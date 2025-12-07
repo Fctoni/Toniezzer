@@ -2381,14 +2381,17 @@ serve(async (req) => {
 **No Supabase Dashboard → Edge Functions → Secrets:**
 
 ```bash
+# IA - Gemini 3 (OCR + classificação)
 GEMINI_API_KEY=AIza...
-GOOGLE_CLOUD_PROJECT=toniezzer-obra
-GOOGLE_APPLICATION_CREDENTIALS=<base64 do service account JSON>
-EMAIL_IMAP_HOST=imap.gmail.com
+
+# Email IMAP (Umbler)
+EMAIL_IMAP_HOST=imap.umbler.com
 EMAIL_IMAP_PORT=993
 EMAIL_IMAP_USER=casa@toniezzer.com
-EMAIL_IMAP_PASSWORD=<app password>
+EMAIL_IMAP_PASSWORD=<senha do email>
 ```
+
+**Nota:** As configurações de email (host, porta, usuário) também ficam editáveis na aba **Configurações** do app. A senha permanece apenas nos Secrets por segurança.
 
 ### **6.3 Cron Jobs (Scheduled Functions)**
 

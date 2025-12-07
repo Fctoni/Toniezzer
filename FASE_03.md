@@ -245,38 +245,26 @@ components/features/
 
 ## 🔧 CONFIGURAÇÕES NECESSÁRIAS
 
-### **1. Configurar Email IMAP**
+### **1. Configurar Secrets no Supabase**
 
-No Supabase Dashboard → Edge Functions → Secrets:
+No Supabase Dashboard → Edge Functions → Secrets, adicionar:
+
 ```bash
-EMAIL_IMAP_HOST=imap.gmail.com
+# Email IMAP (Umbler)
+EMAIL_IMAP_HOST=imap.umbler.com
 EMAIL_IMAP_PORT=993
 EMAIL_IMAP_USER=casa@toniezzer.com
-EMAIL_IMAP_PASSWORD=<gerar app password no Gmail>
+EMAIL_IMAP_PASSWORD=<senha_do_email>
+
+# Gemini API
+GEMINI_API_KEY=<sua_api_key>
 ```
 
-**Como gerar App Password (Gmail):**
-1. Google Account → Security
-2. 2-Step Verification (ativar se não estiver)
-3. App Passwords → Generate
-4. Copiar senha de 16 dígitos
+**Nota:** As configurações de email (host, porta, usuário) também ficam editáveis na aba **Configurações** do app. A senha permanece apenas nos Secrets do Supabase por segurança.
 
 ---
 
-### **2. Configurar Gemini API**
-
-1. Ir em https://ai.google.dev
-2. Criar API Key
-3. Adicionar no Supabase Secrets:
-```bash
-GEMINI_API_KEY=AIza...
-```
-
----
-
----
-
-### **3. Template do Plaud**
+### **2. Template do Plaud**
 
 **Configurar no app Plaud (Configurações → AI Settings → Template):**
 
