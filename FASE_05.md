@@ -50,7 +50,7 @@ Implementar funcionalidades avançadas que agregam valor estratégico: gestão f
 
 ### **Requer de FASE 3:**
 - ✅ Automação IA base (Gemini configurado)
-- ✅ Edge Functions de processamento
+- ✅ APIs server de processamento
 
 ---
 
@@ -160,9 +160,9 @@ CREATE POLICY "analises_select_admin" ON analises_preditivas FOR SELECT TO authe
 
 ---
 
-## ⚡ EDGE FUNCTIONS (NENHUMA NOVA)
+## 🌐 APIS SERVER (NENHUMA NOVA)
 
-As funcionalidades desta fase usam as Edge Functions já criadas nas fases anteriores, especialmente:
+As funcionalidades desta fase usam as APIs server já criadas nas fases anteriores, especialmente:
 - `generate-report` (para relatórios de mudanças)
 - APIs de IA já configuradas (Gemini)
 

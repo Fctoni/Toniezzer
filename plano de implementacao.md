@@ -128,8 +128,8 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 
 ## 📦 ENTREGAS POR FASE (Resumo)
 
-| Fase | Funcionalidades | Tabelas Criadas | Edge Functions | Duração |
-|------|-----------------|-----------------|----------------|---------|
+| Fase | Funcionalidades | Tabelas Criadas | Funções server (Node) | Duração |
+|------|-----------------|-----------------|----------------------|---------|
 | **1** | 4 funcionalidades | 10 tabelas | 2 functions | 2-3 meses |
 | **2** | 3 funcionalidades | 4 tabelas | 1 function | 1-2 meses |
 | **3** | 3 funcionalidades | 3 tabelas | 3 functions | 2-3 meses |
@@ -147,7 +147,7 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 
 1. ✅ **Todas as funcionalidades implementadas** conforme especificação
 2. ✅ **Todas as tabelas criadas** com RLS policies
-3. ✅ **Edge Functions** deployadas e testadas
+3. ✅ **Funções server (Node)** deployadas e testadas
 4. ✅ **Testes manuais** executados (checklist por fase)
 5. ✅ **Deploy em produção** funcionando (Vercel + Supabase)
 6. ✅ **Documentação** atualizada (se necessário)
@@ -170,7 +170,7 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 ### **3. Gestão de Riscos**
 - Backup do banco antes de migrations grandes
 - Testar RLS policies cuidadosamente (pode bloquear acesso)
-- Validar Edge Functions em ambiente de teste primeiro
+- Validar rotas server / jobs em ambiente de teste primeiro
 
 ### **4. Comunicação**
 - Ao final de cada fase: revisar PRD vs implementado

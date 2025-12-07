@@ -137,11 +137,11 @@ CREATE POLICY "acoes_select_all" ON reunioes_acoes FOR SELECT TO authenticated U
 
 ---
 
-## ⚡ EDGE FUNCTIONS
+## 🌐 APIS / JOBS (SERVER RUNTIME – NODE)
 
-### **Function 4: process-email**
+### **API/Job 4: process-email**
 
-**Arquivo:** `supabase/functions/process-email/index.ts`
+**Arquivo sugerido:** `app/api/jobs/process-email/route.ts` (Next.js server)
 
 Ver código completo no **PRD seção 5.14-5.15** (linhas ~1700-1900).
 
@@ -157,22 +157,11 @@ Ver código completo no **PRD seção 5.14-5.15** (linhas ~1700-1900).
 9. Atualizar emails_monitorados com status
 10. Notificar Admin Sistema e Admin Obra
 
-**Cron:** A cada 15 minutos
+**Agendamento:** use cron do provedor (ex: Vercel Cron) chamando a rota com runtime Node e timeout maior.
 
-**Secrets necessários:**
-```
-EMAIL_IMAP_HOST=imap.gmail.com
-EMAIL_IMAP_PORT=993
-EMAIL_IMAP_USER=casa@toniezzer.com
-EMAIL_IMAP_PASSWORD=<app_password>
-GEMINI_API_KEY=<key>
-```
+### **API 5: process-ocr**
 
----
-
-### **Function 5: process-ocr**
-
-**Arquivo:** `supabase/functions/process-ocr/index.ts`
+**Arquivo sugerido:** `app/api/ocr/route.ts`
 
 Ver código completo no **PRD seção 5.17-5.18** (linhas ~2100-2300).
 
@@ -184,13 +173,11 @@ Ver código completo no **PRD seção 5.17-5.18** (linhas ~2100-2300).
 5. Buscar categoria_id no banco
 6. Retornar JSON com dados + confiança
 
-**Trigger:** HTTP (chamada do frontend)
+**Trigger:** HTTP (chamada do frontend), executando em server runtime.
 
----
+### **API 6: process-plaud**
 
-### **Function 6: process-plaud**
-
-**Arquivo:** `supabase/functions/process-plaud/index.ts`
+**Arquivo sugerido:** `app/api/plaud/route.ts`
 
 Ver código completo no **PRD seção 5.20-5.22** (linhas ~2500-2700).
 
@@ -205,7 +192,7 @@ Ver código completo no **PRD seção 5.20-5.22** (linhas ~2500-2700).
 4. Criar backlinks
 5. Retornar lista de itens criados
 
-**Trigger:** HTTP (chamada do frontend após upload)
+**Trigger:** HTTP (chamada do frontend após upload), executando em server runtime.
 
 ---
 
@@ -245,9 +232,9 @@ components/features/
 
 ## 🔧 CONFIGURAÇÕES NECESSÁRIAS
 
-### **1. Configurar Secrets no Supabase**
+### **1. Configurar Secrets no ambiente server**
 
-No Supabase Dashboard → Edge Functions → Secrets, adicionar:
+Definir variáveis de ambiente no provedor de deploy (ex: Vercel) para as rotas server. Manter configs de app no Supabase (tabelas de config).
 
 ```bash
 # Email IMAP (Umbler)
@@ -327,7 +314,7 @@ Data: [DATA]
 ## 🎯 CRITÉRIOS DE CONCLUSÃO
 
 - ✅ Migration 009 executada
-- ✅ 3 Edge Functions deployadas e testadas
+- ✅ 3 APIs/Jobs server deployados e testados
 - ✅ Configurações de APIs (IMAP, Gemini 3) funcionando
 - ✅ Kanban de emails funcional
 - ✅ OCR mobile funcional

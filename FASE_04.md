@@ -119,122 +119,79 @@ CREATE POLICY "orcamentos_select_all" ON orcamentos_materiais FOR SELECT TO auth
 
 ---
 
-## ⚡ EDGE FUNCTION
+## 🌐 API SERVER (NODE)
 
-### **Function 7: generate-report**
+### **API 7: generate-report (server runtime)**
 
-**Arquivo:** `supabase/functions/generate-report/index.ts`
+**Arquivo sugerido:** `app/api/reports/route.ts` (Next.js server)
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { jsPDF } from 'https://esm.sh/jspdf@2'
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { jsPDF } from 'jspdf'
 
-serve(async (req) => {
+export async function POST(req: Request) {
   const { tipo, data_inicio, data_fim } = await req.json()
-  
+
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    process.env.SUPABASE_URL ?? '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
   )
-  
-  if (tipo === 'financeiro') {
-    // Buscar dados financeiros
-    const { data: gastos } = await supabase
-      .from('gastos')
-      .select(`
-        *,
-        categoria:categorias(nome, cor),
-        fornecedor:fornecedores(nome)
-      `)
-      .gte('data', data_inicio)
-      .lte('data', data_fim)
-      .eq('status', 'aprovado')
-      .order('data', { ascending: true })
-    
-    // Buscar orçamentos
-    const { data: categorias } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('ativo', true)
-    
-    // Calcular métricas
-    const total_gasto = gastos?.reduce((sum, g) => sum + Number(g.valor), 0) || 0
-    const total_orcado = categorias?.reduce((sum, c) => sum + (Number(c.orcamento) || 0), 0) || 0
-    
-    // Gerar PDF
-    const doc = new jsPDF()
-    
-    // Cabeçalho
-    doc.setFontSize(20)
-    doc.text('Relatório Financeiro - Toniezzer Manager', 20, 20)
-    doc.setFontSize(10)
-    doc.text(`Período: ${data_inicio} a ${data_fim}`, 20, 30)
-    
-    // Resumo
-    doc.setFontSize(14)
-    doc.text('Resumo Executivo', 20, 45)
-    doc.setFontSize(10)
-    doc.text(`Total Orçado: R$ ${total_orcado.toLocaleString('pt-BR')}`, 20, 55)
-    doc.text(`Total Gasto: R$ ${total_gasto.toLocaleString('pt-BR')}`, 20, 62)
-    doc.text(`Saldo: R$ ${(total_orcado - total_gasto).toLocaleString('pt-BR')}`, 20, 69)
-    doc.text(`Percentual Executado: ${((total_gasto / total_orcado) * 100).toFixed(1)}%`, 20, 76)
-    
-    // Por Categoria
-    doc.setFontSize(14)
-    doc.text('Por Categoria', 20, 90)
-    doc.setFontSize(8)
-    
-    let y = 100
-    for (const cat of categorias || []) {
-      const gastos_cat = gastos?.filter(g => g.categoria_id === cat.id) || []
-      const total_cat = gastos_cat.reduce((sum, g) => sum + Number(g.valor), 0)
-      const perc = cat.orcamento ? (total_cat / cat.orcamento) * 100 : 0
-      
-      doc.text(`${cat.nome}: R$ ${total_cat.toLocaleString('pt-BR')} / R$ ${(cat.orcamento || 0).toLocaleString('pt-BR')} (${perc.toFixed(0)}%)`, 20, y)
-      y += 7
-      
-      if (y > 270) {
-        doc.addPage()
-        y = 20
-      }
-    }
-    
-    // Salvar PDF
-    const pdfBuffer = doc.output('arraybuffer')
-    
-    // Upload para Storage
-    const fileName = `relatorio-financeiro-${data_inicio}-${data_fim}.pdf`
-    const { data: uploadData, error } = await supabase
-      .storage
-      .from('documentos-privados')
-      .upload(`relatorios/${fileName}`, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true
-      })
-    
-    if (error) throw error
-    
-    // Retornar URL
-    const { data: urlData } = supabase
-      .storage
-      .from('documentos-privados')
-      .getPublicUrl(`relatorios/${fileName}`)
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      url: urlData.publicUrl,
-      total_gasto,
-      total_orcado
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    })
+
+  if (tipo !== 'financeiro') {
+    return NextResponse.json({ error: 'Tipo de relatório não suportado' }, { status: 400 })
   }
-  
-  return new Response(JSON.stringify({ error: 'Tipo de relatório não suportado' }), {
-    status: 400
+
+  const { data: gastos } = await supabase
+    .from('gastos')
+    .select(`
+      *,
+      categoria:categorias(nome, cor),
+      fornecedor:fornecedores(nome)
+    `)
+    .gte('data', data_inicio)
+    .lte('data', data_fim)
+    .eq('status', 'aprovado')
+    .order('data', { ascending: true })
+
+  const { data: categorias } = await supabase
+    .from('categorias')
+    .select('*')
+    .eq('ativo', true)
+
+  const total_gasto = gastos?.reduce((sum, g) => sum + Number(g.valor), 0) || 0
+  const total_orcado = categorias?.reduce((sum, c) => sum + (Number(c.orcamento) || 0), 0) || 0
+
+  const doc = new jsPDF()
+  doc.setFontSize(20)
+  doc.text('Relatório Financeiro - Toniezzer Manager', 20, 20)
+  doc.setFontSize(10)
+  doc.text(`Período: ${data_inicio} a ${data_fim}`, 20, 30)
+  // ... restante igual ao PRD (resumo, por categoria, paginação) ...
+
+  const pdfBuffer = doc.output('arraybuffer')
+  const fileName = `relatorio-financeiro-${data_inicio}-${data_fim}.pdf`
+
+  const { error } = await supabase.storage
+    .from('documentos-privados')
+    .upload(`relatorios/${fileName}`, pdfBuffer, {
+      contentType: 'application/pdf',
+      upsert: true
+    })
+  if (error) throw error
+
+  const { data: urlData } = supabase
+    .storage
+    .from('documentos-privados')
+    .getPublicUrl(`relatorios/${fileName}`)
+
+  return NextResponse.json({ 
+    success: true, 
+    url: urlData.publicUrl,
+    total_gasto,
+    total_orcado
   })
-})
+}
 ```
 
 ---
@@ -287,7 +244,7 @@ app/(dashboard)/
 ## 🎯 CRITÉRIOS DE CONCLUSÃO
 
 - ✅ Migration 010 executada
-- ✅ Edge Function generate-report funcionando
+- ✅ API server generate-report funcionando
 - ✅ Todos testes manuais passando
 - ✅ Deploy em produção
 - ✅ Aprovação do proprietário

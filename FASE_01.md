@@ -425,71 +425,59 @@ CREATE TRIGGER update_gastos_updated_at BEFORE UPDATE ON gastos
 
 ---
 
-## ⚡ EDGE FUNCTIONS
+## 🌐 APIS / JOBS (SERVER RUNTIME – NODE)
 
-### **Function 1: recalculate-dates**
+### **API/Job 1: recalculate-dates**
 
-**Arquivo:** `supabase/functions/recalculate-dates/index.ts`
+**Arquivo sugerido:** `app/api/jobs/recalculate-dates/route.ts` (Next.js server + cron do provedor)
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-serve(async (req) => {
+export async function POST(req: Request) {
   try {
     const { etapa_id } = await req.json()
-    
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      process.env.SUPABASE_URL ?? '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
     )
-    
-    // Buscar etapa atrasada
+
     const { data: etapa } = await supabaseClient
       .from('etapas')
       .select('*')
       .eq('id', etapa_id)
       .single()
-    
     if (!etapa || !etapa.data_fim_real || !etapa.data_fim_prevista) {
-      return new Response(JSON.stringify({ error: 'Etapa não encontrada ou sem datas' }), {
-        status: 400
-      })
+      return NextResponse.json({ error: 'Etapa não encontrada ou sem datas' }, { status: 400 })
     }
-    
-    // Calcular dias de atraso
+
     const diff_days = Math.ceil(
-      (new Date(etapa.data_fim_real).getTime() - new Date(etapa.data_fim_prevista).getTime()) 
-      / (1000 * 60 * 60 * 24)
+      (new Date(etapa.data_fim_real).getTime() - new Date(etapa.data_fim_prevista).getTime()) /
+      (1000 * 60 * 60 * 24)
     )
-    
     if (diff_days <= 0) {
-      return new Response(JSON.stringify({ message: 'Etapa não está atrasada' }), {
-        status: 200
-      })
+      return NextResponse.json({ message: 'Etapa não está atrasada' }, { status: 200 })
     }
-    
-    // Buscar etapas dependentes
+
     const { data: dependentes } = await supabaseClient
       .from('etapas_dependencias')
       .select('etapa_id')
       .eq('depende_de_etapa_id', etapa_id)
-    
-    // Atualizar datas das dependentes
+
     for (const dep of dependentes || []) {
       const { data: etapaDep } = await supabaseClient
         .from('etapas')
         .select('*')
         .eq('id', dep.etapa_id)
         .single()
-      
       if (etapaDep) {
         const novaDataInicio = new Date(etapaDep.data_inicio_prevista)
         novaDataInicio.setDate(novaDataInicio.getDate() + diff_days)
-        
+
         const novaDataFim = new Date(etapaDep.data_fim_prevista)
         novaDataFim.setDate(novaDataFim.getDate() + diff_days)
-        
+
         await supabaseClient
           .from('etapas')
           .update({
@@ -497,8 +485,7 @@ serve(async (req) => {
             data_fim_prevista: novaDataFim.toISOString().split('T')[0]
           })
           .eq('id', dep.etapa_id)
-        
-        // Notificar responsável
+
         if (etapaDep.responsavel_id) {
           await supabaseClient.from('notificacoes').insert({
             usuario_id: etapaDep.responsavel_id,
@@ -510,63 +497,51 @@ serve(async (req) => {
         }
       }
     }
-    
-    return new Response(
-      JSON.stringify({ success: true, ajustadas: dependentes?.length || 0, dias: diff_days }),
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+
+    return NextResponse.json({
+      success: true,
+      ajustadas: dependentes?.length || 0,
+      dias: diff_days
     })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-})
+}
 ```
 
-### **Function 2: cleanup-temp-files**
+### **API/Job 2: cleanup-temp-files**
 
-**Arquivo:** `supabase/functions/cleanup-temp-files/index.ts`
+**Arquivo sugerido:** `app/api/jobs/cleanup-temp-files/route.ts` (Next.js server + cron do provedor)
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-serve(async (req) => {
+export async function POST() {
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    process.env.SUPABASE_URL ?? '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
   )
-  
-  // Buscar arquivos no bucket fotos-temp com mais de 24h
+
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  
-  const { data: files, error } = await supabaseClient
-    .storage
+
+  const { data: files, error } = await supabaseClient.storage
     .from('fotos-temp')
     .list()
-  
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  
+
   let deletedCount = 0
-  
   for (const file of files || []) {
     if (new Date(file.created_at) < new Date(oneDayAgo)) {
-      await supabaseClient
-        .storage
-        .from('fotos-temp')
-        .remove([file.name])
+      await supabaseClient.storage.from('fotos-temp').remove([file.name])
       deletedCount++
     }
   }
-  
-  return new Response(
-    JSON.stringify({ success: true, deleted: deletedCount }),
-    { headers: { 'Content-Type': 'application/json' } }
-  )
-})
+
+  return NextResponse.json({ success: true, deleted: deletedCount })
+}
 ```
 
 ---
@@ -656,7 +631,7 @@ components/
 Para considerar FASE 1 completa:
 
 - ✅ Todas 7 migrations executadas sem erros
-- ✅ 2 Edge Functions deployadas
+- ✅ 2 APIs/Jobs server deployados
 - ✅ Todos testes manuais passando
 - ✅ Deploy em produção (Vercel + Supabase)
 - ✅ RLS testado para cada perfil
