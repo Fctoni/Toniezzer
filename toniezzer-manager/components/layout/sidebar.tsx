@@ -171,7 +171,7 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-slate-700">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <TrendingUp className="h-4 w-4" />
-          <span>Fase 1 - Core Essencial</span>
+          <span>Fase 2 - Comunicação</span>
         </div>
       </div>
     </aside>

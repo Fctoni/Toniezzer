@@ -49,6 +49,14 @@ export type NotificacaoTipo =
   | 'tarefa_atribuida'
   | 'sistema'
 
+export type FeedTipo = 'post' | 'decisao' | 'alerta' | 'sistema'
+
+export interface FeedAnexo {
+  nome: string
+  url: string
+  tipo: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -468,6 +476,105 @@ export interface Database {
           created_at?: string
         }
       }
+      feed_comunicacao: {
+        Row: {
+          id: string
+          tipo: FeedTipo
+          conteudo: string
+          autor_id: string
+          etapa_relacionada_id: string | null
+          gasto_relacionado_id: string | null
+          reuniao_relacionada_id: string | null
+          mencoes: string[] | null
+          anexos: FeedAnexo[] | null
+          created_at: string
+          updated_at: string
+          editado: boolean
+        }
+        Insert: {
+          id?: string
+          tipo: FeedTipo
+          conteudo: string
+          autor_id: string
+          etapa_relacionada_id?: string | null
+          gasto_relacionado_id?: string | null
+          reuniao_relacionada_id?: string | null
+          mencoes?: string[] | null
+          anexos?: FeedAnexo[] | null
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+        Update: {
+          id?: string
+          tipo?: FeedTipo
+          conteudo?: string
+          autor_id?: string
+          etapa_relacionada_id?: string | null
+          gasto_relacionado_id?: string | null
+          reuniao_relacionada_id?: string | null
+          mencoes?: string[] | null
+          anexos?: FeedAnexo[] | null
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+      }
+      feed_comentarios: {
+        Row: {
+          id: string
+          feed_id: string
+          conteudo: string
+          autor_id: string
+          created_at: string
+          updated_at: string
+          editado: boolean
+        }
+        Insert: {
+          id?: string
+          feed_id: string
+          conteudo: string
+          autor_id: string
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+        Update: {
+          id?: string
+          feed_id?: string
+          conteudo?: string
+          autor_id?: string
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+      }
+      fornecedores_avaliacoes: {
+        Row: {
+          id: string
+          fornecedor_id: string
+          avaliador_id: string
+          nota: number
+          comentario: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          fornecedor_id: string
+          avaliador_id: string
+          nota: number
+          comentario?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          fornecedor_id?: string
+          avaliador_id?: string
+          nota?: number
+          comentario?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -503,4 +610,25 @@ export type EtapaDependencia = Tables<'etapas_dependencias'>
 export type Gasto = Tables<'gastos'>
 export type Documento = Tables<'documentos'>
 export type Notificacao = Tables<'notificacoes'>
+export type FeedComunicacao = Tables<'feed_comunicacao'>
+export type FeedComentario = Tables<'feed_comentarios'>
+export type FornecedorAvaliacao = Tables<'fornecedores_avaliacoes'>
+
+// Extended types with relations
+export interface FeedComunicacaoWithRelations extends FeedComunicacao {
+  autor: User
+  etapa_relacionada?: Etapa | null
+  gasto_relacionado?: Gasto | null
+  comentarios_count?: number
+  usuarios_mencionados?: User[]
+}
+
+export interface FeedComentarioWithRelations extends FeedComentario {
+  autor: User
+}
+
+export interface FornecedorWithAvaliacoes extends Fornecedor {
+  avaliacoes?: FornecedorAvaliacao[]
+  total_pagamentos?: number
+}
 

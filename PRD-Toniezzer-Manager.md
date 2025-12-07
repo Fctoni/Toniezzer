@@ -140,10 +140,11 @@ Criar um sistema web moderno e completo para **gestão integral de obras residen
 
 | Serviço | Propósito | Implementação |
 |---------|-----------|---------------|
-| **Google Gemini** | LLM para IA (classificação, extração, análise) | Edge Function |
-| **Google Vision API** | OCR de recibos e notas fiscais | Edge Function |
+| **Google Gemini 3** | LLM para IA (OCR, classificação, extração, análise) | Edge Function |
 | **IMAP** | Monitoramento de casa@toniezzer.com | Edge Function (polling 15min) |
 | **Plaud (manual)** | Import de resumos de reuniões (Markdown) | Upload + Edge Function |
+
+**Nota:** O Gemini 3 substitui a necessidade de Google Vision API, pois aceita imagens diretamente e realiza OCR + análise em uma única chamada.
 
 **Observação:** Integração bancária será manual (import de PDF/CSV) nesta versão por questões de segurança.
 
@@ -1834,7 +1835,7 @@ serve(async (req) => {
                 const dados = await parseNFe(attachment.buffer)
                 await processarDadosExtraidos(supabase, emailRecord.id, dados)
               } else if (attachment.contentType.startsWith('image') || attachment.name.endsWith('.pdf')) {
-                // OCR com Google Vision
+                // OCR com Gemini 3
                 const dados = await processarOCR(fileData.path)
                 await processarDadosExtraidos(supabase, emailRecord.id, dados)
               }
@@ -1865,28 +1866,21 @@ serve(async (req) => {
   })
 })
 
-async function processarOCR(filePath: string) {
-  // Google Vision API
-  const vision = require('@google-cloud/vision')
-  const client = new vision.ImageAnnotatorClient()
-  
-  const [result] = await client.textDetection(filePath)
-  const text = result.fullTextAnnotation.text
-  
-  // Enviar para Gemini classificar
+async function processarOCR(imageBuffer: ArrayBuffer) {
+  // Gemini 3 - OCR + Análise em uma única chamada
   const gemini = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY'))
-  const model = gemini.getGenerativeModel({ model: 'gemini-1.5-pro' })
+  const model = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  
+  // Converter imagem para base64
+  const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)))
   
   const prompt = `
-    Extraia as seguintes informações desta nota fiscal:
-    
-    Texto da NF:
-    ${text}
+    Analise esta imagem de nota fiscal/recibo e extraia as informações.
     
     Retorne APENAS um JSON válido com a estrutura:
     {
       "fornecedor": "Nome do fornecedor",
-      "cnpj": "CNPJ",
+      "cnpj": "CNPJ se visível",
       "valor": 1234.56,
       "data": "2024-12-15",
       "numero_nf": "123456",
@@ -1898,7 +1892,16 @@ async function processarOCR(filePath: string) {
     Se não conseguir extrair algum campo, use null.
   `
   
-  const result = await model.generateContent(prompt)
+  const result = await model.generateContent([
+    prompt,
+    {
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: base64Image
+      }
+    }
+  ])
+  
   return JSON.parse(result.response.text())
 }
 
@@ -1965,7 +1968,7 @@ async function categorizarComIA(supabase, dados) {
   
   // Caso contrário, Gemini classifica baseado nos itens
   const gemini = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY'))
-  const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' })
   
   const prompt = `
     Dado os seguintes itens de uma nota fiscal de obra:
@@ -2073,6 +2076,7 @@ Permitir que colaboradores tirem foto de recibos manuais (não eletrônicos) dir
 
 ```typescript
 // supabase/functions/process-ocr/index.ts
+import { GoogleGenerativeAI } from 'npm:@google/generative-ai'
 
 serve(async (req) => {
   const { image_url } = await req.json()
@@ -2084,26 +2088,20 @@ serve(async (req) => {
     .from('fotos-temp')
     .download(image_url)
   
-  // 2. OCR com Google Vision
-  const vision = require('@google-cloud/vision')
-  const client = new vision.ImageAnnotatorClient()
+  // 2. Converter para base64
+  const arrayBuffer = await imageData.arrayBuffer()
+  const base64Image = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
   
-  const [result] = await client.textDetection(imageData)
-  const text = result.fullTextAnnotation.text
-  
-  // 3. Processar com Gemini
+  // 3. OCR + Análise com Gemini 3 (uma única chamada!)
   const gemini = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY'))
-  const model = gemini.getGenerativeModel({ model: 'gemini-1.5-pro' })
+  const model = gemini.getGenerativeModel({ model: 'gemini-2.0-flash' })
   
   const prompt = `
-    Analise este recibo e extraia as informações:
+    Analise esta imagem de recibo/nota fiscal e extraia as informações.
     
-    Texto detectado:
-    ${text}
-    
-    Retorne JSON:
+    Retorne APENAS um JSON válido:
     {
-      "fornecedor": "Nome",
+      "fornecedor": "Nome do estabelecimento",
       "valor": 123.45,
       "data": "2024-12-15",
       "descricao": "Descrição do serviço/produto",
@@ -2111,9 +2109,20 @@ serve(async (req) => {
       "categoria_sugerida": "Nome da categoria",
       "confianca": 0.85
     }
+    
+    Se não conseguir extrair algum campo, use null.
   `
   
-  const aiResult = await model.generateContent(prompt)
+  const aiResult = await model.generateContent([
+    prompt,
+    {
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: base64Image
+      }
+    }
+  ])
+  
   const dados = JSON.parse(aiResult.response.text())
   
   // 4. Buscar categoria no banco
@@ -2793,7 +2802,7 @@ Este PRD define um sistema completo, robusto e moderno para gestão de obras res
 - ✅ Next.js 14 + TypeScript + Tailwind + shadcn/ui (frontend)
 - ✅ Supabase Cloud (backend completo)
 - ✅ Vercel (deploy otimizado)
-- ✅ Google Gemini + Vision API (automação IA)
+- ✅ Google Gemini 3 (automação IA - OCR + classificação + análise)
 
 **Escopo Aprovado:**
 - ✅ 17 funcionalidades (16 confirmadas + 1 nice-to-have)

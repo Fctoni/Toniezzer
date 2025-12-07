@@ -18,8 +18,7 @@ Implementar automação inteligente com IA para reduzir drasticamente trabalho m
 ### ✅ **Funcionalidade #17 - OCR de Recibos via Foto/Upload**
 - Interface mobile para foto
 - Upload desktop
-- OCR com Google Vision API
-- Classificação com Gemini
+- OCR + Classificação com **Gemini 3** (uma única chamada!)
 - Formulário pré-preenchido para revisão
 
 ### ✅ **Funcionalidade #16 - Automação de Email + Notas Fiscais**
@@ -151,9 +150,9 @@ Ver código completo no **PRD seção 5.14-5.15** (linhas ~1700-1900).
 2. Buscar emails não lidos
 3. Fazer upload de anexos para Storage
 4. Se XML: parser de NF-e brasileiro
-5. Se PDF/imagem: Google Vision OCR
+5. Se PDF/imagem: **OCR com Gemini 3** (envia imagem diretamente)
 6. Se sem anexo: tentar extrair do corpo
-7. Classificar categoria com Gemini
+7. Classificar categoria com Gemini 3
 8. Criar gasto sugerido (status: pendente_aprovacao)
 9. Atualizar emails_monitorados com status
 10. Notificar Admin Sistema e Admin Obra
@@ -167,7 +166,6 @@ EMAIL_IMAP_PORT=993
 EMAIL_IMAP_USER=casa@toniezzer.com
 EMAIL_IMAP_PASSWORD=<app_password>
 GEMINI_API_KEY=<key>
-GOOGLE_APPLICATION_CREDENTIALS=<service_account_json_base64>
 ```
 
 ---
@@ -181,11 +179,10 @@ Ver código completo no **PRD seção 5.17-5.18** (linhas ~2100-2300).
 **Principais responsabilidades:**
 1. Receber image_url do Storage
 2. Download da imagem
-3. Google Vision OCR (text detection)
-4. Enviar texto para Gemini com prompt estruturado
-5. Extrair: fornecedor, valor, data, descrição, forma_pagamento
-6. Buscar categoria_id no banco
-7. Retornar JSON com dados + confiança
+3. Enviar imagem para **Gemini 3** (OCR + análise em uma única chamada!)
+4. Extrair: fornecedor, valor, data, descrição, forma_pagamento
+5. Buscar categoria_id no banco
+6. Retornar JSON com dados + confiança
 
 **Trigger:** HTTP (chamada do frontend)
 
@@ -266,24 +263,7 @@ EMAIL_IMAP_PASSWORD=<gerar app password no Gmail>
 
 ---
 
-### **2. Configurar Google Cloud (Vision API)**
-
-1. Criar projeto no Google Cloud Console
-2. Habilitar Vision API
-3. Criar Service Account
-4. Download JSON da service account
-5. Converter para base64:
-```bash
-cat service-account.json | base64
-```
-6. Adicionar no Supabase Secrets:
-```bash
-GOOGLE_APPLICATION_CREDENTIALS=<base64>
-```
-
----
-
-### **3. Configurar Gemini API**
+### **2. Configurar Gemini API**
 
 1. Ir em https://ai.google.dev
 2. Criar API Key
@@ -294,7 +274,9 @@ GEMINI_API_KEY=AIza...
 
 ---
 
-### **4. Template do Plaud**
+---
+
+### **3. Template do Plaud**
 
 **Configurar no app Plaud (Configurações → AI Settings → Template):**
 
@@ -358,7 +340,7 @@ Data: [DATA]
 
 - ✅ Migration 009 executada
 - ✅ 3 Edge Functions deployadas e testadas
-- ✅ Configurações de APIs (IMAP, Vision, Gemini) funcionando
+- ✅ Configurações de APIs (IMAP, Gemini 3) funcionando
 - ✅ Kanban de emails funcional
 - ✅ OCR mobile funcional
 - ✅ Plaud parser funcional

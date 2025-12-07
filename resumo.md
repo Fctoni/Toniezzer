@@ -64,7 +64,7 @@ resumo.md
 
 ### 2.3 Integrações
 - **LLM:** Google Gemini (precisa criar API key)
-- **OCR:** Google Vision API (ou similar)
+- **OCR:** Google Gemini 3 (OCR + análise integrados)
 - **Email:** IMAP (polling a cada 15 minutos)
 - **Bancário:** Import manual de PDF (sem API por segurança)
 
@@ -251,7 +251,7 @@ Aguardando Qualidade ← NOVO STATUS
 ### 8.4 OCR de Recibos (Foto/Upload)
 - **Mobile:** Usar câmera diretamente
 - **Desktop:** Upload de imagem/PDF
-- **Processamento:** Google Vision API (ou similar)
+- **Processamento:** Google Gemini 3 (OCR + análise integrados)
 - **Fluxo:** Foto → OCR → Sugestão → Aprovação → Lançamento
 
 ### 8.5 Integração Bancária
