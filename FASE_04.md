@@ -27,11 +27,20 @@ Implementar controles de qualidade, relatórios automáticos e gestão de compra
 - Exportação CSV
 - Envio automático por email (opcional)
 
-### ✅ **Funcionalidade #10 - Gestão de Compras/Materiais**
-- Lista de materiais por etapa
+### ~~✅ **Funcionalidade #10 - Gestão de Compras** (MOVIDO PARA FASE 1)~~
+
+> ⚠️ **NOTA:** O módulo de Compras foi implementado na **FASE 1** como parte do core financeiro. Inclui:
+> - Cadastro de compras com parcelamento automático
+> - Upload de notas fiscais
+> - Controle de pagamento de parcelas
+> - Filtros avançados e visualização de status
+
+### ✅ **Funcionalidade #10-B - Gestão de Materiais**
+- Lista de materiais necessários por etapa
 - Comparativo de fornecedores (3 orçamentos)
 - Controle de estoque básico
-- Status: comprado, aguardando, entregue
+- Status: pendente, orçamento, comprado, aguardando_entrega, entregue
+- Vinculação com compras existentes
 
 ---
 
@@ -208,11 +217,13 @@ app/(dashboard)/
 ├── relatorios/
 │   ├── page.tsx             # Lista de relatórios
 │   └── [tipo]/page.tsx      # Configurar e gerar
-└── compras/
-    ├── page.tsx             # Lista de materiais
-    ├── novo/page.tsx        # Adicionar material
-    └── [id]/page.tsx        # Comparativo fornecedores
+└── materiais/               # (compras/ já existe na FASE 1)
+    ├── page.tsx             # Lista de materiais necessários
+    ├── novo/page.tsx        # Adicionar material à lista
+    └── [id]/page.tsx        # Comparativo de fornecedores
 ```
+
+> 📝 **Nota:** A rota `/compras` já foi implementada na FASE 1. Esta fase adiciona `/materiais` para controle de estoque e comparativo de fornecedores.
 
 ---
 
@@ -231,13 +242,17 @@ app/(dashboard)/
 - [ ] Exportar dados em CSV
 - [ ] Gerar relatório de progresso de etapas
 
-### **Materiais**
-- [ ] Adicionar material à lista
-- [ ] Solicitar 3 orçamentos de fornecedores
-- [ ] Comparar orçamentos
-- [ ] Selecionar fornecedor
-- [ ] Marcar como comprado/entregue
+### **Materiais (Gestão de Estoque)**
+- [ ] Adicionar material necessário à lista
+- [ ] Vincular material a uma etapa
+- [ ] Solicitar 3 orçamentos de fornecedores diferentes
+- [ ] Comparar orçamentos lado a lado
+- [ ] Selecionar fornecedor vencedor
+- [ ] Marcar como comprado → vincular a uma compra existente
+- [ ] Atualizar status: aguardando_entrega → entregue
 - [ ] Ver status de materiais por etapa
+
+> 📝 **Nota:** O módulo de Compras (FASE 1) já permite cadastrar compras e parcelas. Esta funcionalidade de Materiais complementa com controle de estoque e comparativo de fornecedores.
 
 ---
 

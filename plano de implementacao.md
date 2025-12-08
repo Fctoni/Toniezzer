@@ -26,7 +26,7 @@ Este documento descreve o plano completo de implementação do Toniezzer Manager
 ### **FASE 1 - Core Essencial (MVP)** 
 **Duração:** 2-3 meses  
 **Arquivo:** [`FASE_01.md`](./FASE_01.md)  
-**Status:** 🔵 Próxima a iniciar
+**Status:** ✅ Concluída
 
 **Entregas:**
 - ✅ Setup inicial (Next.js + Supabase + Vercel)
@@ -34,6 +34,7 @@ Este documento descreve o plano completo de implementação do Toniezzer Manager
 - ✅ Gestão Financeira Macro
 - ✅ Cronograma Visual de Etapas
 - ✅ Documentação Visual + Supabase Storage
+- ✅ **Módulo de Compras** (compras parceladas, upload NF, pagamento de parcelas)
 
 > ⚠️ **MVP:** App inicia direto no dashboard, sem login nem RLS.
 
@@ -82,12 +83,13 @@ Este documento descreve o plano completo de implementação do Toniezzer Manager
 **Entregas:**
 - ✅ Checklist de Qualidade por Etapa
 - ✅ Relatórios Automáticos
-- ✅ Gestão de Compras/Materiais
+- ~~✅ Gestão de Compras~~ *(movido para FASE 1)*
+- ✅ Gestão de Materiais (comparativo fornecedores, controle estoque)
 
 **Dependências:**
-- ⚠️ **FASE 1 completa** (precisa de etapas, gastos, fornecedores)
+- ⚠️ **FASE 1 completa** (precisa de etapas, gastos, fornecedores, compras)
 - Recomendado: FASE 2 completa (para notificações de qualidade)
-- Especificamente: tabelas `etapas`, `checklists_qualidade`, `gastos`
+- Especificamente: tabelas `etapas`, `checklists_qualidade`, `gastos`, `compras`
 
 ---
 
@@ -133,16 +135,17 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 
 ## 📦 ENTREGAS POR FASE (Resumo)
 
-| Fase | Funcionalidades | Tabelas Criadas | Funções server (Node) | Duração |
-|------|-----------------|-----------------|----------------------|---------|
-| **1** | 4 funcionalidades | 10 tabelas | 2 functions | 2-3 meses |
-| **2** | 3 funcionalidades | 4 tabelas | 1 function | 1-2 meses |
-| **3** | 3 funcionalidades | 3 tabelas | 3 functions | 2-3 meses |
-| **4** | 3 funcionalidades | 2 tabelas | 1 function | 1-2 meses |
-| **5** | 3 funcionalidades | 2 tabelas | 0 functions | 1-2 meses |
-| **TOTAL** | **16 funcionalidades** | **21 tabelas** | **7 functions** | **8-12 meses** |
+| Fase | Funcionalidades | Tabelas Criadas | Funções server (Node) | Duração | Status |
+|------|-----------------|-----------------|----------------------|---------|--------|
+| **1** | 5 funcionalidades | 11 tabelas (+compras) | 2 functions | 2-3 meses | ✅ Concluída |
+| **2** | 3 funcionalidades | 4 tabelas | 1 function | 1-2 meses | ⏳ Aguardando |
+| **3** | 3 funcionalidades | 3 tabelas | 3 functions | 2-3 meses | ⏳ Aguardando |
+| **4** | 3 funcionalidades | 2 tabelas | 1 function | 1-2 meses | ⏳ Aguardando |
+| **5** | 3 funcionalidades | 2 tabelas | 0 functions | 1-2 meses | ⏳ Aguardando |
+| **TOTAL** | **17 funcionalidades** | **22 tabelas** | **7 functions** | **8-12 meses** | 🔵 Em andamento |
 
 *Nota: BIM Viewer (#12) é nice-to-have e não está incluído no plano principal.*
+*Nota 2: Módulo de Compras foi antecipado da FASE 4 para FASE 1.*
 
 ---
 
@@ -222,6 +225,6 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 
 ---
 
-**Última Atualização:** 06/12/2024  
+**Última Atualização:** 08/12/2024 (Módulo de Compras movido para FASE 1)  
 **Autor:** Claude (Anthropic)
 

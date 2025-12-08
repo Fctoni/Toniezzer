@@ -10,7 +10,7 @@ PRD-Toniezzer-Manager.md
 | Campo | Valor |
 |-------|-------|
 | **Versão do PRD** | 1.0 MVP |
-| **Última Atualização** | 08/12/2024 - MVP sem autenticação |
+| **Última Atualização** | 08/12/2024 - MVP sem auth + Módulo de Compras |
 | **Autor** | Claude (Anthropic) |
 | **IA de Desenvolvimento** | Claude 4.5 Sonnet |
 | **Status** | ✅ Aprovado para desenvolvimento |
@@ -190,12 +190,17 @@ toniezzer-manager/
 │   │   │
 │   │   ├── page.tsx                   # Dashboard principal (overview)
 │   │   │
+│   │   ├── compras/                    # FASE 1 - Módulo de Compras
+│   │   │   ├── page.tsx              # Lista de compras com filtros
+│   │   │   ├── nova/
+│   │   │   │   └── page.tsx          # Nova compra + geração de parcelas
+│   │   │   └── [id]/
+│   │   │       └── page.tsx          # Detalhes + pagamento de parcelas
+│   │   │
 │   │   ├── financeiro/                # FASE 1
 │   │   │   ├── page.tsx              # Visão geral financeira
 │   │   │   ├── lancamentos/
-│   │   │   │   ├── page.tsx          # Lista de lançamentos
-│   │   │   │   ├── novo/
-│   │   │   │   │   └── page.tsx      # Novo lançamento manual
+│   │   │   │   ├── page.tsx          # Lista de parcelas/lançamentos
 │   │   │   │   └── [id]/
 │   │   │   │       └── page.tsx      # Detalhes do lançamento
 │   │   │   ├── orcamento/
@@ -296,12 +301,22 @@ toniezzer-manager/
 │   │   └── ...
 │   │
 │   ├── features/                       # Componentes de funcionalidades
+│   │   ├── compras/
+│   │   │   ├── compra-form.tsx       # Formulário de nova compra
+│   │   │   ├── compra-card.tsx       # Card de resumo de compra
+│   │   │   ├── compras-list.tsx      # Lista com filtros e resumo
+│   │   │   ├── compras-table.tsx     # Tabela de compras
+│   │   │   ├── compras-filters.tsx   # Filtros avançados
+│   │   │   ├── parcelas-preview.tsx  # Preview de parcelas antes de criar
+│   │   │   └── parcelas-table.tsx    # Tabela de parcelas com ações
+│   │   │
 │   │   ├── financeiro/
-│   │   │   ├── lancamento-card.tsx
-│   │   │   ├── orcamento-card.tsx
-│   │   │   ├── grafico-gastos.tsx
-│   │   │   ├── fluxo-caixa-chart.tsx
-│   │   │   └── form-lancamento.tsx
+│   │   │   ├── lancamentos-list.tsx  # Lista de lançamentos com filtros
+│   │   │   ├── lancamentos-table.tsx # Tabela de lançamentos
+│   │   │   ├── lancamentos-filters.tsx # Filtros avançados
+│   │   │   ├── orcamento-editor.tsx
+│   │   │   ├── gastos-chart.tsx
+│   │   │   └── fluxo-caixa-chart.tsx
 │   │   │
 │   │   ├── cronograma/
 │   │   │   ├── timeline.tsx
@@ -650,20 +665,70 @@ UNIQUE (etapa_id, depende_de_etapa_id) -- Sem duplicatas
 
 ---
 
-### **4.7 Tabela: `gastos` (lançamentos financeiros)**
+### **4.7 Tabela: `compras` (compras parceladas)**
+
+> ✅ **Implementado na FASE 1** - Módulo central de gestão financeira
+
+| Coluna | Tipo | Constraints | Descrição |
+|--------|------|-------------|-----------|
+| `id` | uuid | PK | ID da compra |
+| `descricao` | text | NOT NULL | Descrição da compra |
+| `valor_total` | decimal | NOT NULL, CHECK (valor_total > 0) | Valor total em reais |
+| `data_compra` | date | NOT NULL | Data da compra |
+| `fornecedor_id` | uuid | FK(fornecedores.id), NOT NULL | Fornecedor |
+| `categoria_id` | uuid | FK(categorias.id), NOT NULL | Categoria |
+| `subcategoria_id` | uuid | FK(subcategorias.id), NULL | Subcategoria (opcional) |
+| `etapa_relacionada_id` | uuid | FK(etapas.id), NULL | Etapa relacionada |
+| `centro_custo_id` | uuid | FK(centros_custo.id), NULL | Centro de custo (opcional) |
+| `forma_pagamento` | text | NOT NULL, CHECK | dinheiro, pix, cartao, boleto, cheque |
+| `parcelas` | integer | DEFAULT 1, CHECK (parcelas >= 1) | Número de parcelas |
+| `data_primeira_parcela` | date | NOT NULL | Data de vencimento da 1ª parcela |
+| `nota_fiscal_url` | text | NULL | URL da nota fiscal (Supabase Storage) |
+| `nota_fiscal_numero` | text | NULL | Número da NF-e |
+| `status` | text | NOT NULL, DEFAULT 'ativa', CHECK | ativa, quitada, cancelada |
+| `valor_pago` | decimal | DEFAULT 0 | Valor já pago |
+| `parcelas_pagas` | integer | DEFAULT 0 | Quantidade de parcelas pagas |
+| `observacoes` | text | NULL | Observações adicionais |
+| `criado_por` | uuid | FK(users.id), NULL | Quem criou |
+| `criado_via` | text | NOT NULL, DEFAULT 'manual', CHECK | manual, email, ocr, plaud |
+| `created_at` | timestamptz | DEFAULT now() | Data de criação |
+| `updated_at` | timestamptz | DEFAULT now() | Última atualização |
+
+**Constraints:**
+```sql
+CHECK (forma_pagamento IN ('dinheiro', 'pix', 'cartao', 'boleto', 'cheque'))
+CHECK (status IN ('ativa', 'quitada', 'cancelada'))
+CHECK (criado_via IN ('manual', 'email', 'ocr', 'plaud'))
+```
+
+**Índices:**
+- `idx_compras_data` ON `data_compra`
+- `idx_compras_fornecedor` ON `fornecedor_id`
+- `idx_compras_categoria` ON `categoria_id`
+- `idx_compras_status` ON `status`
+- `idx_compras_criado_por` ON `criado_por`
+
+**Trigger:**
+- `trigger_atualiza_compra_ao_pagar`: Atualiza `valor_pago`, `parcelas_pagas` e `status` quando parcela é marcada como paga
+
+---
+
+### **4.8 Tabela: `gastos` (parcelas/lançamentos financeiros)**
+
+> 📝 **Nota:** A partir da implementação do módulo de Compras, os gastos são criados automaticamente como parcelas vinculadas a uma compra via `compra_id`.
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
 | `id` | uuid | PK | ID do gasto |
 | `descricao` | text | NOT NULL | Descrição do gasto |
 | `valor` | decimal | NOT NULL, CHECK (valor > 0) | Valor em reais |
-| `data` | date | NOT NULL | Data do gasto |
+| `data` | date | NOT NULL | Data de vencimento |
 | `categoria_id` | uuid | FK(categorias.id), NOT NULL | Categoria |
 | `subcategoria_id` | uuid | FK(subcategorias.id), NULL | Subcategoria (opcional) |
 | `fornecedor_id` | uuid | FK(fornecedores.id), NULL | Fornecedor |
 | `forma_pagamento` | text | NOT NULL, CHECK | dinheiro, pix, cartao, boleto, cheque |
-| `parcelas` | integer | DEFAULT 1, CHECK (parcelas >= 1) | Número de parcelas |
-| `parcela_atual` | integer | NULL, CHECK (parcela_atual >= 1 AND parcela_atual <= parcelas) | Se parcelado |
+| `parcelas` | integer | DEFAULT 1, CHECK (parcelas >= 1) | Número total de parcelas |
+| `parcela_atual` | integer | NULL, CHECK (parcela_atual >= 1 AND parcela_atual <= parcelas) | Número desta parcela |
 | `nota_fiscal_url` | text | NULL | URL da nota fiscal (Supabase Storage) |
 | `nota_fiscal_numero` | text | NULL | Número da NF-e |
 | `etapa_relacionada_id` | uuid | FK(etapas.id), NULL | Etapa relacionada |
@@ -671,9 +736,12 @@ UNIQUE (etapa_id, depende_de_etapa_id) -- Sem duplicatas
 | `status` | text | NOT NULL, CHECK | pendente_aprovacao, aprovado, rejeitado |
 | `aprovado_por` | uuid | FK(users.id), NULL | Quem aprovou |
 | `aprovado_em` | timestamptz | NULL | Data de aprovação |
-| `criado_por` | uuid | FK(users.id), NOT NULL | Quem criou |
+| `criado_por` | uuid | FK(users.id), NULL | Quem criou |
 | `criado_via` | text | NOT NULL, CHECK | manual, email, ocr, bancario |
 | `observacoes` | text | NULL | Observações adicionais |
+| `compra_id` | uuid | FK(compras.id), NULL | **Compra relacionada (vincula parcela à compra)** |
+| `pago` | boolean | DEFAULT false | **Se a parcela foi paga** |
+| `pago_em` | timestamptz | NULL | **Data em que foi pago** |
 | `created_at` | timestamptz | DEFAULT now() | Data de criação |
 | `updated_at` | timestamptz | DEFAULT now() | Última atualização |
 
@@ -692,10 +760,15 @@ CHECK (criado_via IN ('manual', 'email', 'ocr', 'bancario'))
 - `idx_gastos_centro_custo` ON `centro_custo_id`
 - `idx_gastos_status` ON `status`
 - `idx_gastos_criado_por` ON `criado_por`
+- `idx_gastos_compra` ON `compra_id`
+- `idx_gastos_pago` ON `pago`
+
+**Trigger:**
+- `trigger_atualiza_compra`: Ao marcar `pago = true`, atualiza a compra relacionada
 
 ---
 
-### **4.8 Tabela: `documentos`**
+### **4.10 Tabela: `documentos`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -727,7 +800,7 @@ CHECK (tipo IN ('foto', 'planta', 'contrato', 'nota_fiscal', 'outro'))
 
 ---
 
-### **4.9 Tabela: `feed_comunicacao` (feed centralizado)**
+### **4.11 Tabela: `feed_comunicacao` (feed centralizado)**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -760,7 +833,7 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 
 ---
 
-### **4.10 Tabela: `feed_comentarios`**
+### **4.12 Tabela: `feed_comentarios`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -778,7 +851,7 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 
 ---
 
-### **4.11 Tabela: `reunioes`**
+### **4.13 Tabela: `reunioes`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -797,7 +870,7 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 
 ---
 
-### **4.12 Tabela: `reunioes_acoes` (action items extraídos)**
+### **4.14 Tabela: `reunioes_acoes` (action items extraídos)**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -830,7 +903,7 @@ CHECK (status IN ('pendente', 'em_andamento', 'concluido', 'cancelado'))
 
 ---
 
-### **4.13 Tabela: `emails_monitorados`**
+### **4.15 Tabela: `emails_monitorados`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -869,7 +942,7 @@ CHECK (status IN (
 
 ---
 
-### **4.14 Tabela: `checklists_qualidade`**
+### **4.16 Tabela: `checklists_qualidade`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -890,7 +963,7 @@ CHECK (status IN (
 
 ---
 
-### **4.15 Tabela: `notificacoes`**
+### **4.17 Tabela: `notificacoes`**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -929,7 +1002,7 @@ CHECK (tipo IN (
 
 ---
 
-### **4.16 Tabela: `mudancas_escopo` (Change Orders)**
+### **4.18 Tabela: `mudancas_escopo` (Change Orders)**
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
@@ -964,7 +1037,7 @@ CHECK (status IN ('rascunho', 'aguardando_aprovacao', 'aprovada', 'rejeitada', '
 
 ---
 
-### **4.17 Tabela: `configuracoes_sistema`**
+### **4.19 Tabela: `configuracoes_sistema`**
 
 Tabela genérica para configurações globais (chave-valor).
 
@@ -1042,52 +1115,108 @@ Sistema completo de controle financeiro com orçamento por categoria, alertas au
 }
 ```
 
-#### **5.7.2 Lançamento de Gastos**
+#### **5.7.2 Módulo de Compras (Lançamento Principal)**
 
-**Rota:** `/financeiro/lancamentos/novo`
+> ✅ **Implementado na FASE 1** - Fluxo principal de lançamentos financeiros
 
-**Formulário:**
-- Descrição (text, obrigatório)
-- Valor (decimal, obrigatório)
-- Data (date, obrigatório)
-- Categoria (select, obrigatório)
-  - **Botão "+" ao lado:** Adicionar categoria rápida (modal inline)
-- Subcategoria (select, opcional)
-- Fornecedor (select com busca, opcional)
-  - **Botão "+":** Cadastrar fornecedor rápido
-- Forma de Pagamento (select: dinheiro, pix, cartão, boleto, cheque)
-- Parcelas (number, default 1)
-  - Se > 1: mostrar tabela de parcelas com datas
-- Upload Nota Fiscal (drag & drop)
-- Etapa Relacionada (select, opcional)
-- Observações (textarea, opcional)
+**Rota:** `/compras/nova`
+
+O módulo de Compras é o ponto central para lançar gastos no sistema. Ao criar uma compra, o sistema gera automaticamente as parcelas (lançamentos) na tabela `gastos`.
+
+**Formulário de Nova Compra:**
+- **Informações da Compra:**
+  - Descrição (text, obrigatório)
+  - Valor Total (decimal com máscara monetária, obrigatório)
+  - Data da Compra (date, obrigatório)
+  - Fornecedor (select, obrigatório)
+  - Categoria (select, obrigatório)
+  - Etapa Relacionada (select, opcional)
+
+- **Pagamento:**
+  - Forma de Pagamento (select: pix, dinheiro, cartão, boleto, cheque)
+  - Número de Parcelas (select: 1x a 12x)
+  - Data da 1ª Parcela (date, obrigatório)
+
+- **Nota Fiscal (opcional):**
+  - Upload de arquivo (PDF, JPG, PNG, WebP - máx. 10MB)
+  - Número da NF
+
+- **Preview de Parcelas:**
+  - Tabela mostrando: Parcela, Vencimento, Valor
+  - Cálculo automático de datas (mensal)
+  - Arredondamento correto (diferença na última parcela)
 
 **Validações (Zod):**
 ```typescript
-const gastoSchema = z.object({
+const compraSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
-  valor: z.number().positive("Valor deve ser positivo"),
-  data: z.date(),
-  categoria_id: z.string().uuid(),
-  subcategoria_id: z.string().uuid().optional(),
-  fornecedor_id: z.string().uuid().optional(),
-  forma_pagamento: z.enum(['dinheiro', 'pix', 'cartao', 'boleto', 'cheque']),
-  parcelas: z.number().int().min(1).default(1),
-  nota_fiscal: z.instanceof(File).optional(),
-  etapa_relacionada_id: z.string().uuid().optional(),
+  valor_total: z.string().min(1, "Valor é obrigatório"),
+  data_compra: z.date({ required_error: "Data da compra é obrigatória" }),
+  fornecedor_id: z.string().min(1, "Fornecedor é obrigatório"),
+  categoria_id: z.string().min(1, "Categoria é obrigatória"),
+  etapa_relacionada_id: z.string().optional(),
+  forma_pagamento: z.enum(["dinheiro", "pix", "cartao", "boleto", "cheque"]),
+  parcelas: z.string().default("1"),
+  data_primeira_parcela: z.date({ required_error: "Data da 1ª parcela é obrigatória" }),
+  nota_fiscal_numero: z.string().optional(),
   observacoes: z.string().optional(),
 });
 ```
 
-**Fluxo de Parcelas:**
-1. Usuário informa valor R$ 10.000 e 10 parcelas
-2. Sistema cria 10 lançamentos:
-   - `parcelas = 10`
-   - `parcela_atual = 1, 2, 3, ..., 10`
-   - `data` incrementada mensalmente
-   - `status = 'aprovado'` (todas)
-3. Exibe tabela de confirmação antes de salvar
-4. Usuário pode editar datas individualmente
+**Fluxo de Criação de Compra:**
+```
+1. Usuário preenche formulário de compra
+   ↓
+2. Preview mostra parcelas calculadas
+   ↓
+3. Usuário confirma
+   ↓
+4. Sistema cria registro em `compras`
+   ↓
+5. Sistema cria N registros em `gastos` (parcelas):
+   - compra_id = ID da compra criada
+   - parcela_atual = 1, 2, 3, ..., N
+   - data = incrementada mensalmente a partir de data_primeira_parcela
+   - status = 'aprovado'
+   - pago = false
+   ↓
+6. Redireciona para lista de compras
+```
+
+**Pagamento de Parcelas:**
+
+**Rota:** `/compras/[id]`
+
+Na página de detalhes da compra, usuário pode:
+1. Ver todas as parcelas com status (Pago/Pendente)
+2. Marcar parcela como paga (com data retroativa opcional)
+3. Sistema atualiza:
+   - `gastos.pago = true`
+   - `gastos.pago_em = data selecionada`
+   - `compras.valor_pago += valor_parcela`
+   - `compras.parcelas_pagas += 1`
+   - Se todas pagas: `compras.status = 'quitada'`
+
+#### **5.7.2.1 Lista de Lançamentos (Parcelas)**
+
+**Rota:** `/financeiro/lancamentos`
+
+Exibe todas as parcelas (gastos) com filtros avançados:
+- Busca (descrição, NF, fornecedor, categoria)
+- Status de pagamento (Pago/Pendente)
+- Fornecedor
+- Categoria
+- Período de vencimento
+- Origem (Compra ou Avulso)
+
+**Colunas da tabela:**
+- Data (vencimento)
+- Descrição
+- Origem (link para compra ou "Avulso")
+- Categoria
+- Valor
+- Pagamento (badge Pago/Pendente)
+- Ações
 
 #### **5.7.3 Lista de Lançamentos**
 
@@ -2333,28 +2462,30 @@ npm install @sentry/nextjs
 3. ✅ Gestão Financeira (#1)
 4. ✅ Cronograma de Etapas (#2)
 5. ✅ Documentação Visual (#4) + Supabase Storage
+6. ✅ **Módulo de Compras** *(implementado - gestão de compras parceladas)*
 
 > ⚠️ **MVP:** O sistema inicia direto no dashboard, sem login.
 
 #### **FASE 2 - Comunicação (1-2 meses)**
-6. Feed de Comunicação (#3)
-7. Gestão de Fornecedores (#5)
-8. Alertas Inteligentes (#8)
+7. Feed de Comunicação (#3)
+8. Gestão de Fornecedores (#5)
+9. Alertas Inteligentes (#8)
 
 #### **FASE 3 - Automação IA (2-3 meses)**
-9. OCR de Recibos (#17)
-10. Email + Notas Fiscais (#16)
-11. Plaud + Reuniões (#15)
+10. OCR de Recibos (#17)
+11. Email + Notas Fiscais (#16)
+12. Plaud + Reuniões (#15)
 
 #### **FASE 4 - Qualidade e Relatórios (1-2 meses)**
-12. Checklist de Qualidade (#7)
-13. Relatórios Automáticos (#9)
-14. Gestão de Compras (#10)
+13. Checklist de Qualidade (#7)
+14. Relatórios Automáticos (#9)
+15. ~~Gestão de Compras (#10)~~ *(movido para FASE 1)*
+16. Gestão de Materiais (comparativo de fornecedores, controle de estoque)
 
 #### **FASE 5 - Avançado (1-2 meses)**
-15. Change Orders (#13)
-16. Integração Bancária (#11) - manual primeiro, depois automática
-17. IA Preditiva (#14)
+17. Change Orders (#13)
+18. Integração Bancária (#11) - manual primeiro, depois automática
+19. IA Preditiva (#14)
 
 **FUNCIONALIDADE OPCIONAL (avaliar depois):**
 18. BIM Viewer Simplificado (#12) - complexidade alta, valor incerto
@@ -2446,7 +2577,7 @@ Este PRD define um sistema completo, robusto e moderno para gestão de obras res
 **FIM DO PRD - Toniezzer Manager v1.0 MVP**
 
 *Documento criado em: 06/12/2024*  
-*Atualizado em: 08/12/2024 (MVP sem auth)*  
+*Atualizado em: 08/12/2024 (MVP sem auth + Módulo de Compras implementado)*  
 *Autor: Claude 4.5 Sonnet (Anthropic)*  
 *Status: ✅ Aprovado para desenvolvimento*
 
