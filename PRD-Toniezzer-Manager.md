@@ -1,5 +1,5 @@
 PRD-Toniezzer-Manager.md
-# 📋 PRD - Toniezzer Manager v1.0
+# 📋 PRD - Toniezzer Manager v1.0 (MVP)
 
 **Product Requirements Document**
 
@@ -9,13 +9,15 @@ PRD-Toniezzer-Manager.md
 
 | Campo | Valor |
 |-------|-------|
-| **Versão do PRD** | 1.0 |
-| **Última Atualização** | 06/12/2024 - Versão inicial completa |
+| **Versão do PRD** | 1.0 MVP |
+| **Última Atualização** | 08/12/2024 - MVP sem autenticação |
 | **Autor** | Claude (Anthropic) |
 | **IA de Desenvolvimento** | Claude 4.5 Sonnet |
 | **Status** | ✅ Aprovado para desenvolvimento |
 | **Projeto** | Sistema de Gestão de Obra Residencial |
 | **URL** | obra.toniezzer.com |
+
+> ⚠️ **MVP:** Esta versão não possui sistema de login nem políticas de segurança (RLS). O app inicia diretamente no dashboard. Autenticação e permissões serão implementadas em versão futura.
 
 ---
 
@@ -93,13 +95,13 @@ Criar um sistema web moderno e completo para **gestão integral de obras residen
 
 ### **1.4 Usuários-Alvo**
 
+> ⚠️ **MVP:** Nesta versão, não há diferenciação de perfis. Todos os usuários têm acesso completo ao sistema.
+
 | Perfil | Quantidade | Uso Principal | Plataforma |
 |--------|------------|---------------|------------|
-| **👑 Proprietário** | 1 | Acompanhamento estratégico, análises, aprovações finais | Desktop |
-| **🏗️ Administrador de Obra** | 1 | Gestão diária, aprovações, lançamentos | Desktop + Mobile |
-| **📐 Arquiteto/Engenheiro** | 1-2 | Acompanhamento técnico, checklists de qualidade | Desktop |
-| **👷 Prestadores** | 10-20 | Lançar fotos de progresso, solicitar conclusão de etapas | Mobile |
-| **👀 Visualizadores** | 2-5 | Acompanhar visualmente (família, investidores) | Desktop + Mobile |
+| **👤 Usuário** | 1+ | Acesso completo a todas funcionalidades | Desktop + Mobile |
+
+**Versão Futura:** Sistema completo de perfis (Proprietário, Admin Obra, Arquiteto, Prestadores, Visualizadores) com permissões diferenciadas.
 
 ---
 
@@ -469,40 +471,28 @@ toniezzer-manager/
 - Soft delete: usar coluna `deleted_at` (nullable)
 - Audit: `created_at`, `updated_at`, `created_by`, `updated_by`
 - Enums: usar `text` com `CHECK` constraints
-- RLS: habilitado em TODAS as tabelas
+
+> ⚠️ **MVP:** RLS desabilitado nesta versão. Será implementado em versão futura com autenticação.
 
 ---
 
-### **4.1 Tabela: `users` (extensão de auth.users)**
+### **4.1 Tabela: `users`**
 
-Estende a tabela `auth.users` do Supabase com informações adicionais de perfil.
+> ⚠️ **MVP:** Tabela simplificada sem autenticação.
 
 | Coluna | Tipo | Constraints | Descrição |
 |--------|------|-------------|-----------|
-| `id` | uuid | PK, FK(auth.users.id) | ID do usuário (sincronizado com auth) |
+| `id` | uuid | PK, DEFAULT uuid_generate_v4() | ID do usuário |
 | `nome_completo` | text | NOT NULL | Nome completo |
 | `telefone` | text | NULL | Telefone de contato |
-| `perfil` | text | NOT NULL, CHECK | **Enum:** admin_sistema, admin_obra, arquiteto, prestador, visualizador |
-| `especialidade` | text | NULL | Se prestador: pedreiro, eletricista, etc |
+| `especialidade` | text | NULL | Especialidade (ex: pedreiro, eletricista) |
 | `avatar_url` | text | NULL | URL do avatar (Supabase Storage) |
 | `ativo` | boolean | DEFAULT true | Usuário ativo/inativo |
 | `created_at` | timestamptz | DEFAULT now() | Data de criação |
 | `updated_at` | timestamptz | DEFAULT now() | Última atualização |
 
 **Índices:**
-- `idx_users_perfil` ON `perfil`
 - `idx_users_ativo` ON `ativo`
-
-**Constraints:**
-```sql
-CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visualizador'))
-```
-
-**RLS Policies:**
-- `users_select_own`: Usuários podem ver seu próprio registro
-- `users_select_authenticated`: Admin Sistema e Admin Obra podem ver todos
-- `users_update_own`: Usuários podem atualizar seu próprio perfil (exceto `perfil`)
-- `users_update_admin`: Admin Sistema pode atualizar tudo
 
 ---
 
@@ -525,11 +515,7 @@ CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visu
 - `idx_categorias_ativo` ON `ativo`
 - `idx_categorias_ordem` ON `ordem`
 
-**RLS Policies:**
-- `categorias_select_all`: Todos usuários autenticados podem ver
-- `categorias_insert_admin`: Só Admin Sistema e Admin Obra podem criar
-- `categorias_update_admin`: Só Admin Sistema e Admin Obra podem editar
-- `categorias_delete_admin`: Só Admin Sistema pode deletar (soft delete)
+> ⚠️ **MVP:** Sem RLS - acesso livre a todas as categorias.
 
 ---
 
@@ -548,9 +534,6 @@ CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visu
 - `idx_subcategorias_categoria` ON `categoria_id`
 - `idx_subcategorias_ativo` ON `ativo`
 
-**RLS Policies:**
-- Similar a `categorias`
-
 ---
 
 ### **4.4 Tabela: `centros_custo`**
@@ -568,9 +551,6 @@ CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visu
 **Índices:**
 - `idx_centros_custo_ativo` ON `ativo`
 - `idx_centros_custo_codigo` ON `codigo`
-
-**RLS Policies:**
-- Similar a `categorias`
 
 **Observação:** Centros de custo são opcionais. Se não forem necessários inicialmente, podem ser ignorados. Os campos `categoria_id` e `etapa_relacionada_id` já fornecem boa granularidade de controle.
 
@@ -599,12 +579,6 @@ CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visu
 - `idx_fornecedores_nome` ON `nome`
 - `idx_fornecedores_tipo` ON `tipo`
 - `idx_fornecedores_ativo` ON `ativo`
-
-**RLS Policies:**
-- `fornecedores_select_all`: Todos usuários autenticados podem ver
-- `fornecedores_insert_admin`: Admin Sistema e Admin Obra podem criar
-- `fornecedores_update_admin`: Admin Sistema e Admin Obra podem editar
-- `fornecedores_delete_admin`: Só Admin Sistema pode deletar
 
 ---
 
@@ -648,13 +622,6 @@ CHECK (status IN (
 - `idx_etapas_datas` ON `data_inicio_prevista`, `data_fim_prevista`
 - `idx_etapas_ordem` ON `ordem`
 
-**RLS Policies:**
-- `etapas_select_all`: Todos usuários autenticados podem ver
-- `etapas_insert_admin`: Admin Sistema e Admin Obra podem criar
-- `etapas_update_admin`: Admin Sistema e Admin Obra podem editar tudo
-- `etapas_update_prestador`: Prestador pode mudar status da sua etapa para `aguardando_aprovacao`
-- `etapas_update_progresso`: Responsável pode atualizar `progresso_percentual`
-
 **Trigger:**
 - `trigger_update_status_atrasada`: Verifica diariamente se etapas estão atrasadas
 
@@ -680,9 +647,6 @@ UNIQUE (etapa_id, depende_de_etapa_id) -- Sem duplicatas
 **Índices:**
 - `idx_dependencias_etapa` ON `etapa_id`
 - `idx_dependencias_depende` ON `depende_de_etapa_id`
-
-**RLS Policies:**
-- Similar a `etapas`
 
 ---
 
@@ -729,15 +693,6 @@ CHECK (criado_via IN ('manual', 'email', 'ocr', 'bancario'))
 - `idx_gastos_status` ON `status`
 - `idx_gastos_criado_por` ON `criado_por`
 
-**RLS Policies:**
-- `gastos_select_admin`: Admin Sistema vê tudo
-- `gastos_select_admin_obra`: Admin Obra vê gastos das suas etapas
-- `gastos_select_prestador`: Prestador vê só seus pagamentos
-- `gastos_select_arquiteto`: Arquiteto vê valores macro (sem detalhes de NF)
-- `gastos_insert_admin`: Só Admin Sistema e Admin Obra podem criar
-- `gastos_update_admin`: Só Admin Sistema pode editar gastos aprovados
-- `gastos_delete_never`: Ninguém pode deletar (soft delete)
-
 ---
 
 ### **4.8 Tabela: `documentos`**
@@ -770,12 +725,6 @@ CHECK (tipo IN ('foto', 'planta', 'contrato', 'nota_fiscal', 'outro'))
 - `idx_documentos_tags` ON `tags` USING GIN
 - `idx_documentos_created_at` ON `created_at`
 
-**RLS Policies:**
-- `documentos_select_by_type`: Visibilidade baseada em perfil e tipo de documento
-- `documentos_insert_authenticated`: Usuários autenticados podem fazer upload
-- `documentos_delete_creator`: Criador pode deletar (dentro de 24h)
-- `documentos_delete_admin`: Admin Sistema pode deletar qualquer
-
 ---
 
 ### **4.9 Tabela: `feed_comunicacao` (feed centralizado)**
@@ -806,12 +755,6 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 - `idx_feed_etapa` ON `etapa_relacionada_id`
 - `idx_feed_mencoes` ON `mencoes` USING GIN
 
-**RLS Policies:**
-- `feed_select_all`: Todos usuários autenticados podem ver
-- `feed_insert_authenticated`: Usuários autenticados podem postar
-- `feed_update_own`: Autor pode editar (dentro de 1h)
-- `feed_delete_own`: Autor pode deletar (dentro de 1h)
-
 **Trigger:**
 - `trigger_notifica_mencoes`: Cria notificação para usuários mencionados
 
@@ -833,9 +776,6 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 - `idx_comentarios_feed` ON `feed_id`
 - `idx_comentarios_created_at` ON `created_at`
 
-**RLS Policies:**
-- Similar a `feed_comunicacao`
-
 ---
 
 ### **4.11 Tabela: `reunioes`**
@@ -854,12 +794,6 @@ CHECK (tipo IN ('post', 'decisao', 'alerta', 'sistema'))
 **Índices:**
 - `idx_reunioes_data` ON `data_reuniao` DESC
 - `idx_reunioes_created_by` ON `created_by`
-
-**RLS Policies:**
-- `reunioes_select_all`: Todos usuários autenticados podem ver
-- `reunioes_insert_admin`: Admin Sistema e Admin Obra podem criar
-- `reunioes_update_admin`: Admin Sistema e Admin Obra podem editar
-- `reunioes_delete_admin`: Só Admin Sistema pode deletar
 
 ---
 
@@ -893,9 +827,6 @@ CHECK (status IN ('pendente', 'em_andamento', 'concluido', 'cancelado'))
 - `idx_acoes_responsavel` ON `responsavel_id`
 - `idx_acoes_status` ON `status`
 - `idx_acoes_prazo` ON `prazo`
-
-**RLS Policies:**
-- Similar a `reunioes`
 
 ---
 
@@ -936,11 +867,6 @@ CHECK (status IN (
 - `idx_emails_data_recebimento` ON `data_recebimento` DESC
 - `idx_emails_remetente` ON `remetente`
 
-**RLS Policies:**
-- `emails_select_admin`: Admin Sistema e Admin Obra podem ver
-- `emails_update_admin`: Admin Sistema e Admin Obra podem processar
-- `emails_insert_system`: Só Edge Function pode inserir
-
 ---
 
 ### **4.14 Tabela: `checklists_qualidade`**
@@ -961,12 +887,6 @@ CHECK (status IN (
 **Índices:**
 - `idx_checklists_etapa` ON `etapa_id`
 - `idx_checklists_preenchido_por` ON `preenchido_por`
-
-**RLS Policies:**
-- `checklists_select_all`: Todos podem ver
-- `checklists_insert_admin`: Admin Sistema, Admin Obra e Arquiteto podem criar
-- `checklists_update_admin`: Admin Obra e Arquiteto podem preencher
-- `checklists_delete_admin`: Só Admin Sistema pode deletar
 
 ---
 
@@ -1007,11 +927,6 @@ CHECK (tipo IN (
 - `idx_notificacoes_lida` ON `lida`
 - `idx_notificacoes_created_at` ON `created_at` DESC
 
-**RLS Policies:**
-- `notificacoes_select_own`: Usuário vê só suas notificações
-- `notificacoes_update_own`: Usuário pode marcar como lida
-- `notificacoes_insert_system`: Só triggers/functions podem inserir
-
 ---
 
 ### **4.16 Tabela: `mudancas_escopo` (Change Orders)**
@@ -1047,12 +962,6 @@ CHECK (status IN ('rascunho', 'aguardando_aprovacao', 'aprovada', 'rejeitada', '
 **Trigger:**
 - `trigger_gera_numero`: Gera número sequencial automaticamente
 
-**RLS Policies:**
-- `mudancas_select_all`: Todos podem ver
-- `mudancas_insert_authenticated`: Todos usuários autenticados podem solicitar
-- `mudancas_update_own`: Solicitante pode editar (se status = rascunho)
-- `mudancas_approve_admin`: Só Admin Sistema pode aprovar/rejeitar
-
 ---
 
 ### **4.17 Tabela: `configuracoes_sistema`**
@@ -1074,10 +983,6 @@ Tabela genérica para configurações globais (chave-valor).
 - `data_inicio_obra` - Data de início prevista
 - `data_fim_obra` - Data de término prevista
 
-**RLS Policies:**
-- `config_select_admin`: Só Admin Sistema pode ver
-- `config_update_admin`: Só Admin Sistema pode atualizar
-
 ---
 
 ## 📋 **5. ESPECIFICAÇÃO DETALHADA DAS FUNCIONALIDADES**
@@ -1085,7 +990,7 @@ Tabela genérica para configurações globais (chave-valor).
 ### **Organização por Fases de Implementação**
 
 As funcionalidades estão organizadas em 5 fases conforme aprovado:
-- **FASE 1**: Core Essencial (Auth, Financeiro, Cronograma, Documentos)
+- **FASE 1**: Core Essencial (Financeiro, Cronograma, Documentos) - *MVP sem auth*
 - **FASE 2**: Comunicação (Feed, Fornecedores, Alertas)
 - **FASE 3**: Automação IA (OCR, Email, Plaud)
 - **FASE 4**: Qualidade e Relatórios (Checklists, Relatórios, Compras)
@@ -1093,296 +998,15 @@ As funcionalidades estão organizadas em 5 fases conforme aprovado:
 
 ---
 
-## 🔐 **FASE 1 - FUNCIONALIDADE #6: Sistema de Permissões**
+## 🔐 **Sistema de Permissões (VERSÃO FUTURA)**
 
-### **5.1 Visão Geral**
+> ⚠️ **MVP:** Esta funcionalidade não está implementada no MVP. O sistema inicia diretamente no dashboard sem autenticação.
 
-Sistema completo de autenticação e autorização baseado em perfis de usuário, com RLS (Row Level Security) no Supabase garantindo segurança a nível de banco de dados.
-
-### **5.2 Perfis de Usuário**
-
-#### **5.2.1 Administrador do Sistema (Proprietário)**
-**Identificador:** `admin_sistema`
-
-**Permissões:**
-- ✅ Ver TUDO
-- ✅ Criar TUDO
-- ✅ Editar TUDO
-- ✅ Deletar TUDO
-- ✅ Aprovar mudanças de escopo
-- ✅ Editar lançamentos mesmo após aprovados
-- ✅ Gerenciar usuários e permissões
-- ✅ Acessar configurações do sistema
-
-**Casos de Uso:**
-- Proprietário da obra
-- Controle total sobre orçamento e decisões finais
-- Acesso a dashboards estratégicos
-- Configuração de integrações
-
-#### **5.2.2 Administrador de Obra**
-**Identificador:** `admin_obra`
-
-**Permissões:**
-- ✅ Ver: Financeiro DAS ETAPAS DELE + Todo resto
-- ✅ Criar: Lançar gastos, etapas, fornecedores, documentos, posts no feed
-- ✅ Editar: Suas etapas, fornecedores que cadastrou, aprovar etapas, checklists de qualidade
-- ❌ Deletar: Lançamentos aprovados
-- ✅ Aprovar: Etapas (aguardando aprovação → aguardando qualidade)
-- ✅ Processar: Emails e OCR aguardando revisão
-
-**Regra Especial - Visibilidade Financeira:**
-```sql
--- Admin Obra vê gastos onde:
--- 1) Ele é o responsável pela etapa relacionada
--- 2) OU não tem etapa relacionada (gastos gerais)
-
-SELECT * FROM gastos
-WHERE etapa_relacionada_id IN (
-  SELECT id FROM etapas WHERE responsavel_id = auth.uid()
-)
-OR etapa_relacionada_id IS NULL
-```
-
-**Casos de Uso:**
-- Gestão diária da obra
-- Lançar gastos do dia a dia
-- Aprovar conclusão de etapas
-- Preencher checklists de qualidade
-
-#### **5.2.3 Arquiteto / Engenheiro**
-**Identificador:** `arquiteto`
-
-**Permissões:**
-- ✅ Ver: Todo conteúdo técnico, financeiro MACRO (sem NFs)
-- ✅ Criar: Sugerir mudanças de escopo, checklists, upload de plantas
-- ✅ Editar: Checklists, especificações técnicas, aprovar/reprovar etapas (qualidade)
-- ❌ Deletar: Sem permissões de delete
-- ❌ Lançar gastos
-- ✅ Ver valores por categoria mas não NF por NF
-
-**Visibilidade Financeira:**
-- Vê: "Fundação: R$ 500k de R$ 600k (83%)"
-- NÃO vê: Nota fiscal individual de R$ 5.430,00 da Empresa X
-
-**Casos de Uso:**
-- Acompanhamento técnico
-- Validar qualidade nas inspeções
-- Sugerir melhorias ou mudanças
-- Fazer upload de plantas atualizadas
-
-#### **5.2.4 Prestador**
-**Identificador:** `prestador`
-
-**Permissões:**
-- ✅ Ver: APENAS suas etapas, seus pagamentos, feed geral
-- ❌ Ver: Valores de outros prestadores, orçamento total
-- ✅ Criar: Solicitar conclusão de etapa, upload de fotos de progresso, comentar no feed
-- ✅ Editar: Progresso das suas etapas, suas fotos
-- ❌ Lançar gastos
-- ❌ Ver documentos sensíveis (contratos, NFs de outros)
-
-**Casos de Uso:**
-- Acompanhar suas tarefas (etapas)
-- Upload de fotos de progresso
-- Solicitar aprovação de conclusão
-- Ver seus pagamentos (parcelas pendentes)
-
-#### **5.2.5 Visualizador**
-**Identificador:** `visualizador`
-
-**Permissões:**
-- ✅ Ver: Cronograma geral, fotos, feed de comunicação
-- ❌ Ver: Valores financeiros, dados de prestadores, documentos sensíveis
-- ❌ Criar: Nada
-- ❌ Editar: Nada
-- ❌ Deletar: Nada
-
-**Casos de Uso:**
-- Família acompanhando a obra
-- Investidores com interesse visual
-- Apenas visualização do progresso
-
-### **5.3 Fluxo de Autenticação**
-
-**5.3.1 Registro de Usuário**
-
-1. Admin Sistema acessa `/configuracoes/usuarios`
-2. Clica em "Novo Usuário"
-3. Preenche formulário:
-   - Nome completo
-   - Email
-   - Perfil (dropdown)
-   - Especialidade (se prestador)
-   - Telefone (opcional)
-4. Sistema cria usuário no `auth.users`
-5. Envia email com link de ativação (Supabase Auth)
-6. Usuário define senha no primeiro acesso
-
-**5.3.2 Login**
-
-1. Usuário acessa `/login`
-2. Preenche email e senha
-3. Supabase Auth valida
-4. Middleware verifica perfil na tabela `users`
-5. Redireciona para dashboard apropriado
-
-**5.3.3 Recuperação de Senha**
-
-1. Usuário clica "Esqueci minha senha"
-2. Informa email
-3. Supabase envia email de reset
-4. Usuário define nova senha
-
-### **5.4 Implementação de RLS (Row Level Security)**
-
-#### **Exemplo: Políticas para tabela `gastos`**
-
-```sql
--- Admin Sistema vê tudo
-CREATE POLICY "gastos_select_admin" ON gastos
-FOR SELECT
-TO authenticated
-USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_sistema'
-);
-
--- Admin Obra vê gastos das suas etapas
-CREATE POLICY "gastos_select_admin_obra" ON gastos
-FOR SELECT
-TO authenticated
-USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_obra'
-  AND (
-    etapa_relacionada_id IN (
-      SELECT id FROM etapas WHERE responsavel_id = auth.uid()
-    )
-    OR etapa_relacionada_id IS NULL
-  )
-);
-
--- Prestador vê só seus pagamentos
-CREATE POLICY "gastos_select_prestador" ON gastos
-FOR SELECT
-TO authenticated
-USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'prestador'
-  AND fornecedor_id IN (
-    SELECT id FROM fornecedores WHERE email = (
-      SELECT email FROM auth.users WHERE id = auth.uid()
-    )
-  )
-);
-
--- Arquiteto vê valores macro (implementar na aplicação, não RLS)
-CREATE POLICY "gastos_select_arquiteto" ON gastos
-FOR SELECT
-TO authenticated
-USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'arquiteto'
-);
-
--- Apenas Admin Sistema e Admin Obra podem inserir
-CREATE POLICY "gastos_insert_admin" ON gastos
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
-
--- Apenas Admin Sistema pode editar gastos aprovados
-CREATE POLICY "gastos_update_admin" ON gastos
-FOR UPDATE
-TO authenticated
-USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_sistema'
-  OR (
-    (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_obra'
-    AND status = 'pendente_aprovacao'
-  )
-);
-
--- Ninguém pode deletar (usar soft delete via updated_at)
-CREATE POLICY "gastos_delete_never" ON gastos
-FOR DELETE
-TO authenticated
-USING (false);
-```
-
-### **5.5 Verificação de Permissões no Frontend**
-
-**Hook customizado:** `use-permissions.ts`
-
-```typescript
-export function usePermissions() {
-  const { user } = useUser();
-  
-  const can = {
-    // Financeiro
-    verGastos: (gasto: Gasto) => {
-      if (user.perfil === 'admin_sistema') return true;
-      if (user.perfil === 'admin_obra') {
-        return gasto.etapa_relacionada?.responsavel_id === user.id || !gasto.etapa_relacionada_id;
-      }
-      if (user.perfil === 'prestador') {
-        return gasto.fornecedor?.email === user.email;
-      }
-      if (user.perfil === 'arquiteto') return true; // mas sem detalhes de NF
-      return false;
-    },
-    
-    lancarGasto: () => {
-      return ['admin_sistema', 'admin_obra'].includes(user.perfil);
-    },
-    
-    aprovarGasto: () => {
-      return user.perfil === 'admin_sistema';
-    },
-    
-    // Etapas
-    criarEtapa: () => {
-      return ['admin_sistema', 'admin_obra'].includes(user.perfil);
-    },
-    
-    solicitarConclusaoEtapa: (etapa: Etapa) => {
-      if (['admin_sistema', 'admin_obra'].includes(user.perfil)) return true;
-      return etapa.responsavel_id === user.id;
-    },
-    
-    aprovarEtapa: () => {
-      return ['admin_sistema', 'admin_obra'].includes(user.perfil);
-    },
-    
-    // Mudanças de escopo
-    sugerirMudanca: () => {
-      return user.perfil !== 'visualizador';
-    },
-    
-    aprovarMudanca: () => {
-      return user.perfil === 'admin_sistema';
-    },
-    
-    // Configurações
-    acessarConfiguracoes: () => {
-      return user.perfil === 'admin_sistema';
-    },
-  };
-  
-  return { can };
-}
-```
-
-**Uso no componente:**
-
-```typescript
-function LancarGastoButton() {
-  const { can } = usePermissions();
-  
-  if (!can.lancarGasto()) return null;
-  
-  return <Button onClick={...}>Lançar Gasto</Button>;
-}
-```
+**Planejado para versão futura:**
+- Sistema completo de autenticação com Supabase Auth
+- 5 perfis de usuário (Admin Sistema, Admin Obra, Arquiteto, Prestador, Visualizador)
+- RLS (Row Level Security) para controle de acesso a nível de banco
+- Middleware de autenticação em rotas protegidas
 
 ---
 
@@ -2527,20 +2151,20 @@ jobs:
 
 ## 🔒 **8. SEGURANÇA**
 
+> ⚠️ **MVP:** Esta versão não possui autenticação nem RLS. Itens de segurança relacionados a auth serão implementados em versão futura.
+
 ### **8.1 Checklist de Segurança**
 
-**Autenticação:**
-- ✅ Supabase Auth (email/senha)
-- ✅ Rate limiting em endpoints de login
-- ✅ Força de senha mínima (8 caracteres, 1 número, 1 especial)
-- ✅ Email de verificação obrigatório
-- ✅ Magic link como alternativa
+**Autenticação (VERSÃO FUTURA):**
+- ⏳ Supabase Auth (email/senha)
+- ⏳ Rate limiting em endpoints de login
+- ⏳ Força de senha mínima
+- ⏳ Email de verificação obrigatório
 
-**Autorização:**
-- ✅ RLS habilitado em TODAS as tabelas
-- ✅ Políticas testadas para cada perfil
-- ✅ Middleware de autenticação em todas as rotas privadas
-- ✅ Verificação de permissões no frontend E backend
+**Autorização (VERSÃO FUTURA):**
+- ⏳ RLS habilitado em TODAS as tabelas
+- ⏳ Políticas testadas para cada perfil
+- ⏳ Middleware de autenticação em rotas privadas
 
 **Dados Sensíveis:**
 - ✅ Senhas NUNCA armazenadas (Supabase Auth cuida)
@@ -2703,12 +2327,14 @@ npm install @sentry/nextjs
 
 ### **11.1 Ordem de Implementação (Aprovada)**
 
-#### **FASE 1 - Core Essencial (2-3 meses de desenvolvimento IA)**
+#### **FASE 1 - Core Essencial MVP (2-3 meses de desenvolvimento IA)**
 1. ✅ Setup inicial (Next.js + Supabase + Vercel)
-2. ✅ Auth e Permissões (#6)
+2. ⏳ ~~Auth e Permissões~~ *(movido para versão futura)*
 3. ✅ Gestão Financeira (#1)
 4. ✅ Cronograma de Etapas (#2)
 5. ✅ Documentação Visual (#4) + Supabase Storage
+
+> ⚠️ **MVP:** O sistema inicia direto no dashboard, sem login.
 
 #### **FASE 2 - Comunicação (1-2 meses)**
 6. Feed de Comunicação (#3)
@@ -2799,7 +2425,8 @@ Este PRD define um sistema completo, robusto e moderno para gestão de obras res
 2. **Controle Financeiro Rigoroso:** Orçamento, alertas, projeções e fluxo de caixa
 3. **Qualidade Garantida:** Checklists, aprovações e rastreabilidade
 4. **Comunicação Centralizada:** Fim do caos do WhatsApp, tudo documentado
-5. **Segurança:** RLS rigoroso, HTTPS, validações em todas as camadas
+
+> ⚠️ **MVP:** Esta versão inicial não possui autenticação nem RLS. Segurança completa será implementada em versão futura.
 
 **Stack Validada:**
 - ✅ Next.js 14 + TypeScript + Tailwind + shadcn/ui (frontend)
@@ -2807,20 +2434,19 @@ Este PRD define um sistema completo, robusto e moderno para gestão de obras res
 - ✅ Vercel (deploy otimizado)
 - ✅ Google Gemini 3 (automação IA - OCR + classificação + análise)
 
-**Escopo Aprovado:**
-- ✅ 17 funcionalidades (16 confirmadas + 1 nice-to-have)
-- ✅ 17 tabelas no banco de dados
-- ✅ 5 perfis de usuário com permissões granulares
-- ✅ 7 Edge Functions
-- ✅ 4 Supabase Storage buckets
+**Escopo MVP:**
+- ✅ Funcionalidades core (Financeiro, Cronograma, Documentos)
+- ⏳ Autenticação e permissões (versão futura)
+- ⏳ RLS no banco de dados (versão futura)
 
-**Próximo Passo:** Iniciar implementação da FASE 1 (Core Essencial)!
+**Próximo Passo:** Iniciar implementação da FASE 1 MVP (Core Essencial sem auth)!
 
 ---
 
-**FIM DO PRD - Toniezzer Manager v1.0**
+**FIM DO PRD - Toniezzer Manager v1.0 MVP**
 
 *Documento criado em: 06/12/2024*  
+*Atualizado em: 08/12/2024 (MVP sem auth)*  
 *Autor: Claude 4.5 Sonnet (Anthropic)*  
 *Status: ✅ Aprovado para desenvolvimento*
 

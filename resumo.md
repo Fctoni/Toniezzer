@@ -2,9 +2,12 @@ resumo.md
 # 📋 RESUMO DE DECISÕES - Toniezzer Manager (Sistema de Gestão de Obra)
 
 **Data:** 06/12/2024  
+**Atualizado:** 08/12/2024 (MVP sem autenticação)  
 **Projeto:** Sistema de Gestão de Obra Residencial  
 **Nome:** Toniezzer Manager  
 **URL:** obra.toniezzer.com
+
+> ⚠️ **MVP:** Esta versão inicial não possui login nem RLS. O app inicia diretamente no dashboard.
 
 ---
 
@@ -77,22 +80,20 @@ resumo.md
 
 ## 👥 3. USUÁRIOS E PERMISSÕES
 
-### 3.1 Perfis Aprovados
+> ⚠️ **MVP:** Sistema de permissões não implementado. Todos os usuários têm acesso completo.
 
-| Perfil | Pode Ver | Pode Criar | Pode Editar | Pode Deletar |
-|--------|----------|------------|-------------|--------------|
-| **👑 Admin Sistema** | Tudo | Tudo | Tudo | Tudo |
-| **🏗️ Admin Obra** | Financeiro só das etapas dele<br>Resto: tudo | Lançar gastos, criar etapas, fornecedores, upload docs, feed | Suas etapas, fornecedores, aprovar etapas, checklist qualidade | ❌ Lançamentos aprovados<br>✅ Resto que criou |
-| **👷 Prestador** | Suas etapas, seus pagamentos, feed<br>❌ Valores de outros | Solicitar conclusão etapa, upload fotos, comentar feed | Progresso suas etapas, suas fotos | ❌ Nada financeiro |
-| **📐 Arquiteto/Eng** | Técnico completo, financeiro macro, feed | Sugerir mudanças, criar checklists, upload plantas, comentar | Checklists, specs técnicas, aprovar/reprovar etapas | ❌ Sem deletes |
-| **👀 Visualizador** | Cronograma, fotos, feed<br>❌ Financeiro<br>❌ Dados prestadores | ❌ Nada | ❌ Nada | ❌ Nada |
+### 3.1 MVP - Sem Autenticação
+- App inicia diretamente no dashboard
+- Sem login/senha
+- Sem RLS no banco de dados
+- Acesso completo a todas funcionalidades
 
-### 3.2 Regras Específicas
-- **Admin Obra:** Vê financeiro SÓ das etapas que ele é responsável
-- **Prestadores:** NÃO veem valores de outros prestadores
-- **Lançar gastos:** SÓ Admin Obra ou Admin Sistema
-- **Aprovar mudanças escopo:** Qualquer um sugere, SÓ Admin Sistema aprova
-- **Arquiteto:** Visão macro financeira (ex: "Fundação: R$ 500k de R$ 600k") mas não vê NF por NF
+### 3.2 Versão Futura - Perfis Planejados
+- **Admin Sistema:** Acesso total
+- **Admin Obra:** Gestão diária
+- **Arquiteto/Eng:** Acompanhamento técnico
+- **Prestador:** Apenas suas etapas
+- **Visualizador:** Somente leitura
 
 ---
 
@@ -263,11 +264,13 @@ Aguardando Qualidade ← NOVO STATUS
 
 ## 🔄 9. ORDEM DE IMPLEMENTAÇÃO (Aprovada)
 
-### FASE 1 (Core Essencial)
-1. Auth e Permissões (#6)
+### FASE 1 (Core Essencial - MVP)
+1. ~~Auth e Permissões~~ *(movido para versão futura)*
 2. Gestão Financeira (#1)
 3. Cronograma de Etapas (#2)
 4. Documentação Visual (#4) - incluindo Supabase Storage
+
+> ⚠️ **MVP:** App inicia direto no dashboard, sem login.
 
 ### FASE 2 (Comunicação)
 5. Feed de Comunicação (#3)
@@ -412,13 +415,13 @@ Aguardando Qualidade ← NOVO STATUS
 
 ### 11.1 Itens a Incluir no PRD
 1. ✅ **Template customizado do Plaud** - seção explicando que podemos configurar o template de exportação do Plaud exatamente como precisamos
-2. ✅ **Supabase Storage** - detalhar buckets, políticas RLS, transformação de imagens
+2. ✅ **Supabase Storage** - detalhar buckets e transformação de imagens
 3. ✅ **Edge Functions** específicas para cada automação IA
 4. ✅ **Fluxo completo de aprovação** de etapas com estados intermediários
 5. ✅ **Aba de configurações** para categorias, status, tipos de prestadores
 6. ✅ **Kanban de emails** com 3 colunas
 7. ✅ **Sistema de notificações** in-app
-8. ✅ **Permissões RLS** detalhadas no Supabase por perfil
+8. ⏳ **Permissões RLS** *(versão futura - MVP sem auth)*
 
 ### 11.2 Modelo de Referência
 - **Arquivo:** `PRD-Sistema-Apontamento-v3.md` (3517 linhas)
@@ -432,7 +435,7 @@ Aguardando Qualidade ← NOVO STATUS
 1. **Assertividade:** Todas decisões foram validadas. Não há suposições no PRD.
 2. **Complexidade:** Sistema grande (17 funcionalidades), mas viável com a stack escolhida.
 3. **Prioridade:** Focar na ordem de implementação definida (FASE 1 → 2 → 3 → 4 → 5).
-4. **Segurança:** RLS rigoroso no Supabase para cada perfil de usuário.
+4. **MVP:** Versão inicial sem autenticação e sem RLS (segurança será implementada depois).
 5. **UX Mobile:** Priorizar experiência mobile para prestadores (lançamentos rápidos).
 6. **UX Desktop:** Priorizar dashboards e análises para proprietário/admin obra.
 

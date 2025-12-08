@@ -2,9 +2,12 @@ plano de implementacao.md
 # 📋 PLANO DE IMPLEMENTAÇÃO - Toniezzer Manager
 
 **Projeto:** Sistema de Gestão de Obra Residencial  
-**Versão:** 1.0  
+**Versão:** 1.0 MVP  
 **Data:** 06/12/2024  
-**Baseado em:** PRD-Toniezzer-Manager.md v1.0
+**Atualizado:** 08/12/2024 (MVP sem autenticação)  
+**Baseado em:** PRD-Toniezzer-Manager.md v1.0 MVP
+
+> ⚠️ **MVP:** Esta versão não possui login nem RLS. O app inicia diretamente no dashboard.
 
 ---
 
@@ -20,17 +23,19 @@ Este documento descreve o plano completo de implementação do Toniezzer Manager
 
 ## 📊 ESTRUTURA DAS FASES
 
-### **FASE 1 - Core Essencial** 
+### **FASE 1 - Core Essencial (MVP)** 
 **Duração:** 2-3 meses  
 **Arquivo:** [`FASE_01.md`](./FASE_01.md)  
 **Status:** 🔵 Próxima a iniciar
 
 **Entregas:**
 - ✅ Setup inicial (Next.js + Supabase + Vercel)
-- ✅ Autenticação e Sistema de Permissões
+- ⏳ ~~Autenticação e Sistema de Permissões~~ *(versão futura)*
 - ✅ Gestão Financeira Macro
 - ✅ Cronograma Visual de Etapas
 - ✅ Documentação Visual + Supabase Storage
+
+> ⚠️ **MVP:** App inicia direto no dashboard, sem login nem RLS.
 
 **Dependências:** Nenhuma (ponto de partida)
 
@@ -146,12 +151,14 @@ FASE 2        FASE 4       FASE 3*        FASE 5**
 ### **Para considerar uma fase COMPLETA:**
 
 1. ✅ **Todas as funcionalidades implementadas** conforme especificação
-2. ✅ **Todas as tabelas criadas** com RLS policies
+2. ✅ **Todas as tabelas criadas** no banco de dados
 3. ✅ **Funções server (Node)** deployadas e testadas
 4. ✅ **Testes manuais** executados (checklist por fase)
 5. ✅ **Deploy em produção** funcionando (Vercel + Supabase)
 6. ✅ **Documentação** atualizada (se necessário)
 7. ✅ **Aprovação do proprietário** (você)
+
+> ⚠️ **MVP:** RLS policies não são critério de conclusão nesta versão.
 
 ---
 
