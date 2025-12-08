@@ -47,7 +47,11 @@ export function PreviewOcr({ imageUrl, dados, isLoading }: PreviewOcrProps) {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-'
     try {
-      return new Date(dateStr).toLocaleDateString('pt-BR')
+      // Evitar problema de timezone: adicionar T12:00:00 para garantir o dia correto
+      const date = dateStr.includes('T') 
+        ? new Date(dateStr) 
+        : new Date(dateStr + 'T12:00:00')
+      return date.toLocaleDateString('pt-BR')
     } catch {
       return dateStr
     }

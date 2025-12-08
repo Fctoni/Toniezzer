@@ -33,6 +33,11 @@ const menuItems = [
     title: "Compras",
     href: "/compras",
     icon: Package,
+    subItems: [
+      { title: "Lista", href: "/compras" },
+      { title: "📷 Foto Recibo", href: "/financeiro/lancamentos/foto" },
+      { title: "Nova Compra", href: "/compras/nova" },
+    ],
   },
   {
     title: "Financeiro",
@@ -41,7 +46,6 @@ const menuItems = [
     subItems: [
       { title: "Visão Geral", href: "/financeiro" },
       { title: "Lançamentos", href: "/financeiro/lancamentos" },
-      { title: "📷 Foto Recibo", href: "/financeiro/lancamentos/foto" },
       { title: "Orçamento", href: "/financeiro/orcamento" },
       { title: "Fluxo de Caixa", href: "/financeiro/fluxo-caixa" },
     ],

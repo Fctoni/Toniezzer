@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ParcelasPreview } from "./parcelas-preview";
+import { QuickAddFornecedor } from "../ocr/quick-add-fornecedor";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
@@ -65,13 +66,14 @@ interface CompraFormProps {
 
 export function CompraForm({
   categorias,
-  fornecedores,
+  fornecedores: fornecedoresIniciais,
   etapas,
 }: CompraFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [arquivoNF, setArquivoNF] = useState<File | null>(null);
   const [uploadingNF, setUploadingNF] = useState(false);
+  const [fornecedores, setFornecedores] = useState(fornecedoresIniciais);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormData>({
@@ -359,7 +361,7 @@ export function CompraForm({
                     <FormLabel>Fornecedor *</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -367,6 +369,12 @@ export function CompraForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <QuickAddFornecedor
+                          onFornecedorAdded={(novoFornecedor) => {
+                            setFornecedores(prev => [...prev, novoFornecedor])
+                            field.onChange(novoFornecedor.id)
+                          }}
+                        />
                         {fornecedores.map((f) => (
                           <SelectItem key={f.id} value={f.id}>
                             {f.nome}

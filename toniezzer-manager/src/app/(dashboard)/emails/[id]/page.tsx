@@ -148,17 +148,16 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       // Atualizar status para reprocessamento
       await supabase
         .from('emails_monitorados')
-        .update({ status: 'processando' })
+        .update({ status: 'nao_processado' })
         .eq('id', email.id)
 
-      // Chamar Edge Function (se disponível)
-      const { error } = await supabase.functions.invoke('process-ocr', {
-        body: { email_id: email.id }
-      })
+      // Chamar API Route de processamento
+      const response = await fetch('/api/emails/process', { method: 'POST' })
+      const result = await response.json()
 
-      if (error) {
-        toast.warning('Reprocessamento não disponível', {
-          description: 'Edite os campos manualmente.'
+      if (!response.ok) {
+        toast.warning('Reprocessamento falhou', {
+          description: result.error || 'Edite os campos manualmente.'
         })
         await supabase
           .from('emails_monitorados')

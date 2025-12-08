@@ -22,7 +22,7 @@ interface OcrResult {
 
 export default function FotoReciboPage() {
   const router = useRouter()
-  const { user } = useCurrentUser()
+  const { currentUser } = useCurrentUser()
   const [step, setStep] = useState<Step>('capture')
   const [imageUrl, setImageUrl] = useState<string>('')
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -36,31 +36,46 @@ export default function FotoReciboPage() {
     setStep('processing')
 
     try {
+      // 1. Converter imagem para base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // Remover o prefixo "data:image/...;base64,"
+          resolve(result.split(',')[1])
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // 2. Chamar API Route local (Next.js) para OCR com Gemini
+      const ocrResponse = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_base64: base64 })
+      })
+
+      const ocrResult = await ocrResponse.json()
+
+      // 3. Upload da imagem para o Storage (para manter referência)
       const supabase = createClient()
-      
-      // 1. Upload da imagem para o Storage
       const fileName = `ocr/${Date.now()}-${file.name}`
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('fotos-temp')
         .upload(fileName, file)
 
-      if (uploadError) throw new Error('Erro no upload: ' + uploadError.message)
-
-      // Obter URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('fotos-temp')
-        .getPublicUrl(fileName)
+      let publicUrl = ''
+      if (!uploadError) {
+        const { data } = supabase.storage.from('fotos-temp').getPublicUrl(fileName)
+        publicUrl = data.publicUrl
+      }
 
       setImageUrl(publicUrl)
 
-      // 2. Chamar a Edge Function de OCR
-      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-ocr', {
-        body: { image_url: publicUrl }
-      })
-
-      if (ocrError) {
-        console.error('Erro na Edge Function:', ocrError)
-        // Fallback para dados vazios se a Edge Function falhar
+      // 4. Processar resultado do OCR
+      if (!ocrResponse.ok || !ocrResult.success) {
+        console.error('Erro no OCR:', ocrResult.error)
+        // Fallback para dados vazios
         setOcrResult({
           success: false,
           dados: {
@@ -78,25 +93,30 @@ export default function FotoReciboPage() {
           image_url: publicUrl
         })
         setStep('review')
-        toast.warning('OCR não disponível', {
-          description: 'Preencha os dados manualmente.'
+        toast.warning('OCR não conseguiu extrair dados', {
+          description: ocrResult.error || 'Preencha os dados manualmente.'
         })
         return
       }
 
+      // Sucesso! Dados extraídos
       setOcrResult({
-        ...ocrData,
+        success: true,
+        dados: ocrResult.dados,
+        categoria_id: null,
+        fornecedor_id: null,
         image_url: publicUrl
       })
       setStep('review')
       
-      if (ocrData.dados?.confianca >= 0.7) {
+      const confianca = ocrResult.dados?.confianca || 0
+      if (confianca >= 0.7) {
         toast.success('Dados extraídos com sucesso!', {
-          description: `Confiança: ${Math.round(ocrData.dados.confianca * 100)}%`
+          description: `Confiança: ${Math.round(confianca * 100)}%`
         })
       } else {
         toast.info('Dados extraídos - verifique antes de confirmar', {
-          description: `Confiança: ${Math.round((ocrData.dados?.confianca || 0) * 100)}%`
+          description: `Confiança: ${Math.round(confianca * 100)}%`
         })
       }
 
@@ -115,14 +135,16 @@ export default function FotoReciboPage() {
     descricao: string
     valor: string
     data: string
-    fornecedor_id?: string
+    fornecedor_id: string
     categoria_id: string
+    etapa_relacionada_id?: string
     forma_pagamento: 'dinheiro' | 'pix' | 'cartao' | 'boleto' | 'cheque'
+    parcelas?: string
     nota_fiscal_numero?: string
     observacoes?: string
     nota_fiscal_url: string
   }) => {
-    if (!user) {
+    if (!currentUser) {
       toast.error('Usuário não encontrado')
       return
     }
@@ -130,32 +152,37 @@ export default function FotoReciboPage() {
     setIsSubmitting(true)
     try {
       const supabase = createClient()
+      const valorTotal = parseFloat(data.valor)
+      const numParcelas = parseInt(data.parcelas || '1')
       
-      const { error } = await supabase.from('gastos').insert({
+      const { error } = await supabase.from('compras').insert({
         descricao: data.descricao,
-        valor: parseFloat(data.valor),
-        data: data.data,
+        valor_total: valorTotal,
+        data_compra: data.data,
         categoria_id: data.categoria_id,
-        fornecedor_id: data.fornecedor_id || null,
+        fornecedor_id: data.fornecedor_id,
+        etapa_relacionada_id: data.etapa_relacionada_id || null,
         forma_pagamento: data.forma_pagamento,
+        parcelas: numParcelas,
+        data_primeira_parcela: data.data,
         nota_fiscal_url: data.nota_fiscal_url,
         nota_fiscal_numero: data.nota_fiscal_numero || null,
         observacoes: data.observacoes || null,
-        criado_por: user.id,
+        criado_por: currentUser.id,
         criado_via: 'ocr',
-        status: 'aprovado',
-        pago: true,
-        pago_em: data.data,
+        status: 'ativa',
+        valor_pago: valorTotal, // Marcando como já pago
+        parcelas_pagas: numParcelas,
       })
 
       if (error) throw error
 
-      toast.success('Lançamento criado com sucesso!')
-      router.push('/financeiro/lancamentos')
+      toast.success('Compra registrada com sucesso!')
+      router.push('/compras')
       
     } catch (error) {
       console.error('Erro ao salvar:', error)
-      toast.error('Erro ao salvar lançamento', {
+      toast.error('Erro ao salvar compra', {
         description: error instanceof Error ? error.message : 'Tente novamente'
       })
     } finally {
@@ -175,14 +202,14 @@ export default function FotoReciboPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/financeiro/lancamentos">
+          <Link href="/compras">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Camera className="h-6 w-6" />
-            Lançamento via Foto
+            Compra via Foto
           </h1>
           <p className="text-muted-foreground">
             Tire uma foto do recibo e os dados serão extraídos automaticamente

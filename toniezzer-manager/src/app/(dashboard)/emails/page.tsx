@@ -59,22 +59,45 @@ export default function EmailsPage() {
   const handleSync = async () => {
     setSyncing(true)
     try {
-      const supabase = createClient()
+      // 1. Sincronizar emails do servidor IMAP
+      toast.info('Conectando ao servidor de emails...')
       
-      // Chamar Edge Function de processamento de emails
-      const { data, error } = await supabase.functions.invoke('process-email')
+      const syncResponse = await fetch('/api/emails/sync', { method: 'POST' })
+      const syncResult = await syncResponse.json()
 
-      if (error) {
-        console.warn('Edge Function não disponível:', error)
-        toast.warning('Sincronização manual não disponível', {
-          description: 'A função de polling automático processa emails a cada 15 minutos.'
+      if (!syncResponse.ok) {
+        console.error('Erro na sincronização:', syncResult)
+        toast.error('Erro ao sincronizar', { 
+          description: syncResult.error || 'Erro desconhecido' 
         })
-      } else {
-        toast.success('Emails sincronizados!', {
-          description: `${data?.processed || 0} novos emails processados`
-        })
-        await loadEmails()
+        return
       }
+
+      toast.success(`${syncResult.newEmails} novos emails encontrados`)
+
+      // 2. Processar emails com IA (se houver novos)
+      if (syncResult.newEmails > 0) {
+        toast.info('Processando emails com IA...')
+        
+        const processResponse = await fetch('/api/emails/process', { method: 'POST' })
+        const processResult = await processResponse.json()
+
+        if (processResponse.ok) {
+          toast.success('Emails processados!', {
+            description: `${processResult.processed} emails analisados pela IA`
+          })
+        } else {
+          toast.warning('Erro ao processar com IA', {
+            description: processResult.error
+          })
+        }
+      }
+
+      await loadEmails()
+
+    } catch (error) {
+      console.error('Erro:', error)
+      toast.error('Erro na sincronização')
     } finally {
       setSyncing(false)
     }

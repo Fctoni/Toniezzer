@@ -162,7 +162,16 @@ export function FormAprovacao({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onAprovar)}>
           <CardContent className="space-y-4">
-            {confianca < 0.7 && (
+            {confianca === 0 && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium">Preencha manualmente</p>
+                  <p>Os dados da NF podem estar em um anexo (PDF/imagem). Por favor, verifique o anexo e preencha os campos abaixo.</p>
+                </div>
+              </div>
+            )}
+            {confianca > 0 && confianca < 0.7 && (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
                 <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
                 <p className="text-sm text-yellow-800">

@@ -15,13 +15,13 @@ import { toast } from 'sonner'
 
 export default function NovaReuniaoPage() {
   const router = useRouter()
-  const { user } = useCurrentUser()
+  const { currentUser } = useCurrentUser()
   const [titulo, setTitulo] = useState('')
   const [dataReuniao, setDataReuniao] = useState(new Date().toISOString().split('T')[0])
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleUpload = async (content: string, fileName: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast.error('Usuário não encontrado')
       return
     }
@@ -70,36 +70,42 @@ export default function NovaReuniaoPage() {
           data_reuniao: dataFinal,
           participantes: participantes.length > 0 ? participantes : null,
           resumo_markdown: content,
-          created_by: user.id,
+          created_by: currentUser.id,
         })
         .select()
         .single()
 
       if (reuniaoError) throw reuniaoError
 
-      // 2. Tentar processar com Edge Function (se disponível)
+      // 2. Processar com IA via API Route
       try {
-        const { data: processedData, error: processError } = await supabase.functions.invoke('process-plaud', {
-          body: {
+        const response = await fetch('/api/plaud', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             markdown: content,
             reuniao_id: reuniao.id,
-            autor_id: user.id,
-          }
+            autor_id: currentUser.id,
+          })
         })
 
-        if (processError) {
-          console.warn('Edge Function não disponível, processamento manual necessário:', processError)
-          toast.warning('Reunião criada, mas processamento de IA não disponível', {
-            description: 'As ações podem ser adicionadas manualmente.'
+        const processedData = await response.json()
+
+        if (!response.ok || !processedData.success) {
+          console.warn('Processamento de IA falhou:', processedData.error)
+          toast.warning('Reunião criada, mas processamento de IA falhou', {
+            description: processedData.error || 'As ações podem ser adicionadas manualmente.'
           })
-        } else if (processedData?.success) {
+        } else {
           toast.success('Reunião processada com sucesso!', {
             description: `${processedData.acoes_criadas || 0} ações extraídas`
           })
         }
       } catch (fnError) {
-        console.warn('Erro ao chamar Edge Function:', fnError)
-        // Não bloquear o fluxo se a Edge Function falhar
+        console.warn('Erro ao processar com IA:', fnError)
+        toast.warning('Reunião criada, mas processamento de IA falhou', {
+          description: 'As ações podem ser adicionadas manualmente.'
+        })
       }
 
       router.push(`/reunioes/${reuniao.id}`)
