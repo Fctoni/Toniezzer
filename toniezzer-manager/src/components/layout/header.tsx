@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useCurrentUser } from "@/lib/hooks/use-current-user";
 
 interface Notificacao {
   id: string;
@@ -28,34 +29,53 @@ interface Notificacao {
   link: string | null;
 }
 
+// Formata mensagem removendo tags de menção @[Nome](id) para @Nome
+const formatarMensagem = (mensagem: string | null): string => {
+  if (!mensagem) return "";
+  return mensagem.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1");
+};
+
 export function Header() {
+  const { currentUser, users, setCurrentUserId } = useCurrentUser();
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
 
+  const fetchNotificacoes = useCallback(async () => {
+    if (!currentUser) return;
+    
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("notificacoes")
+      .select("*")
+      .eq("usuario_id", currentUser.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (data) {
+      setNotificacoes(data);
+      setNaoLidas(data.filter((n) => !n.lida).length);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
+    fetchNotificacoes();
+  }, [fetchNotificacoes]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
     const supabase = createClient();
 
-    const fetchNotificacoes = async () => {
-      const { data } = await supabase
-        .from("notificacoes")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (data) {
-        setNotificacoes(data);
-        setNaoLidas(data.filter((n) => !n.lida).length);
-      }
-    };
-
-    fetchNotificacoes();
-
-    // Realtime subscription
     const channel = supabase
       .channel("notificacoes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notificacoes" },
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "notificacoes",
+          filter: `usuario_id=eq.${currentUser.id}`
+        },
         () => {
           fetchNotificacoes();
         }
@@ -65,7 +85,7 @@ export function Header() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUser, fetchNotificacoes]);
 
   const marcarComoLida = async (id: string) => {
     const supabase = createClient();
@@ -86,6 +106,15 @@ export function Header() {
       default:
         return "bg-primary/20 text-primary";
     }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -155,7 +184,7 @@ export function Header() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 pl-4">
-                    {notificacao.mensagem}
+                    {formatarMensagem(notificacao.mensagem)}
                   </p>
                   <span className="text-[10px] text-muted-foreground pl-4">
                     {formatDistanceToNow(new Date(notificacao.created_at), {
@@ -169,25 +198,60 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* User Menu */}
+        {/* User Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  UP
+                  {currentUser ? getInitials(currentUser.nome_completo) : "??"}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">
-                Usuário Principal
-              </span>
+              <div className="hidden sm:flex flex-col items-start">
+                <span className="text-sm font-medium">
+                  {currentUser?.nome_completo || "Selecione"}
+                </span>
+                {currentUser?.especialidade && (
+                  <span className="text-[10px] text-muted-foreground -mt-0.5">
+                    {currentUser.especialidade}
+                  </span>
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Simular Usuário</span>
+              <Badge variant="outline" className="text-[10px]">MVP</Badge>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            {users.map((user) => (
+              <DropdownMenuItem
+                key={user.id}
+                onClick={() => setCurrentUserId(user.id)}
+                className="flex items-center gap-3 cursor-pointer"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs bg-muted">
+                    {getInitials(user.nome_completo)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {user.nome_completo}
+                  </p>
+                  {user.especialidade && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.especialidade}
+                    </p>
+                  )}
+                </div>
+                {currentUser?.id === user.id && (
+                  <Check className="h-4 w-4 text-primary shrink-0" />
+                )}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

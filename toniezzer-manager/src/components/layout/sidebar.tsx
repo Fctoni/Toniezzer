@@ -11,6 +11,8 @@ import {
   Settings,
   Building2,
   ChevronLeft,
+  MessageSquare,
+  Users,
   Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,21 @@ const menuItems = [
     title: "Cronograma",
     href: "/cronograma",
     icon: Calendar,
+  },
+  {
+    title: "Comunicação",
+    href: "/comunicacao",
+    icon: MessageSquare,
+  },
+  {
+    title: "Fornecedores",
+    href: "/fornecedores",
+    icon: Users,
+  },
+  {
+    title: "Notificações",
+    href: "/notificacoes",
+    icon: Bell,
   },
   {
     title: "Documentos",

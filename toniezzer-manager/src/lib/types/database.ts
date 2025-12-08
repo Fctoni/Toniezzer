@@ -422,6 +422,117 @@ export interface Database {
           created_at?: string
         }
       }
+      topicos_comunicacao: {
+        Row: {
+          id: string
+          titulo: string
+          descricao: string | null
+          status: TopicoStatus
+          prioridade: TopicoPrioridade
+          etapa_relacionada_id: string | null
+          autor_id: string
+          fixado: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          descricao?: string | null
+          status?: TopicoStatus
+          prioridade?: TopicoPrioridade
+          etapa_relacionada_id?: string | null
+          autor_id: string
+          fixado?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          descricao?: string | null
+          status?: TopicoStatus
+          prioridade?: TopicoPrioridade
+          etapa_relacionada_id?: string | null
+          autor_id?: string
+          fixado?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      feed_comunicacao: {
+        Row: {
+          id: string
+          tipo: FeedTipo
+          conteudo: string
+          autor_id: string
+          topico_id: string | null
+          etapa_relacionada_id: string | null
+          gasto_relacionado_id: string | null
+          mencoes: string[] | null
+          anexos: Json | null
+          created_at: string
+          updated_at: string
+          editado: boolean
+        }
+        Insert: {
+          id?: string
+          tipo: FeedTipo
+          conteudo: string
+          autor_id: string
+          topico_id?: string | null
+          etapa_relacionada_id?: string | null
+          gasto_relacionado_id?: string | null
+          mencoes?: string[] | null
+          anexos?: Json | null
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+        Update: {
+          id?: string
+          tipo?: FeedTipo
+          conteudo?: string
+          autor_id?: string
+          topico_id?: string | null
+          etapa_relacionada_id?: string | null
+          gasto_relacionado_id?: string | null
+          mencoes?: string[] | null
+          anexos?: Json | null
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+      }
+      feed_comentarios: {
+        Row: {
+          id: string
+          feed_id: string
+          conteudo: string
+          autor_id: string
+          created_at: string
+          updated_at: string
+          editado: boolean
+        }
+        Insert: {
+          id?: string
+          feed_id: string
+          conteudo: string
+          autor_id: string
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+        Update: {
+          id?: string
+          feed_id?: string
+          conteudo?: string
+          autor_id?: string
+          created_at?: string
+          updated_at?: string
+          editado?: boolean
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -465,6 +576,12 @@ export type NotificacaoTipo =
   | 'email_novo' 
   | 'tarefa_atribuida' 
   | 'sistema'
+
+export type FeedTipo = 'post' | 'decisao' | 'alerta' | 'sistema'
+
+export type TopicoStatus = 'aberto' | 'resolvido' | 'arquivado'
+
+export type TopicoPrioridade = 'baixa' | 'normal' | 'alta' | 'urgente'
 
 // Type helpers
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
