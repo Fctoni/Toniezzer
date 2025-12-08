@@ -15,6 +15,10 @@ import {
   Users,
   Bell,
   Package,
+  Mail,
+  FileText,
+  Camera,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -37,6 +41,7 @@ const menuItems = [
     subItems: [
       { title: "Visão Geral", href: "/financeiro" },
       { title: "Lançamentos", href: "/financeiro/lancamentos" },
+      { title: "📷 Foto Recibo", href: "/financeiro/lancamentos/foto" },
       { title: "Orçamento", href: "/financeiro/orcamento" },
       { title: "Fluxo de Caixa", href: "/financeiro/fluxo-caixa" },
     ],
@@ -60,6 +65,15 @@ const menuItems = [
     title: "Notificações",
     href: "/notificacoes",
     icon: Bell,
+  },
+  {
+    title: "Automação IA",
+    href: "/emails",
+    icon: Bot,
+    subItems: [
+      { title: "📧 Emails", href: "/emails" },
+      { title: "🎙️ Reuniões", href: "/reunioes" },
+    ],
   },
   {
     title: "Documentos",

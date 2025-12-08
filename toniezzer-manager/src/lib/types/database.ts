@@ -552,6 +552,7 @@ export interface Database {
           topico_id: string | null
           etapa_relacionada_id: string | null
           gasto_relacionado_id: string | null
+          reuniao_relacionada_id: string | null
           mencoes: string[] | null
           anexos: Json | null
           created_at: string
@@ -566,6 +567,7 @@ export interface Database {
           topico_id?: string | null
           etapa_relacionada_id?: string | null
           gasto_relacionado_id?: string | null
+          reuniao_relacionada_id?: string | null
           mencoes?: string[] | null
           anexos?: Json | null
           created_at?: string
@@ -580,6 +582,7 @@ export interface Database {
           topico_id?: string | null
           etapa_relacionada_id?: string | null
           gasto_relacionado_id?: string | null
+          reuniao_relacionada_id?: string | null
           mencoes?: string[] | null
           anexos?: Json | null
           created_at?: string
@@ -614,6 +617,171 @@ export interface Database {
           created_at?: string
           updated_at?: string
           editado?: boolean
+        }
+      }
+      // FASE 3: Novas tabelas
+      configuracoes_sistema: {
+        Row: {
+          chave: string
+          valor: Json
+          descricao: string | null
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          chave: string
+          valor: Json
+          descricao?: string | null
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chave?: string
+          valor?: Json
+          descricao?: string | null
+          updated_by?: string | null
+          updated_at?: string
+        }
+      }
+      emails_monitorados: {
+        Row: {
+          id: string
+          email_id_externo: string
+          remetente: string
+          remetente_nome: string | null
+          assunto: string
+          corpo: string | null
+          data_recebimento: string
+          status: EmailStatus
+          anexos: Json | null
+          dados_extraidos: Json | null
+          gasto_sugerido_id: string | null
+          compra_sugerida_id: string | null
+          erro_mensagem: string | null
+          processado_em: string | null
+          processado_por: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email_id_externo: string
+          remetente: string
+          remetente_nome?: string | null
+          assunto: string
+          corpo?: string | null
+          data_recebimento: string
+          status?: EmailStatus
+          anexos?: Json | null
+          dados_extraidos?: Json | null
+          gasto_sugerido_id?: string | null
+          compra_sugerida_id?: string | null
+          erro_mensagem?: string | null
+          processado_em?: string | null
+          processado_por?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email_id_externo?: string
+          remetente?: string
+          remetente_nome?: string | null
+          assunto?: string
+          corpo?: string | null
+          data_recebimento?: string
+          status?: EmailStatus
+          anexos?: Json | null
+          dados_extraidos?: Json | null
+          gasto_sugerido_id?: string | null
+          compra_sugerida_id?: string | null
+          erro_mensagem?: string | null
+          processado_em?: string | null
+          processado_por?: string | null
+          created_at?: string
+        }
+      }
+      reunioes: {
+        Row: {
+          id: string
+          titulo: string
+          data_reuniao: string
+          participantes: string[] | null
+          resumo_markdown: string
+          arquivo_original_url: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          data_reuniao: string
+          participantes?: string[] | null
+          resumo_markdown: string
+          arquivo_original_url?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          data_reuniao?: string
+          participantes?: string[] | null
+          resumo_markdown?: string
+          arquivo_original_url?: string | null
+          created_by?: string
+          created_at?: string
+        }
+      }
+      reunioes_acoes: {
+        Row: {
+          id: string
+          reuniao_id: string
+          tipo: AcaoTipo
+          descricao: string
+          responsavel_id: string | null
+          prazo: string | null
+          valor: number | null
+          categoria_id: string | null
+          etapa_id: string | null
+          status: AcaoStatus
+          gasto_criado_id: string | null
+          compra_criada_id: string | null
+          feed_criado_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reuniao_id: string
+          tipo: AcaoTipo
+          descricao: string
+          responsavel_id?: string | null
+          prazo?: string | null
+          valor?: number | null
+          categoria_id?: string | null
+          etapa_id?: string | null
+          status?: AcaoStatus
+          gasto_criado_id?: string | null
+          compra_criada_id?: string | null
+          feed_criado_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reuniao_id?: string
+          tipo?: AcaoTipo
+          descricao?: string
+          responsavel_id?: string | null
+          prazo?: string | null
+          valor?: number | null
+          categoria_id?: string | null
+          etapa_id?: string | null
+          status?: AcaoStatus
+          gasto_criado_id?: string | null
+          compra_criada_id?: string | null
+          feed_criado_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
     }
@@ -669,6 +837,19 @@ export type FeedTipo = 'post' | 'decisao' | 'alerta' | 'sistema'
 export type TopicoStatus = 'aberto' | 'resolvido' | 'arquivado'
 
 export type TopicoPrioridade = 'baixa' | 'normal' | 'alta' | 'urgente'
+
+// FASE 3: Novos enums
+export type EmailStatus = 
+  | 'nao_processado'
+  | 'processando'
+  | 'aguardando_revisao'
+  | 'processado'
+  | 'erro'
+  | 'ignorado'
+
+export type AcaoTipo = 'decisao' | 'tarefa' | 'gasto' | 'problema' | 'mudanca_escopo'
+
+export type AcaoStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado'
 
 // Type helpers
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']

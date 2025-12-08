@@ -1,9 +1,9 @@
 # 📋 PLANO DE IMPLEMENTAÇÃO - FASE 3: Automação com IA
 
-**Projeto:** Toniezzer Manager  
-**Fase:** 3 - Automação com IA  
-**Data:** 08/12/2024  
-**Duração Estimada:** 2-3 semanas  
+**Projeto:** Toniezzer Manager
+**Fase:** 3 - Automação com IA
+**Data:** 08/12/2024
+**Duração Estimada:** 2-3 semanas
 **Status:** 🔵 Pronto para iniciar
 
 ---
@@ -20,40 +20,44 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 
 ## 📊 RESUMO TÉCNICO
 
-| Item | Quantidade | Detalhes |
-|------|------------|----------|
-| **Novas Tabelas** | 4 | emails_monitorados, reunioes, reunioes_acoes, configuracoes_sistema |
-| **Edge Functions** | 3 | process-ocr, process-email, process-plaud |
-| **Novas Páginas** | 6 | /emails, /emails/[id], /reunioes, /reunioes/nova, /reunioes/[id], OCR mobile |
-| **Novos Componentes** | 10+ | Kanban, cards, forms, previews |
-| **Integrações** | 2 | Google Gemini API, IMAP |
+| Item                        | Quantidade | Detalhes                                                                     |
+| --------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| **Novas Tabelas**     | 4          | emails_monitorados, reunioes, reunioes_acoes, configuracoes_sistema          |
+| **Edge Functions**    | 3          | process-ocr, process-email, process-plaud                                    |
+| **Novas Páginas**    | 6          | /emails, /emails/[id], /reunioes, /reunioes/nova, /reunioes/[id], OCR mobile |
+| **Novos Componentes** | 10+        | Kanban, cards, forms, previews                                               |
+| **Integrações**     | 2          | Google Gemini API, IMAP                                                      |
 
 ---
 
 ## 🔧 PRÉ-REQUISITOS
 
 ### **1. Google Gemini API Key** ✅ CONFIGURADO
+
 - **API Key:** `AIzaSyAMXHA5c036cagXV2HruevpTCamENy8Vzg`
 - **Modelo Principal:** `gemini-3-pro` (mais recente e avançado)
 - **Modelo Fallback:** `gemini-3-flash` (versão rápida do Gemini 3)
 - **Console:** https://aistudio.google.com/
 
 > 💡 **Por que Gemini 3:**
+>
 > - Raciocínio avançado (nível PhD)
 > - Compreensão multimodal superior (texto, imagem, áudio, vídeo)
 > - OCR nativo de alta precisão
 > - Melhor extração de dados estruturados
 
 ### **2. Credenciais IMAP** ✅ CONFIGURADO
-| Configuração | Valor |
-|--------------|-------|
-| **Servidor** | `imap.umbler.com` |
-| **Porta** | `993` (SSL ativado) |
-| **Usuário** | `casa@toniezzer.com` |
-| **Senha** | `#1Soeuseitoniezzer` |
-| **Protocolo** | IMAP com SSL/TLS |
+
+| Configuração      | Valor                  |
+| ------------------- | ---------------------- |
+| **Servidor**  | `imap.umbler.com`    |
+| **Porta**     | `993` (SSL ativado)  |
+| **Usuário**  | `casa@toniezzer.com` |
+| **Senha**     | `#1Soeuseitoniezzer` |
+| **Protocolo** | IMAP com SSL/TLS       |
 
 ### **3. Template Plaud** (para reuniões)
+
 - Configurar template customizado no app do Plaud
 - Garantir que exportações saiam em Markdown estruturado
 
@@ -62,6 +66,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ## 📦 ORDEM DE IMPLEMENTAÇÃO
 
 ### **ETAPA 1: Infraestrutura Base** (Dia 1-2)
+
 > Setup inicial que todas as funcionalidades precisam
 
 ```
@@ -72,6 +77,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ```
 
 ### **ETAPA 2: OCR de Recibos** (Dia 3-5)
+
 > Funcionalidade mais simples, entrega valor imediato
 
 ```
@@ -83,6 +89,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ```
 
 ### **ETAPA 3: Processamento de Reuniões (Plaud)** (Dia 6-9)
+
 > Complexidade média, não depende de IMAP
 
 ```
@@ -94,6 +101,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ```
 
 ### **ETAPA 4: Monitoramento de Email** (Dia 10-14)
+
 > Mais complexa, requer polling e IMAP
 
 ```
@@ -106,6 +114,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ```
 
 ### **ETAPA 5: Testes e Refinamentos** (Dia 15-17)
+
 ```
 5.1 Testar OCR com diferentes tipos de recibo
 5.2 Testar parsing de Markdown do Plaud
@@ -119,6 +128,7 @@ Implementar **automação inteligente** para reduzir trabalho manual no lançame
 ## 🗄️ MIGRATIONS (SQL)
 
 ### **Migration 1: configuracoes_sistema**
+
 ```sql
 -- 013_configuracoes_sistema.sql
 CREATE TABLE configuracoes_sistema (
@@ -139,6 +149,7 @@ INSERT INTO configuracoes_sistema (chave, valor, descricao) VALUES
 > 💡 **Nota:** A API key e senha do email também serão configuradas nos Secrets do Supabase Edge Functions para maior segurança.
 
 ### **Migration 2: emails_monitorados**
+
 ```sql
 -- 014_emails_monitorados.sql
 CREATE TABLE emails_monitorados (
@@ -174,6 +185,7 @@ CREATE INDEX idx_emails_remetente ON emails_monitorados(remetente);
 ```
 
 ### **Migration 3: reunioes e reunioes_acoes**
+
 ```sql
 -- 015_reunioes.sql
 CREATE TABLE reunioes (
@@ -215,6 +227,7 @@ CREATE INDEX idx_acoes_prazo ON reunioes_acoes(prazo);
 ```
 
 ### **Migration 4: Adicionar reuniao_relacionada_id ao feed**
+
 ```sql
 -- 016_add_reuniao_to_feed.sql
 ALTER TABLE feed_comunicacao 
@@ -232,6 +245,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 **Endpoint:** `POST /functions/v1/process-ocr`
 
 **Input:**
+
 ```typescript
 {
   image_url: string  // URL da imagem no Storage (fotos-temp)
@@ -239,6 +253,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ```
 
 **Output:**
+
 ```typescript
 {
   success: boolean
@@ -259,6 +274,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ```
 
 **Fluxo:**
+
 1. Download da imagem do Storage
 2. Enviar para Gemini 3 com prompt de extração (OCR + análise)
 3. Parse do JSON retornado
@@ -277,6 +293,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 **Trigger:** A cada 15 minutos
 
 **Fluxo:**
+
 1. Conectar via IMAP
 2. Buscar emails não lidos
 3. Para cada email:
@@ -294,6 +311,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 **Endpoint:** `POST /functions/v1/process-plaud`
 
 **Input:**
+
 ```typescript
 {
   markdown: string      // Conteúdo do arquivo Markdown
@@ -303,6 +321,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ```
 
 **Output:**
+
 ```typescript
 {
   success: boolean
@@ -341,11 +360,13 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ### **1. /emails** (Kanban de Emails)
 
 **Layout:** 3 colunas
+
 - Não Processados
 - Aguardando Revisão
 - Processados
 
 **Componentes:**
+
 - `KanbanEmails` - Container principal
 - `EmailCard` - Card de email em cada coluna
 - `FiltrosEmail` - Filtros por data, status, remetente
@@ -355,10 +376,12 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ### **2. /emails/[id]** (Detalhes do Email)
 
 **Layout:** 2 colunas
+
 - Esquerda: Preview do email + anexos
 - Direita: Formulário de dados extraídos (editável)
 
 **Ações:**
+
 - Aprovar → Cria gasto/compra
 - Rejeitar → Marca como ignorado
 - Reprocessar → Tenta OCR novamente
@@ -368,6 +391,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ### **3. /reunioes** (Lista de Reuniões)
 
 **Layout:** Lista ou cards
+
 - Título, data, participantes
 - Qtd de action items pendentes
 - Link para detalhes
@@ -377,6 +401,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ### **4. /reunioes/nova** (Upload Plaud)
 
 **Formulário:**
+
 - Título (auto-preenchido do Markdown)
 - Data da reunião
 - Upload do arquivo .md ou .txt
@@ -388,6 +413,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ### **5. /reunioes/[id]** (Visualização da Reunião)
 
 **Seções:**
+
 - Header: Título, data, participantes
 - Resumo: Markdown renderizado
 - Action Items: Lista com checkboxes
@@ -402,6 +428,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 **Opção 2:** Nova rota `/financeiro/lancamentos/foto`
 
 **Fluxo:**
+
 1. Abrir câmera ou selecionar arquivo
 2. Upload para Storage
 3. Chamar Edge Function
@@ -413,6 +440,7 @@ CREATE INDEX idx_feed_reuniao ON feed_comunicacao(reuniao_relacionada_id);
 ## 🎨 COMPONENTES
 
 ### **Componentes de Email:**
+
 ```
 components/features/emails/
 ├── kanban-emails.tsx      # Container do Kanban
@@ -423,6 +451,7 @@ components/features/emails/
 ```
 
 ### **Componentes de Reunião:**
+
 ```
 components/features/reunioes/
 ├── upload-plaud.tsx       # Dropzone + preview
@@ -433,6 +462,7 @@ components/features/reunioes/
 ```
 
 ### **Componentes de OCR:**
+
 ```
 components/features/ocr/
 ├── camera-capture.tsx     # Captura de câmera (mobile)
@@ -539,6 +569,7 @@ interface Tables {
 ## ✅ CHECKLIST DE TESTES
 
 ### **OCR de Recibos:**
+
 - [ ] Upload de foto tirada pelo celular
 - [ ] Upload de imagem de arquivo
 - [ ] Extração de valor correto
@@ -548,6 +579,7 @@ interface Tables {
 - [ ] Gasto é criado corretamente
 
 ### **Monitoramento de Email:**
+
 - [ ] Enviar email de teste com NF anexa (PDF)
 - [ ] Enviar email de teste com NF anexa (imagem)
 - [ ] Enviar email de teste com XML de NF-e
@@ -558,6 +590,7 @@ interface Tables {
 - [ ] Notificação é criada para admins
 
 ### **Reuniões Plaud:**
+
 - [ ] Upload de arquivo .md funciona
 - [ ] Parser extrai decisões corretamente
 - [ ] Parser extrai action items com responsável e prazo
@@ -591,6 +624,7 @@ EMAIL_IMAP_PASSWORD=#1Soeuseitoniezzer
 ## 📁 STORAGE BUCKETS
 
 ### **Bucket: fotos-temp**
+
 ```typescript
 {
   id: 'fotos-temp',
@@ -607,23 +641,23 @@ EMAIL_IMAP_PASSWORD=#1Soeuseitoniezzer
 
 ## 📅 CRONOGRAMA DETALHADO
 
-| Dia | Tarefa | Entrega |
-|-----|--------|---------|
-| 1 | Setup: migrations, storage, secrets | Infra pronta |
-| 2 | Setup: types TypeScript, client Gemini | Types atualizados |
-| 3 | OCR: Edge Function process-ocr | Function deployada |
-| 4 | OCR: Componentes (camera, preview, form) | UI pronta |
-| 5 | OCR: Integração com fluxo de gastos | OCR funcionando |
-| 6 | Reuniões: Migrations, types | Tabelas criadas |
-| 7 | Reuniões: Edge Function process-plaud | Function deployada |
-| 8 | Reuniões: Páginas (/reunioes, /nova) | Upload funcionando |
-| 9 | Reuniões: Página /[id], backlinks | Visualização completa |
-| 10 | Email: Migration, types | Tabela criada |
-| 11 | Email: Edge Function process-email | Function deployada |
-| 12 | Email: Páginas (/emails, Kanban) | Lista funcionando |
-| 13 | Email: Página /[id], aprovação | Fluxo completo |
-| 14 | Email: Cron job, notificações | Automação ativa |
-| 15-17 | Testes e refinamentos | Fase 3 completa |
+| Dia   | Tarefa                                   | Entrega                 |
+| ----- | ---------------------------------------- | ----------------------- |
+| 1     | Setup: migrations, storage, secrets      | Infra pronta            |
+| 2     | Setup: types TypeScript, client Gemini   | Types atualizados       |
+| 3     | OCR: Edge Function process-ocr           | Function deployada      |
+| 4     | OCR: Componentes (camera, preview, form) | UI pronta               |
+| 5     | OCR: Integração com fluxo de gastos    | OCR funcionando         |
+| 6     | Reuniões: Migrations, types             | Tabelas criadas         |
+| 7     | Reuniões: Edge Function process-plaud   | Function deployada      |
+| 8     | Reuniões: Páginas (/reunioes, /nova)   | Upload funcionando      |
+| 9     | Reuniões: Página /[id], backlinks      | Visualização completa |
+| 10    | Email: Migration, types                  | Tabela criada           |
+| 11    | Email: Edge Function process-email       | Function deployada      |
+| 12    | Email: Páginas (/emails, Kanban)        | Lista funcionando       |
+| 13    | Email: Página /[id], aprovação        | Fluxo completo          |
+| 14    | Email: Cron job, notificações          | Automação ativa       |
+| 15-17 | Testes e refinamentos                    | Fase 3 completa         |
 
 ---
 
@@ -631,11 +665,12 @@ EMAIL_IMAP_PASSWORD=#1Soeuseitoniezzer
 
 **Checklist de pré-requisitos:**
 
-1. [x] API Key do Gemini disponível ✅
-2. [x] Credenciais IMAP disponíveis ✅
+1. [X] API Key do Gemini disponível ✅
+2. [X] Credenciais IMAP disponíveis ✅
 3. [ ] Aprovação deste plano
 
 **Comando para iniciar:**
+
 ```
 "Iniciar FASE 3 - Etapa 1: Infraestrutura Base"
 ```
@@ -688,6 +723,7 @@ async function processImage(imageBase64: string) {
 ```
 
 ### **Vantagens do Gemini 3:**
+
 - ✅ Raciocínio avançado (nível PhD)
 - ✅ OCR nativo de alta precisão
 - ✅ Compreensão multimodal superior (texto, imagem, áudio, vídeo)
@@ -697,7 +733,6 @@ async function processImage(imageBase64: string) {
 
 ---
 
-**Última Atualização:** 08/12/2024  
-**Autor:** Claude (Anthropic)  
+**Última Atualização:** 08/12/2024
+**Autor:** Claude (Anthropic)
 **Status:** ✅ Credenciais configuradas, pronto para iniciar implementação
-
