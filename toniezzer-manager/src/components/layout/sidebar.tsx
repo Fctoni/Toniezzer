@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Users,
   Bell,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -23,6 +24,11 @@ const menuItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Compras",
+    href: "/compras",
+    icon: Package,
   },
   {
     title: "Financeiro",

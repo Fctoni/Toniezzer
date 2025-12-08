@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, Trash2, FileText } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, FileText, Package, CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
 
 interface Gasto {
@@ -30,9 +30,13 @@ interface Gasto {
   status: string;
   nota_fiscal_url: string | null;
   criado_via: string;
+  pago: boolean;
+  pago_em: string | null;
+  compra_id: string | null;
   categorias: { nome: string; cor: string } | null;
   fornecedores: { nome: string } | null;
   etapas: { nome: string } | null;
+  compras: { id: string; descricao: string } | null;
 }
 
 interface LancamentosTableProps {
@@ -73,12 +77,29 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
     return formas[forma] || forma;
   };
 
+  const getPagoBadge = (pago: boolean) => {
+    if (pago) {
+      return (
+        <Badge variant="outline" className="text-green-600 border-green-600">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Pago
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-amber-600 border-amber-600">
+        <Clock className="h-3 w-3 mr-1" />
+        Pendente
+      </Badge>
+    );
+  };
+
   if (gastos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <p className="text-muted-foreground mb-4">Nenhum lançamento encontrado</p>
         <Button asChild>
-          <Link href="/financeiro/lancamentos/novo">Criar primeiro lançamento</Link>
+          <Link href="/compras/nova">Criar primeira compra</Link>
         </Button>
       </div>
     );
@@ -90,11 +111,10 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
         <TableRow>
           <TableHead>Data</TableHead>
           <TableHead>Descrição</TableHead>
+          <TableHead>Origem</TableHead>
           <TableHead>Categoria</TableHead>
-          <TableHead>Fornecedor</TableHead>
-          <TableHead>Pagamento</TableHead>
           <TableHead className="text-right">Valor</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>Pagamento</TableHead>
           <TableHead className="w-[50px]"></TableHead>
         </TableRow>
       </TableHeader>
@@ -113,6 +133,19 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
               </div>
             </TableCell>
             <TableCell>
+              {gasto.compra_id && gasto.compras ? (
+                <Link
+                  href={`/compras/${gasto.compra_id}`}
+                  className="flex items-center gap-1 text-primary hover:underline text-sm"
+                >
+                  <Package className="h-3 w-3" />
+                  Ver Compra
+                </Link>
+              ) : (
+                <span className="text-xs text-muted-foreground">Avulso</span>
+              )}
+            </TableCell>
+            <TableCell>
               <div className="flex items-center gap-2">
                 <div
                   className="h-2 w-2 rounded-full"
@@ -121,12 +154,10 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
                 <span className="text-sm">{gasto.categorias?.nome || "-"}</span>
               </div>
             </TableCell>
-            <TableCell>{gasto.fornecedores?.nome || "-"}</TableCell>
-            <TableCell>{getFormaPagamento(gasto.forma_pagamento)}</TableCell>
             <TableCell className="text-right font-medium">
               {formatCurrency(Number(gasto.valor))}
             </TableCell>
-            <TableCell>{getStatusBadge(gasto.status)}</TableCell>
+            <TableCell>{getPagoBadge(gasto.pago)}</TableCell>
             <TableCell>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -135,26 +166,21 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href={`/financeiro/lancamentos/${gasto.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Ver detalhes
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Editar
-                  </DropdownMenuItem>
-                  {gasto.nota_fiscal_url && (
-                    <DropdownMenuItem>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Ver NF
+                  {gasto.compra_id ? (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/compras/${gasto.compra_id}`}>
+                        <Package className="mr-2 h-4 w-4" />
+                        Ver compra
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/financeiro/lancamentos/${gasto.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver detalhes
+                      </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem className="text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>

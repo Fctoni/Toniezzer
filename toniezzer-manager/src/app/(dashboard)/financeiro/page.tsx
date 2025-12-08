@@ -7,7 +7,7 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Plus,
+  Package,
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
@@ -69,9 +69,9 @@ export default async function FinanceiroPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/financeiro/lancamentos/novo">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Lançamento
+          <Link href="/compras/nova">
+            <Package className="mr-2 h-4 w-4" />
+            Nova Compra
           </Link>
         </Button>
       </div>

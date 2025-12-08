@@ -282,6 +282,9 @@ export interface Database {
           criado_por: string | null
           criado_via: CriadoVia
           observacoes: string | null
+          compra_id: string | null
+          pago: boolean
+          pago_em: string | null
           created_at: string
           updated_at: string
         }
@@ -306,6 +309,9 @@ export interface Database {
           criado_por?: string | null
           criado_via?: CriadoVia
           observacoes?: string | null
+          compra_id?: string | null
+          pago?: boolean
+          pago_em?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -330,6 +336,83 @@ export interface Database {
           criado_por?: string | null
           criado_via?: CriadoVia
           observacoes?: string | null
+          compra_id?: string | null
+          pago?: boolean
+          pago_em?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      compras: {
+        Row: {
+          id: string
+          descricao: string
+          valor_total: number
+          data_compra: string
+          fornecedor_id: string
+          categoria_id: string
+          subcategoria_id: string | null
+          etapa_relacionada_id: string | null
+          centro_custo_id: string | null
+          forma_pagamento: FormaPagamento
+          parcelas: number
+          data_primeira_parcela: string
+          nota_fiscal_url: string | null
+          nota_fiscal_numero: string | null
+          status: CompraStatus
+          valor_pago: number
+          parcelas_pagas: number
+          observacoes: string | null
+          criado_por: string | null
+          criado_via: CompraCriadoVia
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          descricao: string
+          valor_total: number
+          data_compra: string
+          fornecedor_id: string
+          categoria_id: string
+          subcategoria_id?: string | null
+          etapa_relacionada_id?: string | null
+          centro_custo_id?: string | null
+          forma_pagamento: FormaPagamento
+          parcelas?: number
+          data_primeira_parcela: string
+          nota_fiscal_url?: string | null
+          nota_fiscal_numero?: string | null
+          status?: CompraStatus
+          valor_pago?: number
+          parcelas_pagas?: number
+          observacoes?: string | null
+          criado_por?: string | null
+          criado_via?: CompraCriadoVia
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          descricao?: string
+          valor_total?: number
+          data_compra?: string
+          fornecedor_id?: string
+          categoria_id?: string
+          subcategoria_id?: string | null
+          etapa_relacionada_id?: string | null
+          centro_custo_id?: string | null
+          forma_pagamento?: FormaPagamento
+          parcelas?: number
+          data_primeira_parcela?: string
+          nota_fiscal_url?: string | null
+          nota_fiscal_numero?: string | null
+          status?: CompraStatus
+          valor_pago?: number
+          parcelas_pagas?: number
+          observacoes?: string | null
+          criado_por?: string | null
+          criado_via?: CompraCriadoVia
           created_at?: string
           updated_at?: string
         }
@@ -562,6 +645,10 @@ export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao' | 'boleto' | 'cheque'
 export type GastoStatus = 'pendente_aprovacao' | 'aprovado' | 'rejeitado'
 
 export type CriadoVia = 'manual' | 'email' | 'ocr' | 'bancario'
+
+export type CompraStatus = 'ativa' | 'quitada' | 'cancelada'
+
+export type CompraCriadoVia = 'manual' | 'email' | 'ocr' | 'plaud'
 
 export type DocumentoTipo = 'foto' | 'planta' | 'contrato' | 'nota_fiscal' | 'outro'
 
