@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger 
 } from '@/components/ui/dialog'
-import { Mail, Paperclip, Calendar, Download, Eye, ExternalLink, Loader2 } from 'lucide-react'
+import { Mail, Paperclip, Calendar, Download, Eye, ExternalLink, Loader2, Bug } from 'lucide-react'
 import type { Tables } from '@/lib/types/database'
 
 type Email = Tables<'emails_monitorados'>
@@ -23,6 +23,11 @@ interface EmailPreviewProps {
 export function EmailPreview({ email }: EmailPreviewProps) {
   const [loadingAnexo, setLoadingAnexo] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [showRawResponse, setShowRawResponse] = useState(false)
+  
+  const dadosExtraidos = email.dados_extraidos as {
+    _gemini_raw?: string
+  } | null
   
   const anexos = email.anexos as Array<{
     nome: string
@@ -229,6 +234,28 @@ export function EmailPreview({ email }: EmailPreviewProps) {
               <strong>Erro:</strong> {email.erro_mensagem}
             </p>
           </div>
+        )}
+
+        {/* Botão para ver resposta bruta do Gemini */}
+        {dadosExtraidos?._gemini_raw && (
+          <Dialog open={showRawResponse} onOpenChange={setShowRawResponse}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full gap-2">
+                <Bug className="h-4 w-4" />
+                Ver resposta bruta da IA
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Resposta bruta do Gemini</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="h-[60vh]">
+                <pre className="bg-muted p-4 rounded text-xs whitespace-pre-wrap font-mono">
+                  {dadosExtraidos._gemini_raw}
+                </pre>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
         )}
       </CardContent>
     </Card>

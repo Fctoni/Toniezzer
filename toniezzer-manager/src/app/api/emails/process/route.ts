@@ -74,6 +74,8 @@ async function processarImagem(base64: string): Promise<DadosExtraidos> {
 
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
   
+  console.log('[GEMINI] Enviando imagem para processamento...')
+  
   const response = await fetch(geminiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -113,36 +115,63 @@ Regras:
       }],
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 10240,
       }
     })
   })
 
   if (!response.ok) {
-    throw new Error('Erro na API Gemini')
+    const errorBody = await response.text()
+    console.error('[GEMINI] Erro HTTP:', response.status, errorBody)
+    throw new Error(`Erro na API Gemini (HTTP ${response.status}): ${errorBody.substring(0, 200)}`)
   }
 
   const result = await response.json()
+  console.log('[GEMINI] Resposta recebida:', JSON.stringify(result).substring(0, 500))
+  
   const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text
 
   if (!textResponse) {
-    throw new Error('Resposta vazia do Gemini')
+    const finishReason = result.candidates?.[0]?.finishReason
+    const safetyRatings = result.candidates?.[0]?.safetyRatings
+    console.error('[GEMINI] Resposta vazia. finishReason:', finishReason, 'safetyRatings:', safetyRatings)
+    throw new Error(`Resposta vazia do Gemini. Motivo: ${finishReason || 'desconhecido'}`)
   }
 
+  console.log('[GEMINI] Texto extraído:', textResponse.substring(0, 300))
+  
   const cleanJson = textResponse.replace(/```json\n?|```\n?/g, '').trim()
-  return JSON.parse(cleanJson)
+  
+  try {
+    const dados = JSON.parse(cleanJson)
+    // Adicionar resposta bruta para debug
+    dados._gemini_raw = textResponse
+    return dados
+  } catch (parseError) {
+    console.error('[GEMINI] Erro ao parsear JSON:', cleanJson)
+    throw new Error(`Erro ao parsear resposta do Gemini: ${cleanJson.substring(0, 100)}`)
+  }
 }
 
 // Processar PDF - extrair texto e enviar para Gemini
 async function processarPDF(buffer: Buffer): Promise<DadosExtraidos> {
   // Importar pdf-parse dinamicamente
-  const pdfParse = (await import('pdf-parse')).default
+  console.log('[PDF] Iniciando processamento, tamanho do buffer:', buffer.length)
   
-  const pdfData = await pdfParse(buffer)
+  let pdfData
+  try {
+    const pdfParse = (await import('pdf-parse')).default
+    pdfData = await pdfParse(buffer)
+  } catch (pdfError) {
+    console.error('[PDF] Erro ao parsear PDF:', pdfError)
+    throw new Error(`Erro ao parsear PDF: ${pdfError instanceof Error ? pdfError.message : 'erro desconhecido'}`)
+  }
   
-  console.log('[PROCESS] Texto extraído do PDF:', pdfData.text.substring(0, 500))
+  console.log('[PDF] Texto extraído (primeiros 500 chars):', pdfData.text.substring(0, 500))
+  console.log('[PDF] Total de caracteres extraídos:', pdfData.text.length)
   
   if (!pdfData.text || pdfData.text.trim().length < 10) {
+    console.log('[PDF] PDF sem texto extraível (pode ser imagem escaneada)')
     return {
       fornecedor: null,
       cnpj: null,
@@ -161,6 +190,8 @@ async function processarPDF(buffer: Buffer): Promise<DadosExtraidos> {
   }
 
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
+  
+  console.log('[GEMINI] Enviando texto do PDF para análise...')
   
   const response = await fetch(geminiUrl, {
     method: 'POST',
@@ -196,24 +227,41 @@ Regras:
       }],
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 10240,
       }
     })
   })
 
   if (!response.ok) {
-    throw new Error('Erro na API Gemini')
+    const errorBody = await response.text()
+    console.error('[GEMINI] Erro HTTP:', response.status, errorBody)
+    throw new Error(`Erro na API Gemini (HTTP ${response.status}): ${errorBody.substring(0, 200)}`)
   }
 
   const result = await response.json()
+  console.log('[GEMINI] Resposta recebida:', JSON.stringify(result).substring(0, 500))
+  
   const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text
 
   if (!textResponse) {
-    throw new Error('Resposta vazia do Gemini')
+    const finishReason = result.candidates?.[0]?.finishReason
+    console.error('[GEMINI] Resposta vazia. finishReason:', finishReason)
+    throw new Error(`Resposta vazia do Gemini. Motivo: ${finishReason || 'desconhecido'}`)
   }
 
+  console.log('[GEMINI] Texto extraído:', textResponse.substring(0, 300))
+  
   const cleanJson = textResponse.replace(/```json\n?|```\n?/g, '').trim()
-  return JSON.parse(cleanJson)
+  
+  try {
+    const dados = JSON.parse(cleanJson)
+    // Adicionar resposta bruta para debug
+    dados._gemini_raw = textResponse
+    return dados
+  } catch (parseError) {
+    console.error('[GEMINI] Erro ao parsear JSON:', cleanJson)
+    throw new Error(`Erro ao parsear resposta do Gemini: ${cleanJson.substring(0, 100)}`)
+  }
 }
 
 // Processar XML de NF-e - parser direto
@@ -361,6 +409,9 @@ export async function POST(request: NextRequest) {
         }
 
         let dadosExtraidos: DadosExtraidos | null = null
+        const errosAnexos: string[] = []
+        let anexosProcessados = 0
+        let anexosNaoSuportados: string[] = []
 
         for (const anexo of anexos) {
           console.log('[EMAIL PROCESS] Processando anexo:', anexo.nome, anexo.tipo)
@@ -370,7 +421,9 @@ export async function POST(request: NextRequest) {
             const buffer = await baixarAnexo(anexo.uid, anexo.part)
             
             if (!buffer) {
-              console.log('[EMAIL PROCESS] Não foi possível baixar o anexo')
+              const msg = `Anexo "${anexo.nome}": falha ao baixar do servidor IMAP`
+              console.log('[EMAIL PROCESS]', msg)
+              errosAnexos.push(msg)
               continue
             }
 
@@ -379,21 +432,44 @@ export async function POST(request: NextRequest) {
               console.log('[EMAIL PROCESS] Processando como IMAGEM (OCR)...')
               const base64 = buffer.toString('base64')
               dadosExtraidos = await processarImagem(base64)
+              anexosProcessados++
             } else if (anexo.tipo.includes('pdf')) {
               console.log('[EMAIL PROCESS] Processando como PDF...')
               dadosExtraidos = await processarPDF(buffer)
+              anexosProcessados++
             } else if (anexo.tipo.includes('xml')) {
               console.log('[EMAIL PROCESS] Processando como XML (NF-e)...')
               dadosExtraidos = await processarXML(buffer)
+              anexosProcessados++
+            } else {
+              anexosNaoSuportados.push(`${anexo.nome} (${anexo.tipo})`)
+              console.log('[EMAIL PROCESS] Tipo de anexo não suportado:', anexo.tipo)
+              continue
             }
 
             if (dadosExtraidos && dadosExtraidos.confianca >= 0.5) {
               console.log('[EMAIL PROCESS] Dados extraídos! Confiança:', dadosExtraidos.confianca)
               break
+            } else if (dadosExtraidos) {
+              errosAnexos.push(`Anexo "${anexo.nome}": confiança baixa (${(dadosExtraidos.confianca * 100).toFixed(0)}%)`)
             }
           } catch (processError) {
+            const errorMsg = processError instanceof Error ? processError.message : 'Erro desconhecido'
             console.error('[EMAIL PROCESS] Erro ao processar anexo:', processError)
+            errosAnexos.push(`Anexo "${anexo.nome}": ${errorMsg}`)
           }
+        }
+
+        // Montar mensagem de erro detalhada
+        let erroDetalhado = ''
+        if (anexosNaoSuportados.length > 0) {
+          erroDetalhado += `Tipos não suportados: ${anexosNaoSuportados.join(', ')}. `
+        }
+        if (errosAnexos.length > 0) {
+          erroDetalhado += `Erros: ${errosAnexos.join('; ')}. `
+        }
+        if (anexosProcessados === 0 && anexos.length > 0) {
+          erroDetalhado += `Nenhum dos ${anexos.length} anexos pôde ser processado. `
         }
 
         // Salvar resultados
@@ -403,21 +479,27 @@ export async function POST(request: NextRequest) {
             .update({
               status: 'aguardando_revisao',
               dados_extraidos: dadosExtraidos,
+              erro_mensagem: erroDetalhado || null,
               processado_em: new Date().toISOString(),
             })
             .eq('id', email.id)
           
           console.log('[EMAIL PROCESS] Email processado com sucesso!')
         } else {
+          const mensagemFinal = erroDetalhado || 
+            'Não foi possível extrair dados dos anexos (nenhum dado com confiança suficiente)'
+          
           await supabase
             .from('emails_monitorados')
             .update({
               status: 'aguardando_revisao',
               dados_extraidos: dadosExtraidos || { confianca: 0 },
-              erro_mensagem: 'Não foi possível extrair dados dos anexos',
+              erro_mensagem: mensagemFinal,
               processado_em: new Date().toISOString(),
             })
             .eq('id', email.id)
+          
+          console.log('[EMAIL PROCESS] Falha ao extrair dados:', mensagemFinal)
         }
 
         processed++

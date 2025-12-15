@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TimelineEtapas } from "@/components/features/cronograma/timeline-etapas";
+import { CronogramaTable } from "@/components/features/cronograma/cronograma-table";
 import { NovaEtapaDialog } from "@/components/features/cronograma/nova-etapa-dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface User {
   id: string;
@@ -38,24 +38,16 @@ interface Etapa {
   tarefas: Tarefa[];
 }
 
-interface Dependencia {
-  id: string;
-  etapa_id: string;
-  depende_de_etapa_id: string;
-  tipo: string;
-}
-
 export default async function CronogramaPage() {
   const supabase = await createClient();
 
-  const [{ data: etapasData }, { data: usersData }, { data: dependenciasData }, { data: tarefasData }] =
+  const [{ data: etapasData }, { data: usersData }, { data: tarefasData }] =
     await Promise.all([
       supabase
         .from("etapas")
         .select("*")
         .order("ordem"),
       supabase.from("users").select("*").eq("ativo", true),
-      supabase.from("etapas_dependencias").select("*"),
       supabase.from("tarefas").select("*").order("ordem"),
     ]);
 
@@ -70,23 +62,50 @@ export default async function CronogramaPage() {
       : null,
     tarefas: tarefas.filter(t => t.etapa_id === e.id)
   })) as Etapa[];
-  const dependencias = (dependenciasData || []) as Dependencia[];
 
+  // Estatísticas
   const etapasConcluidas = etapas.filter((e) => e.status === "concluida").length;
   const etapasTotal = etapas.length;
-  const progressoGeral =
-    etapasTotal > 0 ? Math.round((etapasConcluidas / etapasTotal) * 100) : 0;
+  const etapasEmAndamento = etapas.filter((e) => e.status === "em_andamento").length;
+  const totalTarefas = tarefas.length;
+  const tarefasConcluidas = tarefas.filter((t) => t.status === "concluida").length;
 
   return (
-    <div className="space-y-6 animate-in-up">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Header compacto */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cronograma</h1>
-          <p className="text-muted-foreground">
-            Timeline de etapas e progresso da obra
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Cronograma</h1>
+          </div>
+          
+          {/* Mini Stats */}
+          <div className="flex items-center gap-2 text-sm">
+            <Badge variant="outline" className="gap-1.5">
+              <span className="text-muted-foreground">Etapas:</span>
+              <span className="text-green-500 font-medium">{etapasConcluidas}</span>
+              <span className="text-muted-foreground">/</span>
+              <span>{etapasTotal}</span>
+            </Badge>
+            
+            {etapasEmAndamento > 0 && (
+              <Badge variant="outline" className="gap-1.5">
+                <span className="text-blue-500 font-medium">{etapasEmAndamento}</span>
+                <span className="text-muted-foreground">em andamento</span>
+              </Badge>
+            )}
+            
+            {totalTarefas > 0 && (
+              <Badge variant="secondary" className="gap-1.5">
+                <span className="text-muted-foreground">Tarefas:</span>
+                <span className="text-green-500 font-medium">{tarefasConcluidas}</span>
+                <span className="text-muted-foreground">/</span>
+                <span>{totalTarefas}</span>
+              </Badge>
+            )}
+          </div>
         </div>
+        
         <NovaEtapaDialog
           users={users}
           etapas={etapas}
@@ -94,66 +113,8 @@ export default async function CronogramaPage() {
         />
       </div>
 
-      {/* Cards Resumo */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Etapas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{etapasTotal}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Concluídas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{etapasConcluidas}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Em Andamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">
-              {etapas.filter((e) => e.status === "em_andamento").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Progresso Geral
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{progressoGeral}%</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Timeline de Etapas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TimelineEtapas
-            etapas={etapas}
-            dependencias={dependencias}
-            users={users}
-          />
-        </CardContent>
-      </Card>
+      {/* Tabela do Cronograma */}
+      <CronogramaTable etapas={etapas} users={users} />
     </div>
   );
 }
-
