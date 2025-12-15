@@ -52,8 +52,13 @@ export function Header() {
       .limit(10);
 
     if (data) {
-      setNotificacoes(data);
-      setNaoLidas(data.filter((n) => !n.lida).length);
+      const notificacoesFormatadas = data.map(n => ({
+        ...n,
+        lida: n.lida ?? false,
+        created_at: n.created_at || new Date().toISOString()
+      }));
+      setNotificacoes(notificacoesFormatadas);
+      setNaoLidas(notificacoesFormatadas.filter((n) => !n.lida).length);
     }
   }, [currentUser]);
 

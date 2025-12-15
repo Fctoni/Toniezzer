@@ -27,6 +27,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
 import type { DadosExtraidos } from './preview-ocr'
 import { QuickAddFornecedor } from './quick-add-fornecedor'
+import { formatDateToString } from '@/lib/utils'
 import { Check, X } from 'lucide-react'
 
 const formSchema = z.object({
@@ -37,7 +38,7 @@ const formSchema = z.object({
   categoria_id: z.string().min(1, 'Categoria é obrigatória'),
   etapa_relacionada_id: z.string().optional(),
   forma_pagamento: z.enum(['dinheiro', 'pix', 'cartao', 'boleto', 'cheque']),
-  parcelas: z.string().default('1'),
+  parcelas: z.string().min(1, 'Parcelas é obrigatório'),
   nota_fiscal_numero: z.string().optional(),
   observacoes: z.string().optional(),
 })
@@ -73,7 +74,7 @@ export function FormOcr({
     defaultValues: {
       descricao: dados.descricao || '',
       valor: dados.valor?.toString() || '',
-      data: dados.data || new Date().toISOString().split('T')[0],
+      data: dados.data || formatDateToString(new Date()),
       fornecedor_id: fornecedorId || '',
       categoria_id: categoriaId || '',
       etapa_relacionada_id: '',

@@ -82,9 +82,9 @@ export function FeedItem({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState(post.comentarios || []);
 
-  const config = tipoConfig[post.tipo];
+  const config = tipoConfig[post.tipo as FeedTipo];
   const isOwner = currentUserId === post.autor_id;
-  const canEdit = isOwner && new Date(post.created_at) > new Date(Date.now() - 60 * 60 * 1000);
+  const canEdit = isOwner && post.created_at && new Date(post.created_at) > new Date(Date.now() - 60 * 60 * 1000);
 
   const getInitials = (name: string) => {
     return name
@@ -191,7 +191,7 @@ export function FeedItem({
                 <span className="text-[10px] text-muted-foreground">(editado)</span>
               )}
               <span className="text-xs text-muted-foreground ml-auto">
-                {formatDistanceToNow(new Date(post.created_at), {
+                {post.created_at && formatDistanceToNow(new Date(post.created_at), {
                   addSuffix: true,
                   locale: ptBR,
                 })}
@@ -275,7 +275,7 @@ export function FeedItem({
                       {comment.autor?.nome_completo || "Usuário"}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.created_at), {
+                      {comment.created_at && formatDistanceToNow(new Date(comment.created_at), {
                         addSuffix: true,
                         locale: ptBR,
                       })}

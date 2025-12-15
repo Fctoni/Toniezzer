@@ -54,7 +54,7 @@ export function KanbanEmails({ emails, onIgnorar }: KanbanEmailsProps) {
   }
 
   const getEmailsForColumn = (statusList: EmailStatus[]) => {
-    return emails.filter(email => statusList.includes(email.status))
+    return emails.filter(email => statusList.includes(email.status as EmailStatus))
   }
 
   return (

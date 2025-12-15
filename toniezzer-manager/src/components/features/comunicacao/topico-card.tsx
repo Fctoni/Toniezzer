@@ -75,8 +75,8 @@ const prioridadeConfig: Record<
 };
 
 export function TopicoCard({ topico }: TopicoCardProps) {
-  const status = statusConfig[topico.status];
-  const prioridade = prioridadeConfig[topico.prioridade];
+  const status = statusConfig[topico.status as TopicoStatus];
+  const prioridade = prioridadeConfig[topico.prioridade as TopicoPrioridade];
   const mensagensCount = topico._count?.mensagens || 0;
 
   const getInitials = (name: string) => {
@@ -152,7 +152,7 @@ export function TopicoCard({ topico }: TopicoCardProps) {
                 </span>
                 <span>•</span>
                 <span>
-                  {formatDistanceToNow(new Date(topico.created_at), {
+                  {topico.created_at && formatDistanceToNow(new Date(topico.created_at), {
                     addSuffix: true,
                     locale: ptBR,
                   })}

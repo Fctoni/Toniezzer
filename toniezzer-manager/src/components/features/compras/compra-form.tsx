@@ -39,18 +39,19 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ParcelasPreview } from "./parcelas-preview";
 import { QuickAddFornecedor } from "../ocr/quick-add-fornecedor";
+import { formatDateToString } from "@/lib/utils";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
   valor_total: z.string().min(1, "Valor é obrigatório"),
-  data_compra: z.date({ required_error: "Data da compra é obrigatória" }),
+  data_compra: z.date({ message: "Data da compra é obrigatória" }),
   fornecedor_id: z.string().min(1, "Fornecedor é obrigatório"),
   categoria_id: z.string().min(1, "Categoria é obrigatória"),
   etapa_relacionada_id: z.string().optional(),
   forma_pagamento: z.enum(["dinheiro", "pix", "cartao", "boleto", "cheque"]),
-  parcelas: z.string().default("1"),
+  parcelas: z.string().min(1, "Parcelas é obrigatório"),
   data_primeira_parcela: z.date({
-    required_error: "Data da 1ª parcela é obrigatória",
+    message: "Data da 1ª parcela é obrigatória",
   }),
   nota_fiscal_numero: z.string().optional(),
   observacoes: z.string().optional(),
@@ -81,8 +82,8 @@ export function CompraForm({
     defaultValues: {
       descricao: "",
       valor_total: "",
-      forma_pagamento: "pix",
       parcelas: "1",
+      forma_pagamento: "pix",
       nota_fiscal_numero: "",
       observacoes: "",
     },
@@ -178,7 +179,7 @@ export function CompraForm({
         .insert({
           descricao: data.descricao,
           valor_total: valorNumerico,
-          data_compra: data.data_compra.toISOString().split("T")[0],
+          data_compra: formatDateToString(data.data_compra),
           fornecedor_id: data.fornecedor_id,
           categoria_id: data.categoria_id,
           etapa_relacionada_id: data.etapa_relacionada_id || null,
@@ -217,7 +218,7 @@ export function CompraForm({
           compra_id: compra.id,
           descricao: data.descricao,
           valor: valor,
-          data: dataParcela.toISOString().split("T")[0],
+          data: formatDateToString(dataParcela),
           categoria_id: data.categoria_id,
           fornecedor_id: data.fornecedor_id,
           forma_pagamento: data.forma_pagamento,

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, Clock, Loader2, CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateToString } from "@/lib/utils";
 
 interface Parcela {
   id: string;
@@ -72,7 +72,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         .from("gastos")
         .update({
           pago: true,
-          pago_em: dataPagamento.toISOString().split("T")[0],
+          pago_em: formatDateToString(dataPagamento),
         })
         .eq("id", selectedParcela.id);
 

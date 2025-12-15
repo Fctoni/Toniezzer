@@ -96,8 +96,9 @@ export function ActionItemsList({ acoes, onStatusChange }: ActionItemsListProps)
 
   // Agrupar por tipo
   const acoesAgrupadas = acoes.reduce((acc, acao) => {
-    if (!acc[acao.tipo]) acc[acao.tipo] = []
-    acc[acao.tipo].push(acao)
+    const tipo = acao.tipo as AcaoTipo
+    if (!acc[tipo]) acc[tipo] = []
+    acc[tipo].push(acao)
     return acc
   }, {} as Record<AcaoTipo, typeof acoes>)
 
@@ -192,8 +193,8 @@ export function ActionItemsList({ acoes, onStatusChange }: ActionItemsListProps)
                         </Badge>
                       )}
                       
-                      <Badge className={statusConfig[acao.status].color}>
-                        {statusConfig[acao.status].label}
+                      <Badge className={statusConfig[acao.status as AcaoStatus].color}>
+                        {statusConfig[acao.status as AcaoStatus].label}
                       </Badge>
                     </div>
                     

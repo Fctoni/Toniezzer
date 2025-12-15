@@ -4,11 +4,29 @@ import { Button } from "@/components/ui/button";
 import { ComprasList } from "@/components/features/compras/compras-list";
 import { Package, Plus } from "lucide-react";
 
+type CompraComRelacoes = {
+  id: string;
+  descricao: string;
+  data_compra: string;
+  valor_total: number | string;
+  valor_pago: number | string | null;
+  parcelas: number;
+  parcelas_pagas: number | null;
+  status: string;
+  nota_fiscal_numero: string | null;
+  forma_pagamento: string;
+  fornecedor_id: string;
+  categoria_id: string;
+  fornecedor: { nome: string } | null;
+  categoria: { nome: string; cor: string } | null;
+  [key: string]: unknown;
+};
+
 export default async function ComprasPage() {
   const supabase = await createClient();
 
   // Buscar compras
-  const { data: compras, error } = await supabase
+  const { data: comprasRaw, error } = await supabase
     .from("compras")
     .select(
       `
@@ -18,6 +36,8 @@ export default async function ComprasPage() {
     `
     )
     .order("created_at", { ascending: false });
+  
+  const compras = comprasRaw as CompraComRelacoes[] | null;
 
   // Buscar fornecedores para o filtro
   const { data: fornecedores } = await supabase
@@ -39,7 +59,9 @@ export default async function ComprasPage() {
     compras?.map((compra) => ({
       ...compra,
       valor_total: Number(compra.valor_total),
-      valor_pago: Number(compra.valor_pago),
+      valor_pago: Number(compra.valor_pago || 0),
+      parcelas_pagas: compra.parcelas_pagas || 0,
+      status: compra.status as "ativa" | "quitada" | "cancelada",
       fornecedor: compra.fornecedor,
       categoria: compra.categoria,
     })) || [];

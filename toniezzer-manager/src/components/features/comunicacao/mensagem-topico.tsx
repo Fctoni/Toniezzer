@@ -124,7 +124,7 @@ export function MensagemTopico({
               </span>
             )}
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(mensagem.created_at), {
+              {mensagem.created_at && formatDistanceToNow(new Date(mensagem.created_at), {
                 addSuffix: true,
                 locale: ptBR,
               })}

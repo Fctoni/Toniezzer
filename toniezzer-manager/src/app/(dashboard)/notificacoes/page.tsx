@@ -304,7 +304,7 @@ export default function NotificacoesPage() {
           </div>
         ) : (
           notificacoes.map((notificacao) => {
-            const config = tipoConfig[notificacao.tipo];
+            const config = tipoConfig[notificacao.tipo as NotificacaoTipo];
 
             return (
               <Card
@@ -344,7 +344,7 @@ export default function NotificacoesPage() {
                         {formatarMensagem(notificacao.mensagem)}
                       </p>
                       <span className="text-xs text-muted-foreground mt-2 block">
-                        {formatDistanceToNow(new Date(notificacao.created_at), {
+                        {notificacao.created_at && formatDistanceToNow(new Date(notificacao.created_at), {
                           addSuffix: true,
                           locale: ptBR,
                         })}

@@ -33,6 +33,13 @@ export default async function LancamentosPage() {
     .select("id, nome, cor")
     .order("nome");
 
+  // Garantir que campos nullable estejam preenchidos
+  const gastosFormatados = gastos?.map(gasto => ({
+    ...gasto,
+    parcelas: gasto.parcelas || 1,
+    pago: gasto.pago ?? false
+  })) || [];
+
   return (
     <div className="space-y-6 animate-in-up">
       {/* Header */}
@@ -59,7 +66,7 @@ export default async function LancamentosPage() {
 
       {/* Lista com Filtros e Resumo */}
       <LancamentosList
-        gastos={gastos || []}
+        gastos={gastosFormatados}
         fornecedores={fornecedores || []}
         categorias={categorias || []}
       />

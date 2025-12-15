@@ -46,7 +46,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDateToString } from "@/lib/utils";
 
 const formSchema = z.object({
   nome: z.string().min(2, "Mínimo 2 caracteres"),
@@ -117,10 +117,10 @@ export function EditarTarefaDialog({
           nome: data.nome,
           descricao: data.descricao || null,
           data_inicio_prevista: data.data_inicio_prevista
-            ? data.data_inicio_prevista.toISOString().split("T")[0]
+            ? formatDateToString(data.data_inicio_prevista)
             : null,
           data_fim_prevista: data.data_fim_prevista
-            ? data.data_fim_prevista.toISOString().split("T")[0]
+            ? formatDateToString(data.data_fim_prevista)
             : null,
           responsavel_id: data.responsavel_id || null,
         })

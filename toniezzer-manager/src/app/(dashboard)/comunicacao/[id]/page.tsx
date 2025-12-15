@@ -96,8 +96,8 @@ export default function TopicoPage({
         .order("created_at", { ascending: true }),
     ]);
 
-    if (topicoResult.data) setTopico(topicoResult.data);
-    if (mensagensResult.data) setMensagens(mensagensResult.data);
+    if (topicoResult.data) setTopico(topicoResult.data as TopicoWithRelations);
+    if (mensagensResult.data) setMensagens(mensagensResult.data as MensagemWithAutor[]);
 
     setLoading(false);
   }, [id]);
@@ -134,7 +134,7 @@ export default function TopicoPage({
   };
 
   const handleEnviarMensagem = async () => {
-    if (!novaMensagem.trim()) return;
+    if (!novaMensagem.trim() || !currentUser?.id) return;
 
     setIsSubmitting(true);
 
@@ -144,7 +144,7 @@ export default function TopicoPage({
       const { error } = await supabase.from("feed_comunicacao").insert({
         tipo: "post",
         conteudo: novaMensagem,
-        autor_id: currentUser?.id,
+        autor_id: currentUser.id,
         topico_id: id,
         mencoes: mencoes.length > 0 ? mencoes : null,
       });

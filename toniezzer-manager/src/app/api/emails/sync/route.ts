@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
         { seen: false, since },
         { envelope: true, bodyStructure: true, uid: true }
       )) {
+        if (!message.envelope) continue;
+        
         const emailId = message.envelope.messageId || `msg-${message.uid}`
 
         console.log('[EMAIL SYNC] Processando:', emailId, message.envelope.subject)

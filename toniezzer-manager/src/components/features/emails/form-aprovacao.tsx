@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { AlertCircle, Check, X, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
+import { formatDateToString } from '@/lib/utils'
 
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -79,7 +80,7 @@ export function FormAprovacao({
     defaultValues: {
       descricao: dadosExtraidos?.descricao || dadosExtraidos?.fornecedor || email.assunto || '',
       valor: dadosExtraidos?.valor?.toString() || '',
-      data: dadosExtraidos?.data || new Date().toISOString().split('T')[0],
+      data: dadosExtraidos?.data || formatDateToString(new Date()),
       fornecedor_id: '',
       categoria_id: '',
       forma_pagamento: (dadosExtraidos?.forma_pagamento as FormData['forma_pagamento']) || 'pix',

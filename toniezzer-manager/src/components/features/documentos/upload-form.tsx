@@ -98,16 +98,7 @@ export function UploadForm({ etapas }: UploadFormProps) {
         // Upload para o Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(fileName, file, {
-            onUploadProgress: (progress) => {
-              const percent = (progress.loaded / progress.total) * 100;
-              setFiles((prev) => {
-                const newFiles = [...prev];
-                newFiles[i].progress = percent;
-                return newFiles;
-              });
-            },
-          });
+          .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 

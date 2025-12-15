@@ -24,7 +24,7 @@ const statusConfig: Record<EmailStatus, { label: string; color: string; icon: st
 }
 
 export function EmailCard({ email, onIgnorar }: EmailCardProps) {
-  const config = statusConfig[email.status]
+  const config = statusConfig[email.status as EmailStatus]
   const anexos = email.anexos as Array<{ nome: string; url_storage: string; tipo: string }> | null
   const dadosExtraidos = email.dados_extraidos as {
     valor?: number

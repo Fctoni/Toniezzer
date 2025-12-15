@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { parseString } from 'xml2js'
 import { promisify } from 'util'
 import { ImapFlow } from 'imapflow'
+import type { Json } from '@/lib/types/database'
+import { formatDateToString } from '@/lib/utils'
 
 const parseXml = promisify(parseString)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
@@ -160,7 +162,7 @@ async function processarPDF(buffer: Buffer): Promise<DadosExtraidos> {
   
   let pdfData
   try {
-    const pdfParse = (await import('pdf-parse')).default
+    const pdfParse = (await import('pdf-parse')) as unknown as (buffer: Buffer) => Promise<{ text: string }>
     pdfData = await pdfParse(buffer)
   } catch (pdfError) {
     console.error('[PDF] Erro ao parsear PDF:', pdfError)
@@ -271,7 +273,7 @@ async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
   console.log('[PROCESS] XML recebido:', xmlString.substring(0, 500))
   
   try {
-    const result = await parseXml(xmlString, { explicitArray: false }) as any
+    const result = await parseXml(xmlString) as Record<string, any>
     
     // Estrutura padrão de NF-e
     const nfe = result?.nfeProc?.NFe?.infNFe || result?.NFe?.infNFe || result?.infNFe
@@ -311,7 +313,7 @@ async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
       if (dataEmissao) {
         const date = new Date(dataEmissao)
         if (!isNaN(date.getTime())) {
-          dataFormatada = date.toISOString().split('T')[0]
+          dataFormatada = formatDateToString(date)
         }
       }
       
@@ -478,7 +480,7 @@ export async function POST(request: NextRequest) {
             .from('emails_monitorados')
             .update({
               status: 'aguardando_revisao',
-              dados_extraidos: dadosExtraidos,
+              dados_extraidos: dadosExtraidos as unknown as Json,
               erro_mensagem: erroDetalhado || null,
               processado_em: new Date().toISOString(),
             })
@@ -493,7 +495,7 @@ export async function POST(request: NextRequest) {
             .from('emails_monitorados')
             .update({
               status: 'aguardando_revisao',
-              dados_extraidos: dadosExtraidos || { confianca: 0 },
+              dados_extraidos: (dadosExtraidos || { confianca: 0 }) as unknown as Json,
               erro_mensagem: mensagemFinal,
               processado_em: new Date().toISOString(),
             })

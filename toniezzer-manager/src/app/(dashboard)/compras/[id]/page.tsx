@@ -75,7 +75,11 @@ export default function CompraDetalhesPage() {
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
 
+  const id = params.id as string;
+
   const carregarDados = useCallback(async () => {
+    if (!id) return;
+    
     const supabase = createClient();
 
     // Buscar compra
@@ -89,7 +93,7 @@ export default function CompraDetalhesPage() {
         etapa:etapas(nome)
       `
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (compraError) {
@@ -99,16 +103,31 @@ export default function CompraDetalhesPage() {
     }
 
     setCompra({
-      ...compraData,
+      id: compraData.id,
+      descricao: compraData.descricao,
       valor_total: Number(compraData.valor_total),
-      valor_pago: Number(compraData.valor_pago),
+      data_compra: compraData.data_compra,
+      fornecedor_id: compraData.fornecedor_id,
+      categoria_id: compraData.categoria_id,
+      forma_pagamento: compraData.forma_pagamento,
+      parcelas: compraData.parcelas ?? 1,
+      parcelas_pagas: compraData.parcelas_pagas ?? 0,
+      valor_pago: Number(compraData.valor_pago || 0),
+      data_primeira_parcela: compraData.data_primeira_parcela,
+      nota_fiscal_numero: compraData.nota_fiscal_numero,
+      nota_fiscal_url: compraData.nota_fiscal_url,
+      status: compraData.status as "ativa" | "quitada" | "cancelada",
+      observacoes: compraData.observacoes,
+      fornecedor: compraData.fornecedor as { nome: string; cnpj_cpf?: string } | null,
+      categoria: compraData.categoria as { nome: string; cor: string } | null,
+      etapa: compraData.etapa as { nome: string } | null,
     });
 
     // Buscar parcelas (gastos vinculados)
     const { data: parcelasData, error: parcelasError } = await supabase
       .from("gastos")
       .select("id, valor, data, parcela_atual, parcelas, pago, pago_em")
-      .eq("compra_id", params.id)
+      .eq("compra_id", id)
       .order("parcela_atual");
 
     if (parcelasError) {
@@ -116,14 +135,19 @@ export default function CompraDetalhesPage() {
     } else {
       setParcelas(
         parcelasData.map((p) => ({
-          ...p,
+          id: p.id,
           valor: Number(p.valor),
+          data: p.data,
+          parcela_atual: p.parcela_atual ?? 1,
+          parcelas: p.parcelas ?? 1,
+          pago: p.pago ?? false,
+          pago_em: p.pago_em,
         }))
       );
     }
 
     setLoading(false);
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     carregarDados();
@@ -139,7 +163,7 @@ export default function CompraDetalhesPage() {
       const { error } = await supabase
         .from("compras")
         .update({ status: "cancelada" })
-        .eq("id", params.id);
+        .eq("id", id);
 
       if (error) throw error;
 

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
+import { formatDateToString } from '@/lib/utils'
 
 type Step = 'capture' | 'processing' | 'review'
 
@@ -82,7 +83,7 @@ export default function FotoReciboPage() {
             fornecedor: null,
             cnpj: null,
             valor: null,
-            data: new Date().toISOString().split('T')[0],
+            data: formatDateToString(new Date()),
             descricao: '',
             forma_pagamento: 'pix',
             categoria_sugerida: null,

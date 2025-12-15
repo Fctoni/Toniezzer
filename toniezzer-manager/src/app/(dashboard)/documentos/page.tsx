@@ -17,11 +17,26 @@ export default async function DocumentosPage() {
     supabase.from("etapas").select("id, nome").order("ordem"),
   ]);
 
-  const fotos = documentos?.filter((d) => d.tipo === "foto") || [];
-  const plantas = documentos?.filter((d) => d.tipo === "planta") || [];
-  const contratos = documentos?.filter((d) => d.tipo === "contrato") || [];
-  const notasFiscais = documentos?.filter((d) => d.tipo === "nota_fiscal") || [];
-  const outros = documentos?.filter((d) => d.tipo === "outro") || [];
+  const fotos = documentos?.filter((d) => d.tipo === "foto" && d.created_at).map(d => ({
+    ...d,
+    created_at: d.created_at!
+  })) || [];
+  const plantas = documentos?.filter((d) => d.tipo === "planta" && d.created_at).map(d => ({
+    ...d,
+    created_at: d.created_at!
+  })) || [];
+  const contratos = documentos?.filter((d) => d.tipo === "contrato" && d.created_at).map(d => ({
+    ...d,
+    created_at: d.created_at!
+  })) || [];
+  const notasFiscais = documentos?.filter((d) => d.tipo === "nota_fiscal" && d.created_at).map(d => ({
+    ...d,
+    created_at: d.created_at!
+  })) || [];
+  const outros = documentos?.filter((d) => d.tipo === "outro" && d.created_at).map(d => ({
+    ...d,
+    created_at: d.created_at!
+  })) || [];
 
   return (
     <div className="space-y-6 animate-in-up">

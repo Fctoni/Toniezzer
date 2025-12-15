@@ -24,6 +24,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaTarefaDialog } from "./nova-tarefa-dialog";
+import { formatDateToString } from "@/lib/utils";
 
 interface Tarefa {
   id: string;
@@ -117,9 +118,9 @@ export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListP
       const updates: Record<string, unknown> = { status: novoStatus };
 
       if (novoStatus === "em_andamento") {
-        updates.data_inicio_real = new Date().toISOString().split("T")[0];
+        updates.data_inicio_real = formatDateToString(new Date());
       } else if (novoStatus === "concluida") {
-        updates.data_fim_real = new Date().toISOString().split("T")[0];
+        updates.data_fim_real = formatDateToString(new Date());
       }
 
       const { error } = await supabase

@@ -34,16 +34,16 @@ import {
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDateToString } from "@/lib/utils";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
   valor: z.string().min(1, "Valor é obrigatório"),
-  data: z.date({ required_error: "Data é obrigatória" }),
+  data: z.date({ message: "Data é obrigatória" }),
   categoria_id: z.string().min(1, "Categoria é obrigatória"),
   fornecedor_id: z.string().optional(),
   forma_pagamento: z.enum(["dinheiro", "pix", "cartao", "boleto", "cheque"]),
-  parcelas: z.string().default("1"),
+  parcelas: z.string().min(1, "Parcelas é obrigatório"),
   etapa_relacionada_id: z.string().optional(),
   observacoes: z.string().optional(),
 });
@@ -104,7 +104,7 @@ export function FormLancamento({
           lancamentos.push({
             descricao: data.descricao,
             valor: valorParcela,
-            data: dataParcela.toISOString().split("T")[0],
+            data: formatDateToString(dataParcela),
             categoria_id: data.categoria_id,
             fornecedor_id: data.fornecedor_id || null,
             forma_pagamento: data.forma_pagamento,
@@ -128,7 +128,7 @@ export function FormLancamento({
         const { error } = await supabase.from("gastos").insert({
           descricao: data.descricao,
           valor: valorNumerico,
-          data: data.data.toISOString().split("T")[0],
+          data: formatDateToString(data.data),
           categoria_id: data.categoria_id,
           fornecedor_id: data.fornecedor_id || null,
           forma_pagamento: data.forma_pagamento,

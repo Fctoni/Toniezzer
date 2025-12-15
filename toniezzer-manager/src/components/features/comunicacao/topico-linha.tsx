@@ -44,7 +44,7 @@ export function TopicoLinha({ topico }: TopicoLinhaProps) {
     >
       {/* Status indicator */}
       <div className="shrink-0 flex items-center justify-center w-5">
-        {statusIcon[topico.status]}
+        {statusIcon[topico.status as TopicoStatus]}
       </div>
 
       {/* Pin icon */}
@@ -53,7 +53,7 @@ export function TopicoLinha({ topico }: TopicoLinhaProps) {
       )}
 
       {/* Prioridade */}
-      {prioridadeIcon[topico.prioridade]}
+      {prioridadeIcon[topico.prioridade as TopicoPrioridade]}
 
       {/* Título */}
       <span
@@ -71,7 +71,7 @@ export function TopicoLinha({ topico }: TopicoLinhaProps) {
 
       {/* Tempo */}
       <span className="text-[11px] text-muted-foreground shrink-0 w-20 text-right">
-        {formatDistanceToNow(new Date(topico.updated_at), {
+        {topico.updated_at && formatDistanceToNow(new Date(topico.updated_at), {
           addSuffix: false,
           locale: ptBR,
         })}

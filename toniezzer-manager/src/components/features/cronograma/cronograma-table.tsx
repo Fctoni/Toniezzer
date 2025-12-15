@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDateToString, parseDateString } from "@/lib/utils";
 import { NovaTarefaDialog } from "./nova-tarefa-dialog";
 import { NovaEtapaDialog } from "./nova-etapa-dialog";
 import { EditarEtapaDialog } from "./editar-etapa-dialog";
@@ -267,7 +267,7 @@ function SortableEtapaRow({
                   onUpdateEtapa(
                     etapa.id,
                     "data_inicio_prevista",
-                    date?.toISOString().split("T")[0] || null
+                    date ? formatDateToString(date) : null
                   )
                 }
                 initialFocus
@@ -295,7 +295,7 @@ function SortableEtapaRow({
                   onUpdateEtapa(
                     etapa.id,
                     "data_fim_prevista",
-                    date?.toISOString().split("T")[0] || null
+                    date ? formatDateToString(date) : null
                   )
                 }
                 initialFocus
@@ -508,7 +508,7 @@ function SortableTarefaRow({
                 onUpdateTarefa(
                   tarefa.id,
                   "data_inicio_prevista",
-                  date?.toISOString().split("T")[0] || null
+                  date ? formatDateToString(date) : null
                 )
               }
               initialFocus
@@ -536,7 +536,7 @@ function SortableTarefaRow({
                 onUpdateTarefa(
                   tarefa.id,
                   "data_fim_prevista",
-                  date?.toISOString().split("T")[0] || null
+                  date ? formatDateToString(date) : null
                 )
               }
               initialFocus
@@ -592,7 +592,7 @@ function formatDate(date: string | null) {
 
 function parseDate(date: string | null): Date | undefined {
   if (!date) return undefined;
-  return new Date(date);
+  return parseDateString(date);
 }
 
 function calcularProgresso(etapa: Etapa) {
@@ -701,9 +701,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
       if (field === "status") {
         if (value === "em_andamento") {
-          updates.data_inicio_real = new Date().toISOString().split("T")[0];
+          updates.data_inicio_real = formatDateToString(new Date());
         } else if (value === "concluida") {
-          updates.data_fim_real = new Date().toISOString().split("T")[0];
+          updates.data_fim_real = formatDateToString(new Date());
           updates.progresso_percentual = 100;
         }
       }
@@ -730,9 +730,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
       if (field === "status") {
         if (value === "em_andamento") {
-          updates.data_inicio_real = new Date().toISOString().split("T")[0];
+          updates.data_inicio_real = formatDateToString(new Date());
         } else if (value === "concluida") {
-          updates.data_fim_real = new Date().toISOString().split("T")[0];
+          updates.data_fim_real = formatDateToString(new Date());
         }
       }
 

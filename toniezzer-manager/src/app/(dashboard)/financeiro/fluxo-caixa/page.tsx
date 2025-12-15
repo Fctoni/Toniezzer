@@ -47,7 +47,7 @@ export default async function FluxoCaixaPage() {
       i >= 0
         ? gastos
             ?.filter((g) => {
-              if (g.parcelas <= 1) return false;
+              if (!g.parcelas || g.parcelas <= 1) return false;
               const dataOriginal = new Date(g.data);
               const parcelasRestantes = g.parcelas - (g.parcela_atual || 1);
               // Verificar se este mês tem parcela deste gasto

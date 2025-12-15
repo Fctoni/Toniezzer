@@ -12,12 +12,13 @@ import { ArrowLeft, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { toast } from 'sonner'
+import { formatDateToString } from '@/lib/utils'
 
 export default function NovaReuniaoPage() {
   const router = useRouter()
   const { currentUser } = useCurrentUser()
   const [titulo, setTitulo] = useState('')
-  const [dataReuniao, setDataReuniao] = useState(new Date().toISOString().split('T')[0])
+  const [dataReuniao, setDataReuniao] = useState(formatDateToString(new Date()))
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleUpload = async (content: string, fileName: string) => {

@@ -14,7 +14,7 @@ import type { Tables } from '@/lib/types/database'
 export default function EmailDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const router = useRouter()
-  const { user } = useCurrentUser()
+  const { currentUser } = useCurrentUser()
   const [email, setEmail] = useState<Tables<'emails_monitorados'> | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -53,7 +53,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     etapa_relacionada_id?: string
     observacoes?: string
   }) => {
-    if (!user || !email) return
+    if (!currentUser || !email) return
     
     setIsSubmitting(true)
     try {
@@ -72,7 +72,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
           nota_fiscal_numero: data.nota_fiscal_numero || null,
           etapa_relacionada_id: data.etapa_relacionada_id || null,
           observacoes: data.observacoes || null,
-          criado_por: user.id,
+          criado_por: currentUser.id,
           criado_via: 'email',
           status: 'aprovado',
           pago: true,
@@ -90,7 +90,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
           status: 'processado',
           gasto_sugerido_id: gasto.id,
           processado_em: new Date().toISOString(),
-          processado_por: user.id,
+          processado_por: currentUser.id,
         })
         .eq('id', email.id)
 
@@ -110,7 +110,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
   }
 
   const handleRejeitar = async () => {
-    if (!user || !email) return
+    if (!currentUser || !email) return
     
     setIsSubmitting(true)
     try {
@@ -121,7 +121,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         .update({
           status: 'ignorado',
           processado_em: new Date().toISOString(),
-          processado_por: user.id,
+          processado_por: currentUser.id,
         })
         .eq('id', email.id)
 
