@@ -10,6 +10,7 @@ import { ArrowLeft, FileText, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Tables, AcaoStatus } from '@/lib/types/database'
+import { parseDateString } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,6 +108,7 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
 
     toast.success('Reunião excluída')
     router.push('/reunioes')
+    router.refresh()
   }
 
   if (loading) {
@@ -141,7 +143,7 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
               {reuniao.titulo}
             </h1>
             <p className="text-muted-foreground">
-              {new Date(reuniao.data_reuniao).toLocaleDateString('pt-BR', {
+              {parseDateString(reuniao.data_reuniao).toLocaleDateString('pt-BR', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',

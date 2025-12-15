@@ -1,65 +1,30 @@
-"use client";
-
-import { useEffect, useState, useCallback } from "react";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
 import { FornecedorCard } from "@/components/features/fornecedores/fornecedor-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Plus, Search } from "lucide-react";
+import { FornecedoresFilters } from "@/components/features/fornecedores/fornecedores-filters";
+import { Users, Plus } from "lucide-react";
 
-export default function FornecedoresPage() {
-  const [fornecedores, setFornecedores] = useState<Tables<"fornecedores">[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [tipoFilter, setTipoFilter] = useState<string>("all");
+export default async function FornecedoresPage() {
+  const supabase = await createClient();
 
-  const fetchFornecedores = useCallback(async () => {
-    const supabase = createClient();
+  const { data: fornecedores, error } = await supabase
+    .from("fornecedores")
+    .select("*")
+    .eq("ativo", true)
+    .order("nome");
 
-    let query = supabase
-      .from("fornecedores")
-      .select("*")
-      .eq("ativo", true)
-      .order("nome");
+  if (error) {
+    console.error("Erro ao buscar fornecedores:", error);
+  }
 
-    if (tipoFilter !== "all") {
-      query = query.eq("tipo", tipoFilter);
-    }
-
-    if (search) {
-      query = query.ilike("nome", `%${search}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Erro ao buscar fornecedores:", error);
-      return;
-    }
-
-    setFornecedores(data || []);
-    setLoading(false);
-  }, [search, tipoFilter]);
-
-  useEffect(() => {
-    fetchFornecedores();
-  }, [fetchFornecedores]);
-
-  const totalFornecedores = fornecedores.length;
-  const prestadores = fornecedores.filter(
+  const fornecedoresData = fornecedores || [];
+  const totalFornecedores = fornecedoresData.length;
+  const prestadores = fornecedoresData.filter(
     (f) => f.tipo === "prestador_servico"
   ).length;
-  const materiais = fornecedores.filter(
+  const materiais = fornecedoresData.filter(
     (f) => f.tipo === "fornecedor_material"
   ).length;
 
@@ -99,78 +64,8 @@ export default function FornecedoresPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={tipoFilter} onValueChange={setTipoFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            <SelectItem value="fornecedor_material">
-              Fornecedor de Material
-            </SelectItem>
-            <SelectItem value="prestador_servico">
-              Prestador de Serviço
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Grid */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="p-4 rounded-lg border bg-card">
-              <div className="flex gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              </div>
-              <div className="mt-4 space-y-2">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : fornecedores.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium">Nenhum fornecedor encontrado</p>
-          <p className="text-sm mb-4">
-            {search || tipoFilter !== "all"
-              ? "Tente ajustar os filtros"
-              : "Cadastre seu primeiro fornecedor"}
-          </p>
-          {!search && tipoFilter === "all" && (
-            <Button asChild>
-              <Link href="/fornecedores/novo">
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar Fornecedor
-              </Link>
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {fornecedores.map((fornecedor) => (
-            <FornecedorCard key={fornecedor.id} fornecedor={fornecedor} />
-          ))}
-        </div>
-      )}
+      {/* Filters and Grid */}
+      <FornecedoresFilters fornecedores={fornecedoresData} />
     </div>
   );
 }
-

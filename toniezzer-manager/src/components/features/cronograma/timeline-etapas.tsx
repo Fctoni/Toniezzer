@@ -34,7 +34,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TarefasList } from "./tarefas-list";
-import { formatDateToString } from "@/lib/utils";
+import { formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Tarefa {
   id: string;
@@ -194,7 +194,7 @@ export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasPr
 
   const formatDate = (date: string | null) => {
     if (!date) return "-";
-    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+    return format(parseDateString(date), "dd/MM/yyyy", { locale: ptBR });
   };
 
   const getDependencias = (etapaId: string) => {

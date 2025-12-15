@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { GastosChart } from "@/components/features/financeiro/gastos-chart";
+import { parseDateString } from "@/lib/utils";
 
 export default async function FinanceiroPage() {
   const supabase = await createClient();
@@ -183,7 +184,7 @@ export default async function FinanceiroPage() {
                     <p className="text-sm font-medium">{gasto.descricao}</p>
                     <p className="text-xs text-muted-foreground">
                       {(gasto.categorias as { nome: string })?.nome} •{" "}
-                      {new Date(gasto.data).toLocaleDateString("pt-BR")}
+                      {parseDateString(gasto.data).toLocaleDateString("pt-BR")}
                     </p>
                   </div>
                 </div>

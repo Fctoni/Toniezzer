@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { parseDateString } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Package, FileText, Building2 } from "lucide-react";
@@ -73,7 +74,7 @@ export function CompraCard({ compra }: CompraCardProps) {
             </div>
             <div className="text-right shrink-0">
               <p className="text-xs text-muted-foreground">
-                {format(new Date(compra.data_compra), "dd/MM/yyyy", {
+                {format(parseDateString(compra.data_compra), "dd/MM/yyyy", {
                   locale: ptBR,
                 })}
               </p>

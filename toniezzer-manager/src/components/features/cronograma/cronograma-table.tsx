@@ -587,7 +587,7 @@ function SortableTarefaRow({
 // Helper functions
 function formatDate(date: string | null) {
   if (!date) return "-";
-  return format(new Date(date), "dd/MM", { locale: ptBR });
+  return format(parseDateString(date), "dd/MM", { locale: ptBR });
 }
 
 function parseDate(date: string | null): Date | undefined {

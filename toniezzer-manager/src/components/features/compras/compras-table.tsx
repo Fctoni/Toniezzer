@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+import { parseDateString } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -57,7 +58,7 @@ export function ComprasTable({ compras }: ComprasTableProps) {
     }).format(value);
 
   const formatDate = (date: string) =>
-    format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+    format(parseDateString(date), "dd/MM/yyyy", { locale: ptBR });
 
   const getStatusBadge = (status: string, parcelasPagas: number, parcelas: number) => {
     if (status === "cancelada") {

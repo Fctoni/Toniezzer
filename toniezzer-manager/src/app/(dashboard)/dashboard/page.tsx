@@ -11,6 +11,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
+import { parseDateString } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -300,7 +301,7 @@ export default async function DashboardPage() {
                     </div>
                     {etapa.data_fim_prevista && (
                       <span className="text-xs text-muted-foreground">
-                        {new Date(etapa.data_fim_prevista).toLocaleDateString("pt-BR")}
+                        {parseDateString(etapa.data_fim_prevista).toLocaleDateString("pt-BR")}
                       </span>
                     )}
                   </div>

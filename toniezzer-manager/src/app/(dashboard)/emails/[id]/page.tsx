@@ -210,6 +210,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
 
       toast.success('Email aprovado! Compra criada.')
       router.push('/emails')
+      router.refresh()
       
     } catch (error) {
       console.error('Erro ao aprovar:', error)
@@ -241,6 +242,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
 
       toast.success('Email rejeitado')
       router.push('/emails')
+      router.refresh()
       
     } catch (error) {
       console.error('Erro ao rejeitar:', error)

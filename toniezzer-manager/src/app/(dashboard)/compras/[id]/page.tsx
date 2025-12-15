@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { parseDateString } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +173,7 @@ export default function CompraDetalhesPage() {
 
       toast.success("Compra cancelada com sucesso");
       router.push("/compras");
+      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao cancelar compra");
@@ -345,13 +347,13 @@ export default function CompraDetalhesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {format(new Date(compra.data_compra), "dd/MM/yyyy", {
+              {format(parseDateString(compra.data_compra), "dd/MM/yyyy", {
                 locale: ptBR,
               })}
             </p>
             <p className="text-sm text-muted-foreground">
               1ª parcela:{" "}
-              {format(new Date(compra.data_primeira_parcela), "dd/MM/yyyy", {
+              {format(parseDateString(compra.data_primeira_parcela), "dd/MM/yyyy", {
                 locale: ptBR,
               })}
             </p>

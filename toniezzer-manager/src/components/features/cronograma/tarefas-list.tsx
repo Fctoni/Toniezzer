@@ -24,7 +24,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaTarefaDialog } from "./nova-tarefa-dialog";
-import { formatDateToString } from "@/lib/utils";
+import { formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Tarefa {
   id: string;
@@ -141,7 +141,7 @@ export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListP
 
   const formatDate = (date: string | null) => {
     if (!date) return null;
-    return format(new Date(date), "dd/MM", { locale: ptBR });
+    return format(parseDateString(date), "dd/MM", { locale: ptBR });
   };
 
   const proximaOrdem = tarefas.length > 0 

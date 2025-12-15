@@ -224,6 +224,7 @@ export default function FotoReciboPage() {
 
       toast.success(`Compra registrada com ${numParcelas} parcela${numParcelas > 1 ? 's' : ''}!`)
       router.push('/compras')
+      router.refresh()
       
     } catch (error) {
       console.error('Erro ao salvar:', error)

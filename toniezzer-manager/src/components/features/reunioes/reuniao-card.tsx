@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, Users, CheckCircle2, Circle, AlertTriangle } from 'lucide-react'
 import type { Tables } from '@/lib/types/database'
+import { parseDateString } from '@/lib/utils'
 
 type Reuniao = Tables<'reunioes'> & {
   acoes_count?: number
@@ -19,7 +20,7 @@ interface ReuniaoCardProps {
 export function ReuniaoCard({ reuniao }: ReuniaoCardProps) {
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('pt-BR', {
+      return parseDateString(dateStr).toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'

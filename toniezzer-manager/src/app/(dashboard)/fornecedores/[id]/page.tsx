@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
+import { parseDateString } from "@/lib/utils";
 import { AvaliacaoStars } from "@/components/features/fornecedores/avaliacao-stars";
 import { FornecedorForm } from "@/components/features/fornecedores/fornecedor-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,6 +143,7 @@ export default function FornecedorDetalhesPage({
 
       toast.success("Fornecedor excluído!");
       router.push("/fornecedores");
+      router.refresh();
     } catch {
       toast.error("Erro ao excluir fornecedor");
     }
@@ -367,7 +369,7 @@ export default function FornecedorDetalhesPage({
                     <p className="font-medium">{gasto.descricao}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>
-                        {new Date(gasto.data).toLocaleDateString("pt-BR")}
+                        {parseDateString(gasto.data).toLocaleDateString("pt-BR")}
                       </span>
                       {gasto.categoria && (
                         <>

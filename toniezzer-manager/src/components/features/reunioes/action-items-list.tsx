@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import type { Tables, AcaoTipo, AcaoStatus } from '@/lib/types/database'
 import Link from 'next/link'
+import { parseDateString } from '@/lib/utils'
 
 type Acao = Tables<'reunioes_acoes'>
 
@@ -80,7 +81,7 @@ export function ActionItemsList({ acoes, onStatusChange }: ActionItemsListProps)
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null
     try {
-      return new Date(dateStr).toLocaleDateString('pt-BR')
+      return parseDateString(dateStr).toLocaleDateString('pt-BR')
     } catch {
       return dateStr
     }

@@ -110,6 +110,7 @@ export default function NovaReuniaoPage() {
       }
 
       router.push(`/reunioes/${reuniao.id}`)
+      router.refresh()
       
     } catch (error) {
       console.error('Erro ao criar reunião:', error)

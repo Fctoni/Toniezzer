@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Calendar, Users } from 'lucide-react'
+import { parseDateString } from '@/lib/utils'
 
 interface ResumoViewerProps {
   titulo: string
@@ -34,7 +35,7 @@ export function ResumoViewer({ titulo, data, participantes, markdown }: ResumoVi
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('pt-BR', {
+      return parseDateString(dateStr).toLocaleDateString('pt-BR', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',

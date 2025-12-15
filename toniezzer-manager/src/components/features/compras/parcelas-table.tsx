@@ -41,7 +41,7 @@ import {
   Receipt,
   Paperclip
 } from "lucide-react";
-import { cn, formatDateToString } from "@/lib/utils";
+import { cn, formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Parcela {
   id: string;
@@ -252,7 +252,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                   {parcela.parcela_atual}/{parcela.parcelas}
                 </TableCell>
                 <TableCell>
-                  {format(new Date(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
+                  {format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
                 </TableCell>
                 <TableCell className="text-right">
                   R${" "}
@@ -275,7 +275,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                 </TableCell>
                 <TableCell>
                   {parcela.pago_em
-                    ? format(new Date(parcela.pago_em), "dd/MM/yyyy", {
+                    ? format(parseDateString(parcela.pago_em), "dd/MM/yyyy", {
                         locale: ptBR,
                       })
                     : "-"}
@@ -370,7 +370,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Vencimento</span>
                   <span className="font-medium">
-                    {format(new Date(selectedParcela.data), "dd/MM/yyyy", {
+                    {format(parseDateString(selectedParcela.data), "dd/MM/yyyy", {
                       locale: ptBR,
                     })}
                   </span>
@@ -522,7 +522,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                   <span className="text-muted-foreground">Pago em</span>
                   <span className="font-medium">
                     {selectedParcela.pago_em 
-                      ? format(new Date(selectedParcela.pago_em), "dd/MM/yyyy", { locale: ptBR })
+                      ? format(parseDateString(selectedParcela.pago_em), "dd/MM/yyyy", { locale: ptBR })
                       : "-"}
                   </span>
                 </div>

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Eye, Pencil, Trash2, FileText, Package, CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
+import { parseDateString } from "@/lib/utils";
 
 interface Gasto {
   id: string;
@@ -51,7 +52,7 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
     }).format(value);
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("pt-BR");
+    parseDateString(date).toLocaleDateString("pt-BR");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
