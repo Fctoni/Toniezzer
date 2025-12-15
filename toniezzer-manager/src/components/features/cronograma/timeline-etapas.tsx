@@ -15,6 +15,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Play,
   Pause,
   CheckCircle2,
@@ -22,9 +27,27 @@ import {
   AlertTriangle,
   MoreVertical,
   Link2,
+  ChevronDown,
+  ChevronRight,
+  ListTodo,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TarefasList } from "./tarefas-list";
+
+interface Tarefa {
+  id: string;
+  etapa_id: string;
+  nome: string;
+  descricao: string | null;
+  status: string;
+  data_inicio_prevista: string | null;
+  data_fim_prevista: string | null;
+  data_inicio_real: string | null;
+  data_fim_real: string | null;
+  responsavel_id: string | null;
+  ordem: number;
+}
 
 interface Etapa {
   id: string;
@@ -39,6 +62,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: { nome_completo: string } | null;
+  tarefas: Tarefa[];
 }
 
 interface Dependencia {
@@ -116,6 +140,17 @@ const statusConfig: Record<
 export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasProps) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (etapaId: string) => {
+    const newExpanded = new Set(expandedEtapas);
+    if (newExpanded.has(etapaId)) {
+      newExpanded.delete(etapaId);
+    } else {
+      newExpanded.add(etapaId);
+    }
+    setExpandedEtapas(newExpanded);
+  };
 
   const updateStatus = async (etapaId: string, novoStatus: string) => {
     setUpdating(etapaId);
@@ -170,6 +205,12 @@ export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasPr
       });
   };
 
+  const calcularProgressoTarefas = (tarefas: Tarefa[]) => {
+    if (tarefas.length === 0) return null;
+    const concluidas = tarefas.filter(t => t.status === "concluida").length;
+    return Math.round((concluidas / tarefas.length) * 100);
+  };
+
   if (etapas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -186,175 +227,221 @@ export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasPr
       {etapas.map((etapa, index) => {
         const config = statusConfig[etapa.status] || statusConfig.nao_iniciada;
         const deps = getDependencias(etapa.id);
+        const isExpanded = expandedEtapas.has(etapa.id);
+        const tarefasConcluidas = etapa.tarefas.filter(t => t.status === "concluida").length;
+        const progressoTarefas = calcularProgressoTarefas(etapa.tarefas);
 
         return (
-          <div
+          <Collapsible
             key={etapa.id}
-            className="relative flex gap-4 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+            open={isExpanded}
+            onOpenChange={() => toggleExpanded(etapa.id)}
           >
-            {/* Timeline Line */}
-            {index < etapas.length - 1 && (
-              <div className="absolute left-8 top-16 w-0.5 h-[calc(100%-2rem)] bg-border" />
-            )}
-
-            {/* Status Icon */}
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.bgColor} ${config.color}`}
+              className="relative rounded-lg border bg-card hover:bg-muted/30 transition-colors"
             >
-              {config.icon}
-            </div>
+              {/* Timeline Line */}
+              {index < etapas.length - 1 && (
+                <div className="absolute left-8 top-16 w-0.5 h-[calc(100%-2rem)] bg-border" />
+              )}
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold">{etapa.nome}</h3>
-                  {etapa.descricao && (
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {etapa.descricao}
-                    </p>
-                  )}
+              {/* Main Content */}
+              <div className="flex gap-4 p-4">
+                {/* Status Icon */}
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.bgColor} ${config.color}`}
+                >
+                  {config.icon}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={config.color}>
-                    {config.label}
-                  </Badge>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* Expand/Collapse Button */}
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 -ml-1">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      
+                      <div>
+                        <h3 className="font-semibold">{etapa.nome}</h3>
+                        {etapa.descricao && (
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {etapa.descricao}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        disabled={updating === etapa.id}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {etapa.status === "nao_iniciada" && (
-                        <DropdownMenuItem
-                          onClick={() => updateStatus(etapa.id, "em_andamento")}
-                        >
-                          <Play className="mr-2 h-4 w-4" />
-                          Iniciar Etapa
-                        </DropdownMenuItem>
+                    <div className="flex items-center gap-2">
+                      {/* Tasks Counter Badge */}
+                      {etapa.tarefas.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          <ListTodo className="h-3 w-3" />
+                          {tarefasConcluidas}/{etapa.tarefas.length}
+                        </Badge>
                       )}
-                      {etapa.status === "em_andamento" && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              updateStatus(etapa.id, "aguardando_aprovacao")
-                            }
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Solicitar Conclusão
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus(etapa.id, "pausada")}
-                          >
-                            <Pause className="mr-2 h-4 w-4" />
-                            Pausar
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {etapa.status === "aguardando_aprovacao" && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              updateStatus(etapa.id, "aguardando_qualidade")
-                            }
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Aprovar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus(etapa.id, "em_retrabalho")}
-                          >
-                            <AlertTriangle className="mr-2 h-4 w-4" />
-                            Reprovar
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {etapa.status === "aguardando_qualidade" && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus(etapa.id, "concluida")}
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Concluir
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateStatus(etapa.id, "em_retrabalho")}
-                          >
-                            <AlertTriangle className="mr-2 h-4 w-4" />
-                            Reprovar Qualidade
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {(etapa.status === "pausada" ||
-                        etapa.status === "em_retrabalho") && (
-                        <DropdownMenuItem
-                          onClick={() => updateStatus(etapa.id, "em_andamento")}
-                        >
-                          <Play className="mr-2 h-4 w-4" />
-                          Retomar
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+                      
+                      <Badge variant="outline" className={config.color}>
+                        {config.label}
+                      </Badge>
 
-              {/* Progress */}
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex-1">
-                  <Progress value={etapa.progresso_percentual} className="h-2" />
-                </div>
-                <span className="text-sm text-muted-foreground w-12 text-right">
-                  {etapa.progresso_percentual}%
-                </span>
-              </div>
-
-              {/* Meta Info */}
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                {/* Responsável */}
-                {etapa.responsavel && (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(etapa.responsavel.nome_completo)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{etapa.responsavel.nome_completo}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={updating === etapa.id}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {etapa.status === "nao_iniciada" && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatus(etapa.id, "em_andamento")}
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Iniciar Etapa
+                            </DropdownMenuItem>
+                          )}
+                          {etapa.status === "em_andamento" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  updateStatus(etapa.id, "aguardando_aprovacao")
+                                }
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Solicitar Conclusão
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus(etapa.id, "pausada")}
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                Pausar
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {etapa.status === "aguardando_aprovacao" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  updateStatus(etapa.id, "aguardando_qualidade")
+                                }
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Aprovar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus(etapa.id, "em_retrabalho")}
+                              >
+                                <AlertTriangle className="mr-2 h-4 w-4" />
+                                Reprovar
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {etapa.status === "aguardando_qualidade" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus(etapa.id, "concluida")}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Concluir
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatus(etapa.id, "em_retrabalho")}
+                              >
+                                <AlertTriangle className="mr-2 h-4 w-4" />
+                                Reprovar Qualidade
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {(etapa.status === "pausada" ||
+                            etapa.status === "em_retrabalho") && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatus(etapa.id, "em_andamento")}
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Retomar
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                )}
 
-                {/* Datas */}
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    {formatDate(etapa.data_inicio_prevista)} -{" "}
-                    {formatDate(etapa.data_fim_prevista)}
-                  </span>
-                </div>
-
-                {/* Dependências */}
-                {deps.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Link2 className="h-4 w-4" />
-                    <span>
-                      Depende de: {deps.map((d) => d.etapa?.nome).join(", ")}
+                  {/* Progress */}
+                  <div className="mt-3 flex items-center gap-4">
+                    <div className="flex-1">
+                      <Progress 
+                        value={progressoTarefas !== null ? progressoTarefas : etapa.progresso_percentual} 
+                        className="h-2" 
+                      />
+                    </div>
+                    <span className="text-sm text-muted-foreground w-12 text-right">
+                      {progressoTarefas !== null ? progressoTarefas : etapa.progresso_percentual}%
                     </span>
                   </div>
-                )}
+
+                  {/* Meta Info */}
+                  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    {/* Responsável */}
+                    {etapa.responsavel && (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs">
+                            {getInitials(etapa.responsavel.nome_completo)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{etapa.responsavel.nome_completo}</span>
+                      </div>
+                    )}
+
+                    {/* Datas */}
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span>
+                        {formatDate(etapa.data_inicio_prevista)} -{" "}
+                        {formatDate(etapa.data_fim_prevista)}
+                      </span>
+                    </div>
+
+                    {/* Dependências */}
+                    {deps.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Link2 className="h-4 w-4" />
+                        <span>
+                          Depende de: {deps.map((d) => d.etapa?.nome).join(", ")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Tarefas List (Collapsible) */}
+              <CollapsibleContent>
+                <div className="border-t">
+                  <TarefasList
+                    tarefas={etapa.tarefas}
+                    etapaId={etapa.id}
+                    etapaNome={etapa.nome}
+                    users={users}
+                  />
+                </div>
+              </CollapsibleContent>
             </div>
-          </div>
+          </Collapsible>
         );
       })}
     </div>
   );
 }
-

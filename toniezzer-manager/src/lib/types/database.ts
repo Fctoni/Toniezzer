@@ -784,6 +784,60 @@ export interface Database {
           updated_at?: string
         }
       }
+      // Tarefas (subetapas do cronograma)
+      tarefas: {
+        Row: {
+          id: string
+          etapa_id: string
+          nome: string
+          descricao: string | null
+          status: EtapaStatus
+          data_inicio_prevista: string | null
+          data_fim_prevista: string | null
+          data_inicio_real: string | null
+          data_fim_real: string | null
+          responsavel_id: string | null
+          ordem: number
+          peso_percentual: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          etapa_id: string
+          nome: string
+          descricao?: string | null
+          status?: EtapaStatus
+          data_inicio_prevista?: string | null
+          data_fim_prevista?: string | null
+          data_inicio_real?: string | null
+          data_fim_real?: string | null
+          responsavel_id?: string | null
+          ordem: number
+          peso_percentual?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          etapa_id?: string
+          nome?: string
+          descricao?: string | null
+          status?: EtapaStatus
+          data_inicio_prevista?: string | null
+          data_fim_prevista?: string | null
+          data_inicio_real?: string | null
+          data_fim_real?: string | null
+          responsavel_id?: string | null
+          ordem?: number
+          peso_percentual?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,6 +8,20 @@ interface User {
   nome_completo: string;
 }
 
+interface Tarefa {
+  id: string;
+  etapa_id: string;
+  nome: string;
+  descricao: string | null;
+  status: string;
+  data_inicio_prevista: string | null;
+  data_fim_prevista: string | null;
+  data_inicio_real: string | null;
+  data_fim_real: string | null;
+  responsavel_id: string | null;
+  ordem: number;
+}
+
 interface Etapa {
   id: string;
   nome: string;
@@ -21,6 +35,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: User | null;
+  tarefas: Tarefa[];
 }
 
 interface Dependencia {
@@ -33,7 +48,7 @@ interface Dependencia {
 export default async function CronogramaPage() {
   const supabase = await createClient();
 
-  const [{ data: etapasData }, { data: usersData }, { data: dependenciasData }] =
+  const [{ data: etapasData }, { data: usersData }, { data: dependenciasData }, { data: tarefasData }] =
     await Promise.all([
       supabase
         .from("etapas")
@@ -41,16 +56,19 @@ export default async function CronogramaPage() {
         .order("ordem"),
       supabase.from("users").select("*").eq("ativo", true),
       supabase.from("etapas_dependencias").select("*"),
+      supabase.from("tarefas").select("*").order("ordem"),
     ]);
 
-  // Mapear etapas com responsável
+  // Mapear etapas com responsável e tarefas
   const users = (usersData || []) as User[];
+  const tarefas = (tarefasData || []) as Tarefa[];
   const etapasRaw = etapasData || [];
   const etapas: Etapa[] = etapasRaw.map((e: Record<string, unknown>) => ({
     ...e,
     responsavel: e.responsavel_id 
       ? users.find(u => u.id === e.responsavel_id) || null 
-      : null
+      : null,
+    tarefas: tarefas.filter(t => t.etapa_id === e.id)
   })) as Etapa[];
   const dependencias = (dependenciasData || []) as Dependencia[];
 
