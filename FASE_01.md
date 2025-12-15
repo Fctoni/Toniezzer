@@ -1,15 +1,18 @@
 FASE_01.md
-# 🔵 FASE 1 - Core Essencial
+# 🔵 FASE 1 - Core Essencial (MVP)
 
 **Status:** 🚀 Pronto para iniciar  
 **Duração Estimada:** 2-3 meses  
-**Prioridade:** CRÍTICA
+**Prioridade:** CRÍTICA  
+**Versão:** MVP (sem autenticação e sem RLS)
 
 ---
 
 ## 🎯 OBJETIVO DA FASE
 
-Implementar a fundação completa do sistema: autenticação, permissões, gestão financeira, cronograma e documentação visual. Esta é a base sobre a qual todas as outras fases serão construídas.
+Implementar a fundação completa do sistema: gestão financeira, cronograma e documentação visual. Esta é a base sobre a qual todas as outras fases serão construídas.
+
+> ⚠️ **MVP:** Esta versão não possui login nem políticas de segurança (RLS). O app inicia diretamente no dashboard.
 
 ---
 
@@ -23,14 +26,7 @@ Implementar a fundação completa do sistema: autenticação, permissões, gest�
 - Configurar Vercel para deploy
 - Configurar environment variables
 
-### ✅ **2. Funcionalidade #6 - Sistema de Permissões**
-- Implementar autenticação (Supabase Auth)
-- Criar 5 perfis de usuário
-- Implementar RLS policies
-- Middleware de autenticação
-- Hook customizado `use-permissions`
-
-### ✅ **3. Funcionalidade #1 - Gestão Financeira Macro**
+### ✅ **2. Funcionalidade #1 - Gestão Financeira Macro**
 - Dashboard financeiro
 - Lançamento de gastos (manual)
 - Sistema de parcelas
@@ -38,13 +34,13 @@ Implementar a fundação completa do sistema: autenticação, permissões, gest�
 - Fluxo de caixa projetado
 - Alertas 80% e 100%
 
-### ✅ **4. Funcionalidade #2 - Cronograma Visual de Etapas**
+### ✅ **3. Funcionalidade #2 - Cronograma Visual de Etapas**
 - Timeline de etapas (Gantt simplificado)
 - Fluxo de aprovação (6 estados)
 - Dependências entre etapas
 - Recálculo automático de datas
 
-### ✅ **5. Funcionalidade #4 - Documentação Visual**
+### ✅ **4. Funcionalidade #4 - Documentação Visual**
 - Configurar 4 buckets do Supabase Storage
 - Galeria de fotos
 - Upload de plantas e contratos
@@ -56,20 +52,16 @@ Implementar a fundação completa do sistema: autenticação, permissões, gest�
 
 ### **Migrations SQL (criar nesta ordem):**
 
-#### **Migration 001: Schema Base + Auth**
+#### **Migration 001: Schema Base**
 ```sql
 -- Extensões
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Habilitar RLS em auth.users
-ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
-
--- Tabela users (extensão)
+-- Tabela users (simplificada - sem auth)
 CREATE TABLE users (
-  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   nome_completo text NOT NULL,
   telefone text,
-  perfil text NOT NULL CHECK (perfil IN ('admin_sistema', 'admin_obra', 'arquiteto', 'prestador', 'visualizador')),
   especialidade text,
   avatar_url text,
   ativo boolean DEFAULT true,
@@ -77,36 +69,10 @@ CREATE TABLE users (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_users_perfil ON users(perfil);
 CREATE INDEX idx_users_ativo ON users(ativo);
 
--- RLS Policies para users
-CREATE POLICY "users_select_own" ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "users_select_authenticated" ON users FOR SELECT USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
-CREATE POLICY "users_update_own" ON users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "users_update_admin" ON users FOR UPDATE USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_sistema'
-);
-
--- Function para criar user profile automaticamente
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.users (id, nome_completo, perfil)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'nome_completo', 'Usuário'),
-    COALESCE(NEW.raw_user_meta_data->>'perfil', 'visualizador')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- Inserir usuário padrão para o MVP
+INSERT INTO users (nome_completo) VALUES ('Usuário Principal');
 ```
 
 #### **Migration 002: Categorias e Fornecedores**
@@ -128,13 +94,6 @@ CREATE TABLE categorias (
 CREATE INDEX idx_categorias_ativo ON categorias(ativo);
 CREATE INDEX idx_categorias_ordem ON categorias(ordem);
 
--- RLS para categorias
-ALTER TABLE categorias ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "categorias_select_all" ON categorias FOR SELECT TO authenticated USING (true);
-CREATE POLICY "categorias_insert_admin" ON categorias FOR INSERT TO authenticated WITH CHECK (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
-
 -- Tabela subcategorias
 CREATE TABLE subcategorias (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -146,8 +105,6 @@ CREATE TABLE subcategorias (
 );
 
 CREATE INDEX idx_subcategorias_categoria ON subcategorias(categoria_id);
-ALTER TABLE subcategorias ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "subcategorias_select_all" ON subcategorias FOR SELECT TO authenticated USING (true);
 
 -- Tabela centros_custo (opcional)
 CREATE TABLE centros_custo (
@@ -159,9 +116,6 @@ CREATE TABLE centros_custo (
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
-
-ALTER TABLE centros_custo ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "centros_custo_select_all" ON centros_custo FOR SELECT TO authenticated USING (true);
 
 -- Tabela fornecedores
 CREATE TABLE fornecedores (
@@ -183,12 +137,6 @@ CREATE TABLE fornecedores (
 
 CREATE INDEX idx_fornecedores_nome ON fornecedores(nome);
 CREATE INDEX idx_fornecedores_ativo ON fornecedores(ativo);
-
-ALTER TABLE fornecedores ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "fornecedores_select_all" ON fornecedores FOR SELECT TO authenticated USING (true);
-CREATE POLICY "fornecedores_insert_admin" ON fornecedores FOR INSERT TO authenticated WITH CHECK (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
 ```
 
 #### **Migration 003: Etapas e Dependências**
@@ -219,12 +167,6 @@ CREATE INDEX idx_etapas_status ON etapas(status);
 CREATE INDEX idx_etapas_responsavel ON etapas(responsavel_id);
 CREATE INDEX idx_etapas_datas ON etapas(data_inicio_prevista, data_fim_prevista);
 
-ALTER TABLE etapas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "etapas_select_all" ON etapas FOR SELECT TO authenticated USING (true);
-CREATE POLICY "etapas_insert_admin" ON etapas FOR INSERT TO authenticated WITH CHECK (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
-
 -- Tabela etapas_dependencias
 CREATE TABLE etapas_dependencias (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -238,9 +180,6 @@ CREATE TABLE etapas_dependencias (
 
 CREATE INDEX idx_dependencias_etapa ON etapas_dependencias(etapa_id);
 CREATE INDEX idx_dependencias_depende ON etapas_dependencias(depende_de_etapa_id);
-
-ALTER TABLE etapas_dependencias ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "dependencias_select_all" ON etapas_dependencias FOR SELECT TO authenticated USING (true);
 ```
 
 #### **Migration 004: Gastos**
@@ -263,7 +202,7 @@ CREATE TABLE gastos (
   status text NOT NULL CHECK (status IN ('pendente_aprovacao', 'aprovado', 'rejeitado')),
   aprovado_por uuid REFERENCES users(id),
   aprovado_em timestamptz,
-  criado_por uuid NOT NULL REFERENCES users(id),
+  criado_por uuid REFERENCES users(id),
   criado_via text NOT NULL CHECK (criado_via IN ('manual', 'email', 'ocr', 'bancario')),
   observacoes text,
   created_at timestamptz DEFAULT now(),
@@ -274,25 +213,6 @@ CREATE INDEX idx_gastos_data ON gastos(data);
 CREATE INDEX idx_gastos_categoria ON gastos(categoria_id);
 CREATE INDEX idx_gastos_etapa ON gastos(etapa_relacionada_id);
 CREATE INDEX idx_gastos_status ON gastos(status);
-
-ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
-
--- RLS complexo para gastos (ver PRD seção 5.1.4)
-CREATE POLICY "gastos_select_admin" ON gastos FOR SELECT TO authenticated USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_sistema'
-);
-
-CREATE POLICY "gastos_select_admin_obra" ON gastos FOR SELECT TO authenticated USING (
-  (SELECT perfil FROM users WHERE id = auth.uid()) = 'admin_obra'
-  AND (
-    etapa_relacionada_id IN (SELECT id FROM etapas WHERE responsavel_id = auth.uid())
-    OR etapa_relacionada_id IS NULL
-  )
-);
-
-CREATE POLICY "gastos_insert_admin" ON gastos FOR INSERT TO authenticated WITH CHECK (
-  (SELECT perfil FROM users WHERE id = auth.uid()) IN ('admin_sistema', 'admin_obra')
-);
 ```
 
 #### **Migration 005: Documentos e Storage**
@@ -309,24 +229,20 @@ CREATE TABLE documentos (
   versao integer DEFAULT 1,
   documento_pai_id uuid REFERENCES documentos(id),
   tags text[],
-  created_by uuid NOT NULL REFERENCES users(id),
+  created_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now()
 );
 
 CREATE INDEX idx_documentos_tipo ON documentos(tipo);
 CREATE INDEX idx_documentos_etapa ON documentos(etapa_relacionada_id);
 CREATE INDEX idx_documentos_tags ON documentos USING GIN(tags);
-
-ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "documentos_select_authenticated" ON documentos FOR SELECT TO authenticated USING (true);
-CREATE POLICY "documentos_insert_authenticated" ON documentos FOR INSERT TO authenticated WITH CHECK (true);
 ```
 
 #### **Migration 006: Notificações**
 ```sql
 CREATE TABLE notificacoes (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  usuario_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  usuario_id uuid REFERENCES users(id) ON DELETE CASCADE,
   tipo text NOT NULL CHECK (tipo IN (
     'orcamento_80', 'orcamento_100', 'etapa_atrasada', 'etapa_aguardando',
     'mencao', 'gasto_aprovacao', 'mudanca_escopo', 'email_novo', 'tarefa_atribuida', 'sistema'
@@ -344,10 +260,6 @@ CREATE TABLE notificacoes (
 CREATE INDEX idx_notificacoes_usuario ON notificacoes(usuario_id);
 CREATE INDEX idx_notificacoes_lida ON notificacoes(lida);
 CREATE INDEX idx_notificacoes_created_at ON notificacoes(created_at DESC);
-
-ALTER TABLE notificacoes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "notificacoes_select_own" ON notificacoes FOR SELECT TO authenticated USING (usuario_id = auth.uid());
-CREATE POLICY "notificacoes_update_own" ON notificacoes FOR UPDATE TO authenticated USING (usuario_id = auth.uid());
 ```
 
 #### **Migration 007: Triggers e Functions**
@@ -360,12 +272,16 @@ DECLARE
   cat_realizado decimal;
   cat_percentual decimal;
   cat_nome text;
+  user_id uuid;
 BEGIN
   -- Buscar orçamento da categoria
   SELECT orcamento, nome INTO cat_orcamento, cat_nome
   FROM categorias WHERE id = NEW.categoria_id;
   
-  IF cat_orcamento IS NOT NULL THEN
+  -- Buscar primeiro usuário (MVP - sem auth)
+  SELECT id INTO user_id FROM users LIMIT 1;
+  
+  IF cat_orcamento IS NOT NULL AND user_id IS NOT NULL THEN
     -- Calcular realizado
     SELECT COALESCE(SUM(valor), 0) INTO cat_realizado
     FROM gastos
@@ -376,21 +292,25 @@ BEGIN
     -- Alertar em 80%
     IF cat_percentual >= 80 AND cat_percentual < 100 THEN
       INSERT INTO notificacoes (usuario_id, tipo, titulo, mensagem, origem_id)
-      SELECT id, 'orcamento_80', 
-             'Atenção: Orçamento em 80%',
-             'A categoria ' || cat_nome || ' atingiu ' || ROUND(cat_percentual, 0) || '% do orçamento.',
-             NEW.categoria_id
-      FROM users WHERE perfil IN ('admin_sistema', 'admin_obra');
+      VALUES (
+        user_id,
+        'orcamento_80', 
+        'Atenção: Orçamento em 80%',
+        'A categoria ' || cat_nome || ' atingiu ' || ROUND(cat_percentual, 0) || '% do orçamento.',
+        NEW.categoria_id
+      );
     END IF;
     
     -- Alertar em 100%
     IF cat_percentual >= 100 THEN
       INSERT INTO notificacoes (usuario_id, tipo, titulo, mensagem, origem_id)
-      SELECT id, 'orcamento_100',
-             'Alerta: Orçamento atingido!',
-             'A categoria ' || cat_nome || ' atingiu ' || ROUND(cat_percentual, 0) || '% do orçamento.',
-             NEW.categoria_id
-      FROM users WHERE perfil IN ('admin_sistema', 'admin_obra');
+      VALUES (
+        user_id,
+        'orcamento_100',
+        'Alerta: Orçamento atingido!',
+        'A categoria ' || cat_nome || ' atingiu ' || ROUND(cat_percentual, 0) || '% do orçamento.',
+        NEW.categoria_id
+      );
     END IF;
   END IF;
   
@@ -552,12 +472,11 @@ export async function POST() {
 
 ```
 app/
-├── (auth)/
-│   ├── login/page.tsx
-│   └── register/page.tsx
+├── layout.tsx                      # Layout raiz
+├── page.tsx                        # Redireciona para /dashboard
 ├── (dashboard)/
-│   ├── layout.tsx
-│   ├── page.tsx                    # Dashboard overview
+│   ├── layout.tsx                 # Layout com sidebar
+│   ├── page.tsx                   # Dashboard overview
 │   ├── financeiro/
 │   │   ├── page.tsx               # Dashboard financeiro
 │   │   ├── lancamentos/
@@ -572,8 +491,7 @@ app/
 │   │   ├── page.tsx               # Galeria
 │   │   └── fotos/page.tsx        # Fotos
 │   └── configuracoes/
-│       ├── categorias/page.tsx
-│       └── usuarios/page.tsx
+│       └── categorias/page.tsx
 
 components/
 ├── ui/                            # shadcn/ui base
@@ -583,22 +501,16 @@ components/
     └── documentos/
 ```
 
+> ⚠️ **MVP:** Sem pasta `(auth)/` - o app inicia direto no dashboard.
+
 ---
 
 ## ✅ CHECKLIST DE TESTES MANUAIS
 
-### **Setup e Auth**
-- [ ] Criar novo usuário (register)
-- [ ] Login com email/senha
-- [ ] Logout
-- [ ] Recuperar senha
-- [ ] Criar usuários com cada perfil (5 perfis)
-
-### **Permissões**
-- [ ] Logar como Admin Sistema → ver tudo
-- [ ] Logar como Admin Obra → ver só financeiro das suas etapas
-- [ ] Logar como Prestador → ver só suas etapas e pagamentos
-- [ ] Logar como Visualizador → não ter acesso a financeiro
+### **Setup Inicial**
+- [ ] App inicia diretamente no dashboard (sem login)
+- [ ] Navegação funciona entre todas as páginas
+- [ ] Conexão com Supabase funcionando
 
 ### **Financeiro**
 - [ ] Criar categoria + orçamento
@@ -634,7 +546,7 @@ Para considerar FASE 1 completa:
 - ✅ 2 APIs/Jobs server deployados
 - ✅ Todos testes manuais passando
 - ✅ Deploy em produção (Vercel + Supabase)
-- ✅ RLS testado para cada perfil
+- ✅ App inicia direto no dashboard (MVP sem login)
 - ✅ Zero erros de linter/TypeScript
 - ✅ Aprovação do proprietário
 

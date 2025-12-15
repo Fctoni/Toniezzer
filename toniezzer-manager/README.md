@@ -1,94 +1,36 @@
-# Toniezzer Manager
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Sistema de gestao integral de obras residenciais.
+## Getting Started
 
-## Stack Tecnico
+First, run the development server:
 
-- **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- **UI Components:** shadcn/ui
-- **Backend:** Supabase (PostgreSQL + Auth + Storage + Edge Functions)
-- **Deploy:** Vercel
-
-## Setup Local
-
-### Pre-requisitos
-
-- Node.js 18+
-- npm ou yarn
-- Conta no Supabase (https://supabase.com)
-
-### Instalacao
-
-1. Clone o repositorio:
-```bash
-git clone <repo-url>
-cd toniezzer-manager
-```
-
-2. Instale as dependencias:
-```bash
-npm install
-```
-
-3. Configure as variaveis de ambiente:
-```bash
-cp env.example .env.local
-```
-
-4. Edite `.env.local` com suas credenciais do Supabase:
-```
-NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-anon-key
-SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
-```
-
-5. Execute as migrations no Supabase (ver pasta `supabase/migrations/`)
-
-6. Inicie o servidor de desenvolvimento:
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-7. Acesse http://localhost:3000
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Estrutura do Projeto
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```
-toniezzer-manager/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Paginas de autenticacao
-│   ├── (dashboard)/       # Paginas protegidas
-│   └── api/               # API Routes
-├── components/
-│   ├── ui/                # Componentes base (shadcn/ui)
-│   ├── features/          # Componentes de funcionalidades
-│   └── layout/            # Componentes de layout
-├── lib/
-│   ├── supabase/          # Clientes Supabase
-│   ├── hooks/             # Custom React hooks
-│   ├── types/             # TypeScript types
-│   └── utils/             # Utilitarios
-├── supabase/
-│   ├── migrations/        # SQL migrations
-│   └── functions/         # Edge Functions
-└── public/                # Assets estaticos
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Scripts
+## Learn More
 
-- `npm run dev` - Servidor de desenvolvimento
-- `npm run build` - Build de producao
-- `npm run start` - Servidor de producao
-- `npm run lint` - Verificar linting
-- `npm run type-check` - Verificar tipos TypeScript
+To learn more about Next.js, take a look at the following resources:
 
-## Documentacao
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-- [PRD Completo](../PRD-Toniezzer-Manager.md)
-- [Plano de Implementacao](../Implementacao/plano%20de%20implementacao.md)
-- [Fase 1 - Core Essencial](../Implementacao/FASE_01.md)
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Licenca
+## Deploy on Vercel
 
-Proprietary - Todos os direitos reservados.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

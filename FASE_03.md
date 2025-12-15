@@ -40,15 +40,19 @@ Implementar automação inteligente com IA para reduzir drasticamente trabalho m
 ## 🔗 DEPENDÊNCIAS
 
 ### **Requer de FASE 1:**
-- ✅ Tabela `gastos` (para criar lançamentos automáticos)
+- ✅ Tabela `compras` (para criar compras automaticamente via IA)
+- ✅ Tabela `gastos` (para criar parcelas/lançamentos automáticos)
 - ✅ Tabela `categorias` (para classificação IA)
 - ✅ Tabela `fornecedores` (para vincular/criar)
-- ✅ Supabase Storage (bucket `fotos-temp`)
+- ✅ Supabase Storage (bucket `fotos-temp`, `documentos`)
 - ✅ Sistema de aprovação de gastos
+- ✅ Módulo de Compras funcional (para vincular lançamentos via `compra_id`)
 
 ### **Requer de FASE 2:**
 - ✅ Tabela `feed_comunicacao` (para backlinks de reuniões)
 - ✅ Sistema de notificações (para avisar sobre emails/OCR)
+
+> 📝 **Nota:** Com o módulo de Compras implementado, a automação IA pode criar compras completas (com parcelas) ao invés de lançamentos avulsos.
 
 ---
 
