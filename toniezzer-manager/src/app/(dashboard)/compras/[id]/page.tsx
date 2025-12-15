@@ -65,6 +65,7 @@ interface Parcela {
   parcelas: number;
   pago: boolean;
   pago_em: string | null;
+  comprovante_pagamento_url: string | null;
 }
 
 export default function CompraDetalhesPage() {
@@ -126,7 +127,7 @@ export default function CompraDetalhesPage() {
     // Buscar parcelas (gastos vinculados)
     const { data: parcelasData, error: parcelasError } = await supabase
       .from("gastos")
-      .select("id, valor, data, parcela_atual, parcelas, pago, pago_em")
+      .select("id, valor, data, parcela_atual, parcelas, pago, pago_em, comprovante_pagamento_url")
       .eq("compra_id", id)
       .order("parcela_atual");
 
@@ -142,6 +143,7 @@ export default function CompraDetalhesPage() {
           parcelas: p.parcelas ?? 1,
           pago: p.pago ?? false,
           pago_em: p.pago_em,
+          comprovante_pagamento_url: p.comprovante_pagamento_url,
         }))
       );
     }

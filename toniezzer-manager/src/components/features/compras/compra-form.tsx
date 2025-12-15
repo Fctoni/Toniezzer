@@ -153,7 +153,7 @@ export function CompraForm({
         const filePath = `notas-fiscais/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("documentos")
+          .from("notas-compras")
           .upload(filePath, arquivoNF);
 
         if (uploadError) {
@@ -166,7 +166,7 @@ export function CompraForm({
 
         // Obter URL pública
         const { data: urlData } = supabase.storage
-          .from("documentos")
+          .from("notas-compras")
           .getPublicUrl(filePath);
 
         notaFiscalUrl = urlData.publicUrl;
@@ -185,9 +185,7 @@ export function CompraForm({
           etapa_relacionada_id: data.etapa_relacionada_id || null,
           forma_pagamento: data.forma_pagamento,
           parcelas: numParcelas,
-          data_primeira_parcela: data.data_primeira_parcela
-            .toISOString()
-            .split("T")[0],
+          data_primeira_parcela: formatDateToString(data.data_primeira_parcela),
           nota_fiscal_numero: data.nota_fiscal_numero || null,
           nota_fiscal_url: notaFiscalUrl,
           observacoes: data.observacoes || null,

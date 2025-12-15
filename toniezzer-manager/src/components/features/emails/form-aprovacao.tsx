@@ -28,14 +28,16 @@ import { AlertCircle, Check, X, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
+import { QuickAddFornecedor } from '@/components/features/ocr/quick-add-fornecedor'
 
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
   valor: z.string().min(1, 'Valor é obrigatório'),
   data: z.string().min(1, 'Data é obrigatória'),
-  fornecedor_id: z.string().optional(),
+  fornecedor_id: z.string().min(1, 'Fornecedor é obrigatório'),
   categoria_id: z.string().min(1, 'Categoria é obrigatória'),
   forma_pagamento: z.enum(['dinheiro', 'pix', 'cartao', 'boleto', 'cheque']),
+  parcelas: z.string().min(1, 'Parcelas é obrigatório'),
   nota_fiscal_numero: z.string().optional(),
   etapa_relacionada_id: z.string().optional(),
   observacoes: z.string().optional(),
@@ -84,6 +86,7 @@ export function FormAprovacao({
       fornecedor_id: '',
       categoria_id: '',
       forma_pagamento: (dadosExtraidos?.forma_pagamento as FormData['forma_pagamento']) || 'pix',
+      parcelas: '1',
       nota_fiscal_numero: dadosExtraidos?.numero_nf || '',
       etapa_relacionada_id: '',
       observacoes: `Importado do email de ${email.remetente}\nConfiança IA: ${dadosExtraidos?.confianca ? Math.round(dadosExtraidos.confianca * 100) + '%' : 'N/A'}`,
@@ -259,17 +262,19 @@ export function FormAprovacao({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fornecedor</FormLabel>
-                  <Select 
-                    onValueChange={(val) => field.onChange(val === '_none' ? '' : val)} 
-                    value={field.value || '_none'}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione (opcional)" />
+                        <SelectValue placeholder="Selecione o fornecedor" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="_none">Nenhum</SelectItem>
+                      <QuickAddFornecedor 
+                        onFornecedorAdded={(novoFornecedor) => {
+                          setFornecedores(prev => [...prev, novoFornecedor as Tables<'fornecedores'>])
+                          field.onChange(novoFornecedor.id)
+                        }}
+                      />
                       {fornecedores.map((f) => (
                         <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                       ))}
@@ -280,7 +285,7 @@ export function FormAprovacao({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="forma_pagamento"
@@ -301,6 +306,20 @@ export function FormAprovacao({
                         <SelectItem value="cheque">Cheque</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="parcelas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parcelas</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" max="48" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import type { Tables } from '@/lib/types/database'
+import { formatDateToString } from '@/lib/utils'
 
 export default function EmailDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -46,9 +47,10 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     descricao: string
     valor: string
     data: string
-    fornecedor_id?: string
+    fornecedor_id: string
     categoria_id: string
     forma_pagamento: 'dinheiro' | 'pix' | 'cartao' | 'boleto' | 'cheque'
+    parcelas: string
     nota_fiscal_numero?: string
     etapa_relacionada_id?: string
     observacoes?: string
@@ -58,37 +60,147 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     setIsSubmitting(true)
     try {
       const supabase = createClient()
+      const numParcelas = parseInt(data.parcelas || '1')
       
-      // 1. Criar o gasto
-      const { data: gasto, error: gastoError } = await supabase
-        .from('gastos')
+      // 1. Verificar se há anexos e salvar no Storage
+      let notaFiscalUrl: string | null = null
+      
+      const anexos = email.anexos as Array<{
+        nome: string
+        tipo: string
+        tamanho?: number
+        part: string
+        uid: number
+      }> | null
+      
+      if (anexos && anexos.length > 0) {
+        // Encontrar o primeiro anexo que seja imagem ou PDF
+        const anexoParaSalvar = anexos.find(a => 
+          a.tipo?.includes('image') || a.tipo?.includes('pdf')
+        )
+        
+        if (anexoParaSalvar) {
+          try {
+            // Baixar o anexo via API
+            const anexoUrl = `/api/emails/attachment?uid=${anexoParaSalvar.uid}&part=${anexoParaSalvar.part}&tipo=${encodeURIComponent(anexoParaSalvar.tipo)}&nome=${encodeURIComponent(anexoParaSalvar.nome)}`
+            const response = await fetch(anexoUrl)
+            
+            if (response.ok) {
+              const blob = await response.blob()
+              
+              // Determinar extensão do arquivo
+              let extensao = 'bin'
+              if (anexoParaSalvar.tipo?.includes('jpeg') || anexoParaSalvar.tipo?.includes('jpg')) {
+                extensao = 'jpg'
+              } else if (anexoParaSalvar.tipo?.includes('png')) {
+                extensao = 'png'
+              } else if (anexoParaSalvar.tipo?.includes('pdf')) {
+                extensao = 'pdf'
+              }
+              
+              // Upload para o Storage
+              const fileName = `email/${Date.now()}-${email.id}.${extensao}`
+              const { error: uploadError } = await supabase.storage
+                .from('notas-compras')
+                .upload(fileName, blob, {
+                  contentType: anexoParaSalvar.tipo,
+                  upsert: false
+                })
+              
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage
+                  .from('notas-compras')
+                  .getPublicUrl(fileName)
+                notaFiscalUrl = urlData.publicUrl
+                console.log('[EMAIL] Anexo salvo no Storage:', notaFiscalUrl)
+              } else {
+                console.error('[EMAIL] Erro ao fazer upload do anexo:', uploadError)
+              }
+            }
+          } catch (anexoError) {
+            console.error('[EMAIL] Erro ao processar anexo:', anexoError)
+            // Continua mesmo se falhar o upload do anexo
+          }
+        }
+      }
+      
+      // 2. Criar a compra
+      const { data: compra, error: compraError } = await supabase
+        .from('compras')
         .insert({
           descricao: data.descricao,
-          valor: parseFloat(data.valor),
-          data: data.data,
+          valor_total: parseFloat(data.valor),
+          data_compra: data.data,
+          data_primeira_parcela: data.data,
           categoria_id: data.categoria_id,
-          fornecedor_id: data.fornecedor_id || null,
+          fornecedor_id: data.fornecedor_id,
           forma_pagamento: data.forma_pagamento,
+          parcelas: numParcelas,
           nota_fiscal_numero: data.nota_fiscal_numero || null,
+          nota_fiscal_url: notaFiscalUrl,
           etapa_relacionada_id: data.etapa_relacionada_id || null,
           observacoes: data.observacoes || null,
           criado_por: currentUser.id,
           criado_via: 'email',
-          status: 'aprovado',
-          pago: true,
-          pago_em: data.data,
+          status: 'ativa',
+          valor_pago: 0,
+          parcelas_pagas: 0,
         })
         .select()
         .single()
 
-      if (gastoError) throw gastoError
+      if (compraError) throw compraError
 
-      // 2. Atualizar o email
+      // 3. Criar as parcelas (lançamentos na tabela gastos)
+      const valorTotal = parseFloat(data.valor)
+      const valorParcela = valorTotal / numParcelas
+      const valorArredondado = Math.floor(valorParcela * 100) / 100
+      const diferencaArredondamento = valorTotal - (valorArredondado * numParcelas)
+
+      const lancamentos = []
+      const dataPrimeiraParcela = new Date(data.data + 'T12:00:00')
+
+      for (let i = 0; i < numParcelas; i++) {
+        const dataParcela = new Date(dataPrimeiraParcela)
+        dataParcela.setMonth(dataParcela.getMonth() + i)
+        
+        const valor = i === numParcelas - 1
+          ? valorArredondado + diferencaArredondamento
+          : valorArredondado
+
+        lancamentos.push({
+          compra_id: compra.id,
+          descricao: data.descricao,
+          valor: valor,
+          data: formatDateToString(dataParcela),
+          categoria_id: data.categoria_id,
+          fornecedor_id: data.fornecedor_id,
+          forma_pagamento: data.forma_pagamento,
+          parcelas: numParcelas,
+          parcela_atual: i + 1,
+          etapa_relacionada_id: data.etapa_relacionada_id || null,
+          status: 'aprovado',
+          pago: false,
+          criado_por: currentUser.id,
+          criado_via: 'email',
+        })
+      }
+
+      const { error: lancamentosError } = await supabase
+        .from('gastos')
+        .insert(lancamentos)
+
+      if (lancamentosError) {
+        console.error('Erro ao criar parcelas:', lancamentosError)
+        // Não lança erro para não impedir o fluxo, mas loga
+      }
+
+      // 4. Atualizar o email
       const { error: emailError } = await supabase
         .from('emails_monitorados')
         .update({
           status: 'processado',
-          gasto_sugerido_id: gasto.id,
+          compra_sugerida_id: compra.id,
           processado_em: new Date().toISOString(),
           processado_por: currentUser.id,
         })
@@ -96,7 +208,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
 
       if (emailError) throw emailError
 
-      toast.success('Email aprovado! Lançamento criado.')
+      toast.success('Email aprovado! Compra criada.')
       router.push('/emails')
       
     } catch (error) {

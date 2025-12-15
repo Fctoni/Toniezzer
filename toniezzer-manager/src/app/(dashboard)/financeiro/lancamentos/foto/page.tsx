@@ -62,12 +62,12 @@ export default function FotoReciboPage() {
       const supabase = createClient()
       const fileName = `ocr/${Date.now()}-${file.name}`
       const { error: uploadError } = await supabase.storage
-        .from('fotos-temp')
+        .from('notas-compras')
         .upload(fileName, file)
 
       let publicUrl = ''
       if (!uploadError) {
-        const { data } = supabase.storage.from('fotos-temp').getPublicUrl(fileName)
+        const { data } = supabase.storage.from('notas-compras').getPublicUrl(fileName)
         publicUrl = data.publicUrl
       }
 
@@ -156,7 +156,8 @@ export default function FotoReciboPage() {
       const valorTotal = parseFloat(data.valor)
       const numParcelas = parseInt(data.parcelas || '1')
       
-      const { error } = await supabase.from('compras').insert({
+      // 1. Criar a compra
+      const { data: compra, error: compraError } = await supabase.from('compras').insert({
         descricao: data.descricao,
         valor_total: valorTotal,
         data_compra: data.data,
@@ -172,13 +173,56 @@ export default function FotoReciboPage() {
         criado_por: currentUser.id,
         criado_via: 'ocr',
         status: 'ativa',
-        valor_pago: valorTotal, // Marcando como já pago
-        parcelas_pagas: numParcelas,
-      })
+        valor_pago: 0,
+        parcelas_pagas: 0,
+      }).select().single()
 
-      if (error) throw error
+      if (compraError) throw compraError
 
-      toast.success('Compra registrada com sucesso!')
+      // 2. Criar as parcelas (lançamentos na tabela gastos)
+      const valorParcela = valorTotal / numParcelas
+      const valorArredondado = Math.floor(valorParcela * 100) / 100
+      const diferencaArredondamento = valorTotal - (valorArredondado * numParcelas)
+
+      const lancamentos = []
+      const dataPrimeiraParcela = new Date(data.data + 'T12:00:00')
+
+      for (let i = 0; i < numParcelas; i++) {
+        const dataParcela = new Date(dataPrimeiraParcela)
+        dataParcela.setMonth(dataParcela.getMonth() + i)
+        
+        const valor = i === numParcelas - 1
+          ? valorArredondado + diferencaArredondamento
+          : valorArredondado
+
+        lancamentos.push({
+          compra_id: compra.id,
+          descricao: data.descricao,
+          valor: valor,
+          data: formatDateToString(dataParcela),
+          categoria_id: data.categoria_id,
+          fornecedor_id: data.fornecedor_id,
+          forma_pagamento: data.forma_pagamento,
+          parcelas: numParcelas,
+          parcela_atual: i + 1,
+          etapa_relacionada_id: data.etapa_relacionada_id || null,
+          status: 'aprovado',
+          pago: false,
+          criado_por: currentUser.id,
+          criado_via: 'ocr',
+        })
+      }
+
+      const { error: lancamentosError } = await supabase
+        .from('gastos')
+        .insert(lancamentos)
+
+      if (lancamentosError) {
+        console.error('Erro ao criar parcelas:', lancamentosError)
+        // Não lança erro para não impedir o fluxo, mas loga
+      }
+
+      toast.success(`Compra registrada com ${numParcelas} parcela${numParcelas > 1 ? 's' : ''}!`)
       router.push('/compras')
       
     } catch (error) {

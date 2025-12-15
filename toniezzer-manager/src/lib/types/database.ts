@@ -700,6 +700,7 @@ export type Database = {
           categoria_id: string
           centro_custo_id: string | null
           compra_id: string | null
+          comprovante_pagamento_url: string | null
           created_at: string | null
           criado_por: string | null
           criado_via: string
@@ -727,6 +728,7 @@ export type Database = {
           categoria_id: string
           centro_custo_id?: string | null
           compra_id?: string | null
+          comprovante_pagamento_url?: string | null
           created_at?: string | null
           criado_por?: string | null
           criado_via?: string
@@ -754,6 +756,7 @@ export type Database = {
           categoria_id?: string
           centro_custo_id?: string | null
           compra_id?: string | null
+          comprovante_pagamento_url?: string | null
           created_at?: string | null
           criado_por?: string | null
           criado_via?: string
