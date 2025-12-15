@@ -34,6 +34,7 @@ import {
   Tag,
   Trash2,
   Loader2,
+  Pencil,
 } from "lucide-react";
 
 interface Compra {
@@ -242,13 +243,20 @@ export default function CompraDetalhesPage() {
         </div>
 
         {compra.status !== "cancelada" && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Cancelar Compra
+          <div className="flex gap-2">
+            <Link href={`/compras/${id}/editar`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
               </Button>
-            </AlertDialogTrigger>
+            </Link>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancelar Compra
+                </Button>
+              </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Cancelar Compra?</AlertDialogTitle>
@@ -271,6 +279,7 @@ export default function CompraDetalhesPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         )}
       </div>
 

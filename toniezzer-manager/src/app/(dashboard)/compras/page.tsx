@@ -17,8 +17,10 @@ type CompraComRelacoes = {
   forma_pagamento: string;
   fornecedor_id: string;
   categoria_id: string;
+  etapa_relacionada_id: string | null;
   fornecedor: { nome: string } | null;
   categoria: { nome: string; cor: string } | null;
+  etapa: { nome: string } | null;
   [key: string]: unknown;
 };
 
@@ -32,7 +34,8 @@ export default async function ComprasPage() {
       `
       *,
       fornecedor:fornecedores(nome),
-      categoria:categorias(nome, cor)
+      categoria:categorias(nome, cor),
+      etapa:etapas(nome)
     `
     )
     .order("created_at", { ascending: false });
@@ -51,6 +54,12 @@ export default async function ComprasPage() {
     .select("id, nome, cor")
     .order("nome");
 
+  // Buscar etapas para o filtro
+  const { data: etapas } = await supabase
+    .from("etapas")
+    .select("id, nome")
+    .order("ordem");
+
   if (error) {
     console.error("Erro ao buscar compras:", error);
   }
@@ -64,6 +73,7 @@ export default async function ComprasPage() {
       status: compra.status as "ativa" | "quitada" | "cancelada",
       fornecedor: compra.fornecedor,
       categoria: compra.categoria,
+      etapa: compra.etapa,
     })) || [];
 
   return (
@@ -106,6 +116,7 @@ export default async function ComprasPage() {
           compras={comprasFormatadas}
           fornecedores={fornecedores || []}
           categorias={categorias || []}
+          etapas={etapas || []}
         />
       )}
     </div>

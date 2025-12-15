@@ -42,6 +42,7 @@ interface Compra {
   forma_pagamento: string;
   fornecedor?: { nome: string } | null;
   categoria?: { nome: string; cor: string } | null;
+  etapa?: { nome: string } | null;
 }
 
 interface ComprasTableProps {
@@ -113,6 +114,7 @@ export function ComprasTable({ compras }: ComprasTableProps) {
           <TableHead>Descrição</TableHead>
           <TableHead>Fornecedor</TableHead>
           <TableHead>Categoria</TableHead>
+          <TableHead>Etapa</TableHead>
           <TableHead className="text-right">Valor</TableHead>
           <TableHead className="text-center">Parcelas</TableHead>
           <TableHead>Progresso</TableHead>
@@ -156,6 +158,9 @@ export function ComprasTable({ compras }: ComprasTableProps) {
                     <span className="text-sm">{compra.categoria.nome}</span>
                   </div>
                 )}
+              </TableCell>
+              <TableCell>
+                <span className="text-sm">{compra.etapa?.nome || "-"}</span>
               </TableCell>
               <TableCell className="text-right font-medium whitespace-nowrap">
                 {formatCurrency(compra.valor_total)}

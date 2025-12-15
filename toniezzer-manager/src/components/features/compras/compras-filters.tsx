@@ -36,6 +36,7 @@ export interface ComprasFilters {
   status: string;
   fornecedor_id: string;
   categoria_id: string;
+  etapa_id: string;
   data_inicio: Date | undefined;
   data_fim: Date | undefined;
   valor_min: string;
@@ -55,6 +56,7 @@ interface ComprasFiltersProps {
   onFiltersChange: (filters: ComprasFilters) => void;
   fornecedores: Array<{ id: string; nome: string }>;
   categorias: Array<{ id: string; nome: string; cor: string }>;
+  etapas: Array<{ id: string; nome: string }>;
   resumo: ResumoCompras;
   resultadosFiltrados: number;
 }
@@ -64,6 +66,7 @@ export const defaultFilters: ComprasFilters = {
   status: "todos",
   fornecedor_id: "todos",
   categoria_id: "todos",
+  etapa_id: "todos",
   data_inicio: undefined,
   data_fim: undefined,
   valor_min: "",
@@ -75,6 +78,7 @@ export function ComprasFiltersComponent({
   onFiltersChange,
   fornecedores,
   categorias,
+  etapas,
   resumo,
   resultadosFiltrados,
 }: ComprasFiltersProps) {
@@ -95,6 +99,7 @@ export function ComprasFiltersComponent({
     filters.status !== "todos",
     filters.fornecedor_id !== "todos",
     filters.categoria_id !== "todos",
+    filters.etapa_id !== "todos",
     filters.data_inicio !== undefined || filters.data_fim !== undefined,
     filters.valor_min !== "" || filters.valor_max !== "",
   ].filter(Boolean).length;
@@ -188,7 +193,7 @@ export function ComprasFiltersComponent({
       {isOpen && (
         <div className="border-t p-3 space-y-3 bg-muted/30">
           {/* Linha 1: Selects */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {/* Status */}
             <div className="space-y-1.5">
               <Label className="text-xs">Status</Label>
@@ -250,6 +255,28 @@ export function ComprasFiltersComponent({
                         />
                         {c.nome}
                       </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Etapa */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Etapa</Label>
+              <Select
+                value={filters.etapa_id}
+                onValueChange={(value) => updateFilter("etapa_id", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="sem_etapa">Sem etapa</SelectItem>
+                  {etapas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>

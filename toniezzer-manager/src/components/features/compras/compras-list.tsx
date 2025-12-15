@@ -22,20 +22,24 @@ interface Compra {
   forma_pagamento: string;
   fornecedor_id: string;
   categoria_id: string;
+  etapa_relacionada_id: string | null;
   fornecedor?: { nome: string } | null;
   categoria?: { nome: string; cor: string } | null;
+  etapa?: { nome: string } | null;
 }
 
 interface ComprasListProps {
   compras: Compra[];
   fornecedores: Array<{ id: string; nome: string }>;
   categorias: Array<{ id: string; nome: string; cor: string }>;
+  etapas: Array<{ id: string; nome: string }>;
 }
 
 export function ComprasList({
   compras,
   fornecedores,
   categorias,
+  etapas,
 }: ComprasListProps) {
   const [filters, setFilters] = useState<ComprasFilters>(defaultFilters);
 
@@ -91,6 +95,17 @@ export function ComprasList({
         return false;
       }
 
+      // Filtro de etapa
+      if (filters.etapa_id !== "todos") {
+        if (filters.etapa_id === "sem_etapa") {
+          if (compra.etapa_relacionada_id !== null) {
+            return false;
+          }
+        } else if (compra.etapa_relacionada_id !== filters.etapa_id) {
+          return false;
+        }
+      }
+
       // Filtro de data início
       if (filters.data_inicio) {
         const dataCompra = new Date(compra.data_compra);
@@ -137,6 +152,7 @@ export function ComprasList({
         onFiltersChange={setFilters}
         fornecedores={fornecedores}
         categorias={categorias}
+        etapas={etapas}
         resumo={resumo}
         resultadosFiltrados={comprasFiltradas.length}
       />
