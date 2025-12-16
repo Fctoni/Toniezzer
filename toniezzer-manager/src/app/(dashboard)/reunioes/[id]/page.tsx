@@ -108,7 +108,6 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
 
     toast.success('Reunião excluída')
     router.push('/reunioes')
-    router.refresh()
   }
 
   if (loading) {

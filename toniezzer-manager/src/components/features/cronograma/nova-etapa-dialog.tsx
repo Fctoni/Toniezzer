@@ -64,12 +64,14 @@ interface NovaEtapaDialogProps {
   users: User[];
   etapas: Etapa[];
   proximaOrdem: number;
+  onSuccess?: () => void;
 }
 
 export function NovaEtapaDialog({
   users,
   etapas,
   proximaOrdem,
+  onSuccess,
 }: NovaEtapaDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -122,7 +124,13 @@ export function NovaEtapaDialog({
       toast.success("Etapa criada com sucesso!");
       setOpen(false);
       form.reset();
-      router.refresh();
+      
+      // Notificar o parent ou fazer refresh da página
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       console.error(error);
       toast.error("Erro ao criar etapa");

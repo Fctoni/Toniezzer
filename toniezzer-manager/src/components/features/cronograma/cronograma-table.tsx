@@ -119,6 +119,7 @@ function SortableEtapaRow({
   onReorderTarefas,
   onEditEtapa,
   onEditTarefa,
+  onTarefaCreated,
 }: {
   etapa: Etapa;
   isExpanded: boolean;
@@ -130,6 +131,7 @@ function SortableEtapaRow({
   onReorderTarefas: (etapaId: string, tarefas: Tarefa[]) => void;
   onEditEtapa: (etapa: Etapa) => void;
   onEditTarefa: (tarefa: Tarefa) => void;
+  onTarefaCreated: () => void;
 }) {
   const {
     attributes,
@@ -348,6 +350,7 @@ function SortableEtapaRow({
             etapaNome={etapa.nome}
             users={users}
             proximaOrdem={etapa.tarefas.length + 1}
+            onSuccess={onTarefaCreated}
             trigger={
               <Button
                 variant="ghost"
@@ -618,6 +621,82 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
   const [editingTarefa, setEditingTarefa] = useState<Tarefa | null>(null);
 
+  // Função para recarregar dados do servidor
+  const refreshData = async () => {
+    const supabase = createClient();
+    
+    const [{ data: etapasData }, { data: tarefasData }] = await Promise.all([
+      supabase.from("etapas").select("*").order("ordem"),
+      supabase.from("tarefas").select("*").order("ordem"),
+    ]);
+
+    if (etapasData && tarefasData) {
+      const newEtapas: Etapa[] = etapasData.map((e) => ({
+        ...e,
+        responsavel: e.responsavel_id ? users.find((u) => u.id === e.responsavel_id) || null : null,
+        tarefas: tarefasData.filter((t) => t.etapa_id === e.id),
+      }));
+      setEtapas(newEtapas);
+    }
+  };
+
+  // Callback para quando uma etapa é editada via dialog
+  const handleEtapaUpdated = (updatedEtapa: Partial<Etapa> & { id: string }) => {
+    setEtapas((prev) =>
+      prev.map((e) => {
+        if (e.id !== updatedEtapa.id) return e;
+        return {
+          ...e,
+          ...updatedEtapa,
+          responsavel: updatedEtapa.responsavel_id
+            ? users.find((u) => u.id === updatedEtapa.responsavel_id) || null
+            : null,
+        };
+      })
+    );
+    setEditingEtapa(null);
+  };
+
+  // Callback para quando uma etapa é excluída via dialog
+  const handleEtapaDeleted = (etapaId: string) => {
+    setEtapas((prev) => prev.filter((e) => e.id !== etapaId));
+    setEditingEtapa(null);
+  };
+
+  // Callback para quando uma tarefa é editada via dialog
+  const handleTarefaUpdated = (updatedTarefa: Partial<Tarefa> & { id: string }) => {
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        tarefas: e.tarefas.map((t) =>
+          t.id === updatedTarefa.id ? { ...t, ...updatedTarefa } : t
+        ),
+      }))
+    );
+    setEditingTarefa(null);
+  };
+
+  // Callback para quando uma tarefa é excluída via dialog
+  const handleTarefaDeleted = (tarefaId: string) => {
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        tarefas: e.tarefas.filter((t) => t.id !== tarefaId),
+      }))
+    );
+    setEditingTarefa(null);
+  };
+
+  // Callback para quando uma nova etapa é criada
+  const handleEtapaCreated = () => {
+    refreshData();
+  };
+
+  // Callback para quando uma nova tarefa é criada
+  const handleTarefaCreated = () => {
+    refreshData();
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -696,6 +775,27 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     setUpdating(etapaId);
     const supabase = createClient();
 
+    // Atualização otimista do estado local
+    const previousEtapas = etapas;
+    setEtapas((prev) =>
+      prev.map((e) => {
+        if (e.id !== etapaId) return e;
+        const updated = { ...e, [field]: value };
+        if (field === "responsavel_id") {
+          updated.responsavel = value ? users.find((u) => u.id === value) || null : null;
+        }
+        if (field === "status") {
+          if (value === "em_andamento") {
+            updated.data_inicio_real = formatDateToString(new Date());
+          } else if (value === "concluida") {
+            updated.data_fim_real = formatDateToString(new Date());
+            updated.progresso_percentual = 100;
+          }
+        }
+        return updated;
+      })
+    );
+
     try {
       const updates: Record<string, unknown> = { [field]: value };
 
@@ -713,9 +813,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       if (error) throw error;
 
       toast.success("Atualizado!");
-      router.refresh();
     } catch (error) {
       toast.error("Erro ao atualizar");
+      setEtapas(previousEtapas); // Reverter em caso de erro
     } finally {
       setUpdating(null);
     }
@@ -724,6 +824,26 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
   const updateTarefa = async (tarefaId: string, field: string, value: string | null) => {
     setUpdating(tarefaId);
     const supabase = createClient();
+
+    // Atualização otimista do estado local
+    const previousEtapas = etapas;
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        tarefas: e.tarefas.map((t) => {
+          if (t.id !== tarefaId) return t;
+          const updated = { ...t, [field]: value };
+          if (field === "status") {
+            if (value === "em_andamento") {
+              updated.data_inicio_real = formatDateToString(new Date());
+            } else if (value === "concluida") {
+              updated.data_fim_real = formatDateToString(new Date());
+            }
+          }
+          return updated;
+        }),
+      }))
+    );
 
     try {
       const updates: Record<string, unknown> = { [field]: value };
@@ -741,9 +861,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       if (error) throw error;
 
       toast.success("Atualizado!");
-      router.refresh();
     } catch (error) {
       toast.error("Erro ao atualizar");
+      setEtapas(previousEtapas); // Reverter em caso de erro
     } finally {
       setUpdating(null);
     }
@@ -797,6 +917,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
                 onReorderTarefas={handleReorderTarefas}
                 onEditEtapa={setEditingEtapa}
                 onEditTarefa={setEditingTarefa}
+                onTarefaCreated={handleTarefaCreated}
               />
             ))}
           </SortableContext>
@@ -810,6 +931,8 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
           users={users}
           open={!!editingEtapa}
           onOpenChange={(open) => !open && setEditingEtapa(null)}
+          onSuccess={handleEtapaUpdated}
+          onDelete={handleEtapaDeleted}
         />
       )}
 
@@ -820,6 +943,8 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
           users={users}
           open={!!editingTarefa}
           onOpenChange={(open) => !open && setEditingTarefa(null)}
+          onSuccess={handleTarefaUpdated}
+          onDelete={handleTarefaDeleted}
         />
       )}
     </>

@@ -50,6 +50,7 @@ interface TarefasListProps {
   etapaId: string;
   etapaNome: string;
   users: User[];
+  onRefresh?: () => void;
 }
 
 const statusConfig: Record<
@@ -106,7 +107,7 @@ const statusConfig: Record<
   },
 };
 
-export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListProps) {
+export function TarefasList({ tarefas, etapaId, etapaNome, users, onRefresh }: TarefasListProps) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -131,7 +132,13 @@ export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListP
       if (error) throw error;
 
       toast.success("Tarefa atualizada!");
-      router.refresh();
+      
+      // Notificar o parent ou fazer refresh da página
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       toast.error("Erro ao atualizar tarefa");
     } finally {
@@ -158,6 +165,7 @@ export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListP
             etapaNome={etapaNome}
             users={users}
             proximaOrdem={1}
+            onSuccess={onRefresh}
           />
         </div>
       </div>
@@ -273,6 +281,7 @@ export function TarefasList({ tarefas, etapaId, etapaNome, users }: TarefasListP
           etapaNome={etapaNome}
           users={users}
           proximaOrdem={proximaOrdem}
+          onSuccess={onRefresh}
         />
       </div>
     </div>

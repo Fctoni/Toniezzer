@@ -110,8 +110,13 @@ export function NovaTarefaDialog({
       toast.success("Tarefa criada com sucesso!");
       setOpen(false);
       form.reset();
-      onSuccess?.();
-      router.refresh();
+      
+      // Notificar o parent ou fazer refresh da página
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       console.error(error);
       toast.error("Erro ao criar tarefa");

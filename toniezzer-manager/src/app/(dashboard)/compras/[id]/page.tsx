@@ -173,7 +173,6 @@ export default function CompraDetalhesPage() {
 
       toast.success("Compra cancelada com sucesso");
       router.push("/compras");
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao cancelar compra");

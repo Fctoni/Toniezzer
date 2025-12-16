@@ -12,17 +12,16 @@ import { ArrowLeft, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { toast } from 'sonner'
-import { formatDateToString } from '@/lib/utils'
 
 export default function NovaReuniaoPage() {
   const router = useRouter()
-  const { currentUser } = useCurrentUser()
+  const { user } = useCurrentUser()
   const [titulo, setTitulo] = useState('')
-  const [dataReuniao, setDataReuniao] = useState(formatDateToString(new Date()))
+  const [dataReuniao, setDataReuniao] = useState(new Date().toISOString().split('T')[0])
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleUpload = async (content: string, fileName: string) => {
-    if (!currentUser) {
+    if (!user) {
       toast.error('Usuário não encontrado')
       return
     }
@@ -71,46 +70,39 @@ export default function NovaReuniaoPage() {
           data_reuniao: dataFinal,
           participantes: participantes.length > 0 ? participantes : null,
           resumo_markdown: content,
-          created_by: currentUser.id,
+          created_by: user.id,
         })
         .select()
         .single()
 
       if (reuniaoError) throw reuniaoError
 
-      // 2. Processar com IA via API Route
+      // 2. Tentar processar com Edge Function (se disponível)
       try {
-        const response = await fetch('/api/plaud', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const { data: processedData, error: processError } = await supabase.functions.invoke('process-plaud', {
+          body: {
             markdown: content,
             reuniao_id: reuniao.id,
-            autor_id: currentUser.id,
-          })
+            autor_id: user.id,
+          }
         })
 
-        const processedData = await response.json()
-
-        if (!response.ok || !processedData.success) {
-          console.warn('Processamento de IA falhou:', processedData.error)
-          toast.warning('Reunião criada, mas processamento de IA falhou', {
-            description: processedData.error || 'As ações podem ser adicionadas manualmente.'
+        if (processError) {
+          console.warn('Edge Function não disponível, processamento manual necessário:', processError)
+          toast.warning('Reunião criada, mas processamento de IA não disponível', {
+            description: 'As ações podem ser adicionadas manualmente.'
           })
-        } else {
+        } else if (processedData?.success) {
           toast.success('Reunião processada com sucesso!', {
             description: `${processedData.acoes_criadas || 0} ações extraídas`
           })
         }
       } catch (fnError) {
-        console.warn('Erro ao processar com IA:', fnError)
-        toast.warning('Reunião criada, mas processamento de IA falhou', {
-          description: 'As ações podem ser adicionadas manualmente.'
-        })
+        console.warn('Erro ao chamar Edge Function:', fnError)
+        // Não bloquear o fluxo se a Edge Function falhar
       }
 
       router.push(`/reunioes/${reuniao.id}`)
-      router.refresh()
       
     } catch (error) {
       console.error('Erro ao criar reunião:', error)

@@ -213,7 +213,6 @@ export default function TopicoPage({
 
       toast.success("Tópico excluído!");
       router.push("/comunicacao");
-      router.refresh();
     } catch {
       toast.error("Erro ao excluir tópico");
     }

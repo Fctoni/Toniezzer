@@ -82,6 +82,7 @@ interface TimelineEtapasProps {
   etapas: Etapa[];
   dependencias: Dependencia[];
   users: User[];
+  onRefresh?: () => void;
 }
 
 const statusConfig: Record<
@@ -138,7 +139,7 @@ const statusConfig: Record<
   },
 };
 
-export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasProps) {
+export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: TimelineEtapasProps) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
@@ -175,7 +176,13 @@ export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasPr
       if (error) throw error;
 
       toast.success("Status atualizado!");
-      router.refresh();
+      
+      // Notificar o parent ou fazer refresh da página
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       toast.error("Erro ao atualizar status");
     } finally {
@@ -436,6 +443,7 @@ export function TimelineEtapas({ etapas, dependencias, users }: TimelineEtapasPr
                     etapaId={etapa.id}
                     etapaNome={etapa.nome}
                     users={users}
+                    onRefresh={onRefresh}
                   />
                 </div>
               </CollapsibleContent>

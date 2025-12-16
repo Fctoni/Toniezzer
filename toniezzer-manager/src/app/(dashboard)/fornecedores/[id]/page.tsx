@@ -143,7 +143,6 @@ export default function FornecedorDetalhesPage({
 
       toast.success("Fornecedor excluído!");
       router.push("/fornecedores");
-      router.refresh();
     } catch {
       toast.error("Erro ao excluir fornecedor");
     }

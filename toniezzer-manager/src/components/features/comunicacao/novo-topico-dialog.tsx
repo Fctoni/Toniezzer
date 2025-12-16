@@ -78,7 +78,6 @@ export function NovoTopicoDialog({
       
       // Redirecionar para o novo tópico
       router.push(`/comunicacao/${data.id}`);
-      router.refresh();
     } catch {
       toast.error("Erro ao criar tópico");
     } finally {

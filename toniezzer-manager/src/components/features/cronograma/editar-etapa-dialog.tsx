@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -77,6 +76,8 @@ interface EditarEtapaDialogProps {
   users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: (updatedEtapa: Partial<Etapa> & { id: string }) => void;
+  onDelete?: (etapaId: string) => void;
 }
 
 export function EditarEtapaDialog({
@@ -84,8 +85,9 @@ export function EditarEtapaDialog({
   users,
   open,
   onOpenChange,
+  onSuccess,
+  onDelete,
 }: EditarEtapaDialogProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,26 +113,32 @@ export function EditarEtapaDialog({
     try {
       const supabase = createClient();
 
+      const updatedData = {
+        nome: data.nome,
+        descricao: data.descricao || null,
+        data_inicio_prevista: data.data_inicio_prevista
+          ? formatDateToString(data.data_inicio_prevista)
+          : null,
+        data_fim_prevista: data.data_fim_prevista
+          ? formatDateToString(data.data_fim_prevista)
+          : null,
+        responsavel_id: data.responsavel_id || null,
+      };
+
       const { error } = await supabase
         .from("etapas")
-        .update({
-          nome: data.nome,
-          descricao: data.descricao || null,
-          data_inicio_prevista: data.data_inicio_prevista
-            ? formatDateToString(data.data_inicio_prevista)
-            : null,
-          data_fim_prevista: data.data_fim_prevista
-            ? formatDateToString(data.data_fim_prevista)
-            : null,
-          responsavel_id: data.responsavel_id || null,
-        })
+        .update(updatedData)
         .eq("id", etapa.id);
 
       if (error) throw error;
 
       toast.success("Etapa atualizada!");
+      
+      // Notificar o parent com os dados atualizados
+      if (onSuccess) {
+        onSuccess({ id: etapa.id, ...updatedData });
+      }
       onOpenChange(false);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar etapa");
@@ -155,8 +163,12 @@ export function EditarEtapaDialog({
 
       toast.success("Etapa excluída!");
       setShowDeleteAlert(false);
+      
+      // Notificar o parent sobre a exclusão
+      if (onDelete) {
+        onDelete(etapa.id);
+      }
       onOpenChange(false);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao excluir etapa");

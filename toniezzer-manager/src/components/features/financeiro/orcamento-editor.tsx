@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -30,6 +30,11 @@ export function OrcamentoEditor({
   const router = useRouter();
   const [categorias, setCategorias] = useState(categoriasIniciais);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sincronizar estado local quando as props mudarem
+  useEffect(() => {
+    setCategorias(categoriasIniciais);
+  }, [categoriasIniciais]);
 
   const orcamentoTotal = categorias.reduce(
     (acc, cat) => acc + (Number(cat.orcamento) || 0),

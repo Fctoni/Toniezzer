@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -77,6 +76,8 @@ interface EditarTarefaDialogProps {
   users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: (updatedTarefa: Partial<Tarefa> & { id: string }) => void;
+  onDelete?: (tarefaId: string) => void;
 }
 
 export function EditarTarefaDialog({
@@ -84,8 +85,9 @@ export function EditarTarefaDialog({
   users,
   open,
   onOpenChange,
+  onSuccess,
+  onDelete,
 }: EditarTarefaDialogProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,26 +113,32 @@ export function EditarTarefaDialog({
     try {
       const supabase = createClient();
 
+      const updatedData = {
+        nome: data.nome,
+        descricao: data.descricao || null,
+        data_inicio_prevista: data.data_inicio_prevista
+          ? formatDateToString(data.data_inicio_prevista)
+          : null,
+        data_fim_prevista: data.data_fim_prevista
+          ? formatDateToString(data.data_fim_prevista)
+          : null,
+        responsavel_id: data.responsavel_id || null,
+      };
+
       const { error } = await supabase
         .from("tarefas")
-        .update({
-          nome: data.nome,
-          descricao: data.descricao || null,
-          data_inicio_prevista: data.data_inicio_prevista
-            ? formatDateToString(data.data_inicio_prevista)
-            : null,
-          data_fim_prevista: data.data_fim_prevista
-            ? formatDateToString(data.data_fim_prevista)
-            : null,
-          responsavel_id: data.responsavel_id || null,
-        })
+        .update(updatedData)
         .eq("id", tarefa.id);
 
       if (error) throw error;
 
       toast.success("Tarefa atualizada!");
+      
+      // Notificar o parent com os dados atualizados
+      if (onSuccess) {
+        onSuccess({ id: tarefa.id, ...updatedData });
+      }
       onOpenChange(false);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao atualizar tarefa");
@@ -151,8 +159,12 @@ export function EditarTarefaDialog({
 
       toast.success("Tarefa excluída!");
       setShowDeleteAlert(false);
+      
+      // Notificar o parent sobre a exclusão
+      if (onDelete) {
+        onDelete(tarefa.id);
+      }
       onOpenChange(false);
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao excluir tarefa");
