@@ -26,31 +26,70 @@ export function CameraCapture({ onCapture, onCancel, isLoading }: CameraCaptureP
     try {
       setCameraError(null)
       setIsVideoReady(false)
+      setMode('camera')
       
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       })
       streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        // Aguardar o video estar pronto para reproduzir
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().then(() => {
-            setIsVideoReady(true)
-          }).catch((err) => {
-            console.error('Erro ao iniciar video:', err)
-            setCameraError('Erro ao iniciar a camera.')
-          })
+      
+      // Aguardar o proximo tick para garantir que o video element existe
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
+      if (!videoRef.current) {
+        console.error('Video element nao encontrado')
+        setCameraError('Erro interno: elemento de video nao encontrado')
+        return
+      }
+      
+      const video = videoRef.current
+      video.srcObject = stream
+      
+      // Funcao para marcar video como pronto
+      const markReady = () => {
+        if (!isVideoReady) {
+          setIsVideoReady(true)
         }
       }
-      setMode('camera')
+      
+      // Verificar se ja esta pronto (fix race condition)
+      // readyState: 0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA
+      if (video.readyState >= 2) {
+        markReady()
+      } else {
+        // Usar canplay que e mais confiavel em mobile que loadedmetadata
+        const onCanPlay = () => {
+          markReady()
+          video.removeEventListener('canplay', onCanPlay)
+          video.removeEventListener('loadeddata', onCanPlay)
+        }
+        
+        video.addEventListener('canplay', onCanPlay, { once: true })
+        video.addEventListener('loadeddata', onCanPlay, { once: true })
+        
+        // Timeout de fallback (3 segundos)
+        setTimeout(() => {
+          if (video.readyState >= 1) {
+            markReady()
+          }
+        }, 3000)
+      }
+      
+      // Tentar dar play (necessario em alguns navegadores mobile)
+      try {
+        await video.play()
+      } catch (playError) {
+        // Ignorar erro de autoplay - o video pode ja estar tocando via autoPlay attribute
+        console.log('Play automatico:', playError)
+      }
+      
     } catch (error) {
       console.error('Erro ao acessar camera:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
       setCameraError(`Nao foi possivel acessar a camera: ${errorMessage}`)
-      alert('Nao foi possivel acessar a camera. Verifique as permissoes.')
+      setMode('select')
     }
-  }, [])
+  }, [isVideoReady])
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
