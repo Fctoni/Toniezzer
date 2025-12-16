@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Search, ChevronDown, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, Search, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,7 +37,8 @@ const formatarMensagem = (mensagem: string | null): string => {
 };
 
 export function Header() {
-  const { currentUser, users, setCurrentUserId } = useCurrentUser();
+  const router = useRouter();
+  const { authUser, currentUser, signOut } = useCurrentUser();
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
 
@@ -122,6 +124,10 @@ export function Header() {
       .slice(0, 2);
   };
 
+  // Nome para exibir: do perfil ou do auth
+  const displayName = currentUser?.nome_completo || authUser?.email || "Usuario";
+  const displayEmail = authUser?.email || "";
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
       {/* Search */}
@@ -153,7 +159,7 @@ export function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel className="flex items-center justify-between">
-              Notificações
+              Notificacoes
               {naoLidas > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {naoLidas} novas
@@ -163,7 +169,7 @@ export function Header() {
             <DropdownMenuSeparator />
             {notificacoes.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma notificação
+                Nenhuma notificacao
               </div>
             ) : (
               notificacoes.map((notificacao) => (
@@ -203,18 +209,18 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* User Selector */}
+        {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  {currentUser ? getInitials(currentUser.nome_completo) : "??"}
+                  {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:flex flex-col items-start">
                 <span className="text-sm font-medium">
-                  {currentUser?.nome_completo || "Selecione"}
+                  {currentUser?.nome_completo || "Usuario"}
                 </span>
                 {currentUser?.especialidade && (
                   <span className="text-[10px] text-muted-foreground -mt-0.5">
@@ -226,41 +232,33 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Simular Usuário</span>
-              <Badge variant="outline" className="text-[10px]">MVP</Badge>
+            <DropdownMenuLabel>
+              <div className="flex flex-col">
+                <span className="font-medium">{displayName}</span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  {displayEmail}
+                </span>
+              </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {users.map((user) => (
-              <DropdownMenuItem
-                key={user.id}
-                onClick={() => setCurrentUserId(user.id)}
-                className="flex items-center gap-3 cursor-pointer"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs bg-muted">
-                    {getInitials(user.nome_completo)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {user.nome_completo}
-                  </p>
-                  {user.especialidade && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.especialidade}
-                    </p>
-                  )}
-                </div>
-                {currentUser?.id === user.id && (
-                  <Check className="h-4 w-4 text-primary shrink-0" />
-                )}
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuItem 
+              className="cursor-pointer"
+              onClick={() => router.push('/perfil')}
+            >
+              <UserIcon className="mr-2 h-4 w-4" />
+              Meu Perfil
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="cursor-pointer text-red-500 focus:text-red-500"
+              onSelect={() => signOut()}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
   );
 }
-

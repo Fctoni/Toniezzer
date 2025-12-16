@@ -9,64 +9,125 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
+import { User } from "@supabase/supabase-js";
 
 interface CurrentUserContextType {
+  // Usuario autenticado do Supabase Auth
+  authUser: User | null;
+  // Perfil do usuario na tabela public.users
   currentUser: Tables<"users"> | null;
+  // Lista de todos os usuarios (para mencoes, atribuicoes, etc)
   users: Tables<"users">[];
-  setCurrentUserId: (id: string) => void;
+  // Estado de carregamento
   loading: boolean;
+  // Funcao de logout
+  signOut: () => Promise<void>;
 }
 
 const CurrentUserContext = createContext<CurrentUserContextType | undefined>(
   undefined
 );
 
-const STORAGE_KEY = "toniezzer-current-user-id";
-
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<Tables<"users"> | null>(null);
   const [users, setUsers] = useState<Tables<"users">[]>([]);
-  const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .eq("ativo", true)
-        .order("nome_completo");
+    const supabase = createClient();
 
-      if (data && data.length > 0) {
-        setUsers(data);
-
-        // Tentar recuperar do localStorage
-        const savedId = localStorage.getItem(STORAGE_KEY);
-        if (savedId && data.find((u) => u.id === savedId)) {
-          setCurrentUserIdState(savedId);
-        } else {
-          // Usar o primeiro usuário como padrão
-          setCurrentUserIdState(data[0].id);
-          localStorage.setItem(STORAGE_KEY, data[0].id);
+    const initializeAuth = async () => {
+      try {
+        // Buscar usuario autenticado
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) {
+          console.error("Erro ao buscar usuario auth:", authError);
         }
-      }
+        
+        setAuthUser(user);
 
-      setLoading(false);
+        // Buscar todos os usuarios ativos
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("ativo", true)
+          .order("nome_completo");
+
+        if (usersError) {
+          console.error("Erro ao buscar usuarios:", usersError);
+        }
+
+        if (usersData && usersData.length > 0) {
+          setUsers(usersData);
+
+          // Se temos usuario autenticado, buscar seu perfil por email
+          if (user?.email) {
+            const userProfile = usersData.find((u) => u.email === user.email);
+            setCurrentUser(userProfile || usersData[0]);
+          } else {
+            // Sem usuario autenticado ou sem email, usar primeiro usuario
+            setCurrentUser(usersData[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao inicializar autenticacao:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchUsers();
+    initializeAuth();
+
+    // Escutar mudancas de autenticacao
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        
+        if (event === "SIGNED_OUT") {
+          setAuthUser(null);
+          setCurrentUser(null);
+          return;
+        }
+        
+        setAuthUser(session?.user || null);
+
+        if (session?.user?.email) {
+          // Buscar perfil do usuario logado
+          const { data: usersData } = await supabase
+            .from("users")
+            .select("*")
+            .eq("ativo", true)
+            .order("nome_completo");
+
+          if (usersData && usersData.length > 0) {
+            setUsers(usersData);
+            const userProfile = usersData.find(
+              (u) => u.email === session.user.email
+            );
+            setCurrentUser(userProfile || usersData[0]);
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const setCurrentUserId = (id: string) => {
-    setCurrentUserIdState(id);
-    localStorage.setItem(STORAGE_KEY, id);
+  const signOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setAuthUser(null);
+    setCurrentUser(null);
+    window.location.href = "/login";
   };
-
-  const currentUser = users.find((u) => u.id === currentUserId) || null;
 
   return (
     <CurrentUserContext.Provider
-      value={{ currentUser, users, setCurrentUserId, loading }}
+      value={{ authUser, currentUser, users, loading, signOut }}
     >
       {children}
     </CurrentUserContext.Provider>
@@ -80,4 +141,3 @@ export function useCurrentUser() {
   }
   return context;
 }
-

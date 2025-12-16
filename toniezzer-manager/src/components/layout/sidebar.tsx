@@ -94,6 +94,7 @@ const menuItems = [
     href: "/configuracoes",
     icon: Settings,
     subItems: [
+      { title: "👥 Usuários", href: "/configuracoes/usuarios" },
       { title: "Categorias", href: "/configuracoes/categorias" },
     ],
   },

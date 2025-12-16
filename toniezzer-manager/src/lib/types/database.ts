@@ -1195,9 +1195,11 @@ export type Database = {
           ativo: boolean | null
           avatar_url: string | null
           created_at: string | null
+          email: string | null
           especialidade: string | null
           id: string
           nome_completo: string
+          role: UserRole
           telefone: string | null
           updated_at: string | null
         }
@@ -1205,9 +1207,11 @@ export type Database = {
           ativo?: boolean | null
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           especialidade?: string | null
           id?: string
           nome_completo: string
+          role?: UserRole
           telefone?: string | null
           updated_at?: string | null
         }
@@ -1215,9 +1219,11 @@ export type Database = {
           ativo?: boolean | null
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           especialidade?: string | null
           id?: string
           nome_completo?: string
+          role?: UserRole
           telefone?: string | null
           updated_at?: string | null
         }
@@ -1406,3 +1412,5 @@ export type EmailStatus =
 export type AcaoTipo = 'decisao' | 'tarefa' | 'gasto' | 'problema' | 'mudanca_escopo'
 
 export type AcaoStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado'
+
+export type UserRole = 'admin' | 'editor' | 'viewer'
