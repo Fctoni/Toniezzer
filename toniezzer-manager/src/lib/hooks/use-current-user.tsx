@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -33,22 +34,50 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<Tables<"users"> | null>(null);
   const [users, setUsers] = useState<Tables<"users">[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Flag para evitar inicializacao duplicada
+  const isInitialized = useRef(false);
 
   useEffect(() => {
     const supabase = createClient();
+    let mounted = true;
 
     const initializeAuth = async () => {
+      // Evitar inicializacao duplicada (StrictMode chama useEffect 2x)
+      if (isInitialized.current) {
+        console.log("[Auth] Ja inicializado, ignorando...");
+        return;
+      }
+      
+      isInitialized.current = true;
+      console.log("[Auth] Iniciando...");
+      
       try {
-        // Buscar usuario autenticado
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // 1. Primeiro verificar a sessao existente
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (authError) {
-          console.error("Erro ao buscar usuario auth:", authError);
+        if (sessionError) {
+          console.error("[Auth] Erro getSession:", sessionError.message);
         }
         
-        setAuthUser(user);
-
-        // Buscar todos os usuarios ativos
+        console.log("[Auth] Sessao:", session?.user?.email || "nenhuma");
+        
+        // 2. Se nao tem sessao, finalizar loading e deixar middleware redirecionar
+        if (!session?.user) {
+          console.log("[Auth] Sem sessao ativa");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // 3. Temos sessao, buscar usuarios
+        if (mounted) {
+          setAuthUser(session.user);
+        }
+        
+        console.log("[Auth] Buscando usuarios...");
+        
         const { data: usersData, error: usersError } = await supabase
           .from("users")
           .select("*")
@@ -56,63 +85,59 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
           .order("nome_completo");
 
         if (usersError) {
-          console.error("Erro ao buscar usuarios:", usersError);
+          console.error("[Auth] Erro buscar usuarios:", usersError.message, usersError);
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
         }
 
-        if (usersData && usersData.length > 0) {
+        console.log("[Auth] Usuarios encontrados:", usersData?.length || 0);
+
+        if (mounted && usersData && usersData.length > 0) {
           setUsers(usersData);
 
-          // Se temos usuario autenticado, buscar seu perfil por email
-          if (user?.email) {
-            const userProfile = usersData.find((u) => u.email === user.email);
-            setCurrentUser(userProfile || usersData[0]);
-          } else {
-            // Sem usuario autenticado ou sem email, usar primeiro usuario
-            setCurrentUser(usersData[0]);
-          }
+          // Buscar perfil por email
+          const userProfile = usersData.find((u) => u.email === session.user.email);
+          console.log("[Auth] Perfil encontrado:", userProfile?.nome_completo || "fallback");
+          setCurrentUser(userProfile || usersData[0]);
         }
       } catch (error) {
-        console.error("Erro ao inicializar autenticacao:", error);
+        console.error("[Auth] Erro critico:", error);
       } finally {
-        setLoading(false);
+        console.log("[Auth] Finalizado");
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    initializeAuth();
-
-    // Escutar mudancas de autenticacao
+    // Escutar mudancas de autenticacao (apenas para logout/refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
+      (event, session) => {
+        console.log("[Auth] Estado mudou:", event);
         
+        if (!mounted) return;
+        
+        // Tratar apenas eventos importantes apos inicializacao
         if (event === "SIGNED_OUT") {
           setAuthUser(null);
           setCurrentUser(null);
-          return;
+          setUsers([]);
+          window.location.href = '/login';
+        } else if (event === "TOKEN_REFRESHED") {
+          console.log("[Auth] Token atualizado");
+          setAuthUser(session?.user || null);
         }
-        
-        setAuthUser(session?.user || null);
-
-        if (session?.user?.email) {
-          // Buscar perfil do usuario logado
-          const { data: usersData } = await supabase
-            .from("users")
-            .select("*")
-            .eq("ativo", true)
-            .order("nome_completo");
-
-          if (usersData && usersData.length > 0) {
-            setUsers(usersData);
-            const userProfile = usersData.find(
-              (u) => u.email === session.user.email
-            );
-            setCurrentUser(userProfile || usersData[0]);
-          }
-        }
+        // SIGNED_IN e INITIAL_SESSION sao tratados pelo initializeAuth
       }
     );
 
+    // Inicializar
+    initializeAuth();
+
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

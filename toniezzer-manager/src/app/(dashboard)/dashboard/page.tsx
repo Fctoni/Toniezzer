@@ -12,16 +12,25 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { parseDateString } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  // Verificar se usuario esta autenticado
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error("[Dashboard] Erro de autenticacao:", authError?.message);
+    redirect("/login");
+  }
+
   // Buscar dados
   const [
-    { data: categorias },
-    { data: gastos },
-    { data: etapas },
-    { data: notificacoes },
+    categoriasRes,
+    gastosRes,
+    etapasRes,
+    notificacoesRes,
   ] = await Promise.all([
     supabase.from("categorias").select("*").eq("ativo", true),
     supabase.from("gastos").select("*").eq("status", "aprovado"),
@@ -33,6 +42,20 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
+
+  // Verificar erros nas queries (pode indicar problema de permissao/sessao)
+  if (categoriasRes.error || gastosRes.error || etapasRes.error) {
+    console.error("[Dashboard] Erro nas queries:", {
+      categorias: categoriasRes.error?.message,
+      gastos: gastosRes.error?.message,
+      etapas: etapasRes.error?.message,
+    });
+  }
+
+  const categorias = categoriasRes.data;
+  const gastos = gastosRes.data;
+  const etapas = etapasRes.data;
+  const notificacoes = notificacoesRes.data;
 
   // Cálculos financeiros
   const orcamentoTotal =

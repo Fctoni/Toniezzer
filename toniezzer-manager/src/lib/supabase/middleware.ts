@@ -40,49 +40,24 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Tentar verificar autenticacao com tratamento de erro
-  let user = null
-  try {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) {
-      console.error('[Proxy] Erro ao verificar usuario:', error.message)
-    } else {
-      user = data.user
-    }
-  } catch (error) {
-    // Erro de rede/DNS - logar e permitir que o request continue
-    // O cliente fara a verificacao de autenticacao
-    console.error('[Proxy] Falha de conexao com Supabase:', error instanceof Error ? error.message : error)
-    // Retornar a resposta sem bloquear - o cliente verificara a auth
-    return supabaseResponse
-  }
+  // IMPORTANTE: Usar getUser() ao inves de getSession()
+  // getUser() valida o token JWT com o servidor Supabase e faz refresh automatico
+  // se o access token expirou mas o refresh token ainda e valido
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  // Se nao esta logado e tenta acessar rota protegida
-  if (!user) {
+  // Se nao tem usuario valido ou houve erro, redirecionar para login
+  if (error || !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Se esta logado e tenta acessar pagina de login (ja tratado acima, mas por seguranca)
+  // Se tem usuario e tenta acessar pagina de login, redirecionar para dashboard
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
-
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
 
   return supabaseResponse
 }
