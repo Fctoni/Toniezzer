@@ -60,7 +60,7 @@ interface NovaTarefaDialogProps {
   users: User[];
   proximaOrdem: number;
   trigger?: React.ReactNode;
-  onSuccess?: () => void;
+  onSuccess?: (etapaId?: string) => void;
 }
 
 export function NovaTarefaDialog({
@@ -113,7 +113,7 @@ export function NovaTarefaDialog({
       
       // Notificar o parent ou fazer refresh da página
       if (onSuccess) {
-        onSuccess();
+        onSuccess(etapaId);
       } else {
         router.refresh();
       }

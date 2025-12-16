@@ -40,18 +40,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn, formatDateToString } from "@/lib/utils";
+import { Loader2, Trash2 } from "lucide-react";
 
 const formSchema = z.object({
   nome: z.string().min(3, "Mínimo 3 caracteres"),
   descricao: z.string().optional(),
-  data_inicio_prevista: z.date().optional().nullable(),
-  data_fim_prevista: z.date().optional().nullable(),
   responsavel_id: z.string().optional(),
 });
 
@@ -97,12 +90,6 @@ export function EditarEtapaDialog({
     defaultValues: {
       nome: etapa.nome,
       descricao: etapa.descricao || "",
-      data_inicio_prevista: etapa.data_inicio_prevista
-        ? new Date(etapa.data_inicio_prevista)
-        : null,
-      data_fim_prevista: etapa.data_fim_prevista
-        ? new Date(etapa.data_fim_prevista)
-        : null,
       responsavel_id: etapa.responsavel_id || undefined,
     },
   });
@@ -116,12 +103,7 @@ export function EditarEtapaDialog({
       const updatedData = {
         nome: data.nome,
         descricao: data.descricao || null,
-        data_inicio_prevista: data.data_inicio_prevista
-          ? formatDateToString(data.data_inicio_prevista)
-          : null,
-        data_fim_prevista: data.data_fim_prevista
-          ? formatDateToString(data.data_fim_prevista)
-          : null,
+        // Datas são calculadas automaticamente baseadas nas tarefas
         responsavel_id: data.responsavel_id || null,
       };
 
@@ -219,84 +201,11 @@ export function EditarEtapaDialog({
                 )}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="data_inicio_prevista"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data Início</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                              ) : (
-                                <span>Selecione</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="data_fim_prevista"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data Fim</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                              ) : (
-                                <span>Selecione</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
+                <p className="font-medium mb-1">Datas da Etapa</p>
+                <p className="text-xs">
+                  As datas de início e fim são calculadas automaticamente com base nas tarefas da etapa.
+                </p>
               </div>
 
               <FormField

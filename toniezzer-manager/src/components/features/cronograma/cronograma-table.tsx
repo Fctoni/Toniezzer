@@ -131,7 +131,7 @@ function SortableEtapaRow({
   onReorderTarefas: (etapaId: string, tarefas: Tarefa[]) => void;
   onEditEtapa: (etapa: Etapa) => void;
   onEditTarefa: (tarefa: Tarefa) => void;
-  onTarefaCreated: () => void;
+  onTarefaCreated: (etapaId?: string) => void;
 }) {
   const {
     attributes,
@@ -250,60 +250,24 @@ function SortableEtapaRow({
           </Select>
         </div>
 
-        {/* Data Início */}
+        {/* Data Início - Calculada automaticamente */}
         <div className="p-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 px-2 text-xs font-normal justify-start hover:bg-muted/50"
-              >
-                {formatDate(etapa.data_inicio_prevista)}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={parseDate(etapa.data_inicio_prevista)}
-                onSelect={(date) =>
-                  onUpdateEtapa(
-                    etapa.id,
-                    "data_inicio_prevista",
-                    date ? formatDateToString(date) : null
-                  )
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
+            {(() => {
+              const { inicio } = calcularDatasEtapa(etapa.tarefas);
+              return formatDate(inicio);
+            })()}
+          </div>
         </div>
 
-        {/* Data Fim */}
+        {/* Data Fim - Calculada automaticamente */}
         <div className="p-1">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 px-2 text-xs font-normal justify-start hover:bg-muted/50"
-              >
-                {formatDate(etapa.data_fim_prevista)}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={parseDate(etapa.data_fim_prevista)}
-                onSelect={(date) =>
-                  onUpdateEtapa(
-                    etapa.id,
-                    "data_fim_prevista",
-                    date ? formatDateToString(date) : null
-                  )
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
+            {(() => {
+              const { fim } = calcularDatasEtapa(etapa.tarefas);
+              return formatDate(fim);
+            })()}
+          </div>
         </div>
 
         {/* Responsável */}
@@ -350,7 +314,7 @@ function SortableEtapaRow({
             etapaNome={etapa.nome}
             users={users}
             proximaOrdem={etapa.tarefas.length + 1}
-            onSuccess={onTarefaCreated}
+            onSuccess={() => onTarefaCreated(etapa.id)}
             trigger={
               <Button
                 variant="ghost"
@@ -604,6 +568,32 @@ function calcularProgresso(etapa: Etapa) {
   return Math.round((concluidas / etapa.tarefas.length) * 100);
 }
 
+function calcularDatasEtapa(tarefas: Tarefa[]): { inicio: string | null; fim: string | null } {
+  if (tarefas.length === 0) {
+    return { inicio: null, fim: null };
+  }
+
+  const datasInicio = tarefas
+    .map((t) => t.data_inicio_prevista)
+    .filter((d): d is string => d !== null);
+  const datasFim = tarefas
+    .map((t) => t.data_fim_prevista)
+    .filter((d): d is string => d !== null);
+
+  if (datasInicio.length === 0 && datasFim.length === 0) {
+    return { inicio: null, fim: null };
+  }
+
+  const inicio = datasInicio.length > 0
+    ? datasInicio.reduce((min, date) => (date < min ? date : min))
+    : null;
+  const fim = datasFim.length > 0
+    ? datasFim.reduce((max, date) => (date > max ? date : max))
+    : null;
+
+  return { inicio, fim };
+}
+
 function getStatusConfig(status: string) {
   return statusOptions.find((s) => s.value === status) || statusOptions[0];
 }
@@ -631,12 +621,70 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     ]);
 
     if (etapasData && tarefasData) {
-      const newEtapas: Etapa[] = etapasData.map((e) => ({
-        ...e,
-        responsavel: e.responsavel_id ? users.find((u) => u.id === e.responsavel_id) || null : null,
-        tarefas: tarefasData.filter((t) => t.etapa_id === e.id),
-      }));
+      const newEtapas: Etapa[] = etapasData.map((e) => {
+        const tarefasEtapa = tarefasData.filter((t) => t.etapa_id === e.id) as Tarefa[];
+        const { inicio, fim } = calcularDatasEtapa(tarefasEtapa);
+        return {
+          ...e,
+          progresso_percentual: e.progresso_percentual ?? 0,
+          responsavel: e.responsavel_id ? users.find((u) => u.id === e.responsavel_id) || null : null,
+          tarefas: tarefasEtapa,
+          data_inicio_prevista: inicio,
+          data_fim_prevista: fim,
+        } as Etapa;
+      });
       setEtapas(newEtapas);
+
+      // Atualizar datas no banco para todas as etapas
+      const supabase = createClient();
+      for (const etapa of newEtapas) {
+        const { inicio, fim } = calcularDatasEtapa(etapa.tarefas);
+        await supabase
+          .from("etapas")
+          .update({
+            data_inicio_prevista: inicio,
+            data_fim_prevista: fim,
+          })
+          .eq("id", etapa.id);
+      }
+    }
+  };
+
+  // Função para atualizar datas da etapa baseado nas tarefas
+  const atualizarDatasEtapa = async (etapaId: string) => {
+    // Usar função de callback para garantir que temos o estado mais recente
+    let etapaAtual: Etapa | undefined;
+    let novasDatas: { inicio: string | null; fim: string | null } = { inicio: null, fim: null };
+
+    setEtapas((prev) => {
+      const etapa = prev.find((e) => e.id === etapaId);
+      if (!etapa) return prev;
+
+      etapaAtual = etapa;
+      novasDatas = calcularDatasEtapa(etapa.tarefas);
+
+      // Atualizar estado local
+      return prev.map((e) =>
+        e.id === etapaId
+          ? { ...e, data_inicio_prevista: novasDatas.inicio, data_fim_prevista: novasDatas.fim }
+          : e
+      );
+    });
+
+    // Atualizar no banco de dados
+    if (etapaAtual) {
+      const supabase = createClient();
+      try {
+        await supabase
+          .from("etapas")
+          .update({
+            data_inicio_prevista: novasDatas.inicio,
+            data_fim_prevista: novasDatas.fim,
+          })
+          .eq("id", etapaId);
+      } catch (error) {
+        console.error("Erro ao atualizar datas da etapa:", error);
+      }
     }
   };
 
@@ -664,7 +712,10 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
   };
 
   // Callback para quando uma tarefa é editada via dialog
-  const handleTarefaUpdated = (updatedTarefa: Partial<Tarefa> & { id: string }) => {
+  const handleTarefaUpdated = async (updatedTarefa: Partial<Tarefa> & { id: string }) => {
+    // Encontrar a etapa da tarefa
+    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === updatedTarefa.id));
+
     setEtapas((prev) =>
       prev.map((e) => ({
         ...e,
@@ -674,10 +725,18 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       }))
     );
     setEditingTarefa(null);
+
+    // Atualizar datas da etapa se a tarefa tem datas
+    if (etapaDaTarefa && (updatedTarefa.data_inicio_prevista !== undefined || updatedTarefa.data_fim_prevista !== undefined)) {
+      await atualizarDatasEtapa(etapaDaTarefa.id);
+    }
   };
 
   // Callback para quando uma tarefa é excluída via dialog
-  const handleTarefaDeleted = (tarefaId: string) => {
+  const handleTarefaDeleted = async (tarefaId: string) => {
+    // Encontrar a etapa da tarefa antes de excluir
+    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === tarefaId));
+
     setEtapas((prev) =>
       prev.map((e) => ({
         ...e,
@@ -685,6 +744,11 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       }))
     );
     setEditingTarefa(null);
+
+    // Atualizar datas da etapa após excluir tarefa
+    if (etapaDaTarefa) {
+      await atualizarDatasEtapa(etapaDaTarefa.id);
+    }
   };
 
   // Callback para quando uma nova etapa é criada
@@ -693,8 +757,14 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
   };
 
   // Callback para quando uma nova tarefa é criada
-  const handleTarefaCreated = () => {
-    refreshData();
+  const handleTarefaCreated = async (etapaId?: string) => {
+    if (etapaId) {
+      // Recarregar dados e atualizar datas da etapa
+      await refreshData();
+      await atualizarDatasEtapa(etapaId);
+    } else {
+      refreshData();
+    }
   };
 
   const sensors = useSensors(
@@ -764,6 +834,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
         await supabase.from("tarefas").update({ ordem: update.ordem }).eq("id", update.id);
       }
 
+      // Recalcular datas da etapa após reordenar
+      await atualizarDatasEtapa(etapaId);
+
       toast.success("Ordem atualizada!");
     } catch (error) {
       toast.error("Erro ao reordenar tarefas");
@@ -825,6 +898,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     setUpdating(tarefaId);
     const supabase = createClient();
 
+    // Encontrar a etapa da tarefa para atualizar datas depois
+    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === tarefaId));
+
     // Atualização otimista do estado local
     const previousEtapas = etapas;
     setEtapas((prev) =>
@@ -859,6 +935,12 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       const { error } = await supabase.from("tarefas").update(updates).eq("id", tarefaId);
 
       if (error) throw error;
+
+      // Sempre recalcular datas da etapa quando uma tarefa é atualizada
+      // (especialmente se foi atualizada uma data)
+      if (etapaDaTarefa) {
+        await atualizarDatasEtapa(etapaDaTarefa.id);
+      }
 
       toast.success("Atualizado!");
     } catch (error) {
