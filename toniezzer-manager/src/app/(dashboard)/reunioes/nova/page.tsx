@@ -15,13 +15,13 @@ import { toast } from 'sonner'
 
 export default function NovaReuniaoPage() {
   const router = useRouter()
-  const { user } = useCurrentUser()
+  const { currentUser } = useCurrentUser()
   const [titulo, setTitulo] = useState('')
   const [dataReuniao, setDataReuniao] = useState(new Date().toISOString().split('T')[0])
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleUpload = async (content: string, fileName: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast.error('Usuário não encontrado')
       return
     }
@@ -70,7 +70,7 @@ export default function NovaReuniaoPage() {
           data_reuniao: dataFinal,
           participantes: participantes.length > 0 ? participantes : null,
           resumo_markdown: content,
-          created_by: user.id,
+          created_by: currentUser.id,
         })
         .select()
         .single()
@@ -83,7 +83,7 @@ export default function NovaReuniaoPage() {
           body: {
             markdown: content,
             reuniao_id: reuniao.id,
-            autor_id: user.id,
+            autor_id: currentUser.id,
           }
         })
 
