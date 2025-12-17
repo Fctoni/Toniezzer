@@ -268,6 +268,8 @@ export default function FotoReciboPage() {
           onCapture={handleCapture}
           onCancel={() => router.back()}
           isLoading={isProcessing}
+          title="📷 Capturar Recibo"
+          filePrefix="recibo"
         />
       )}
 

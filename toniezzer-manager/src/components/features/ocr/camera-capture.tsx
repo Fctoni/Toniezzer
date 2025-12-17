@@ -9,9 +9,17 @@ interface CameraCaptureProps {
   onCapture: (file: File) => void
   onCancel?: () => void
   isLoading?: boolean
+  title?: string
+  filePrefix?: string
 }
 
-export function CameraCapture({ onCapture, onCancel, isLoading }: CameraCaptureProps) {
+export function CameraCapture({ 
+  onCapture, 
+  onCancel, 
+  isLoading,
+  title = "📷 Capturar Foto",
+  filePrefix = "foto"
+}: CameraCaptureProps) {
   const [mode, setMode] = useState<'select' | 'camera' | 'preview'>('select')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
@@ -139,7 +147,7 @@ export function CameraCapture({ onCapture, onCancel, isLoading }: CameraCaptureP
       ctx.drawImage(video, 0, 0)
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], `recibo-${Date.now()}.jpg`, { type: 'image/jpeg' })
+          const file = new File([blob], `${filePrefix}-${Date.now()}.jpg`, { type: 'image/jpeg' })
           setCapturedFile(file)
           setCapturedImage(canvas.toDataURL('image/jpeg'))
           stopCamera()
@@ -198,7 +206,7 @@ export function CameraCapture({ onCapture, onCancel, isLoading }: CameraCaptureP
         {mode === 'select' && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-center mb-4">
-              📷 Capturar Recibo
+              {title}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <Button
