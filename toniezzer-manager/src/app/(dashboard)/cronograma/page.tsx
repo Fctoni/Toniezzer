@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { CronogramaTable } from "@/components/features/cronograma/cronograma-table";
+import { CronogramaWrapper } from "@/components/features/cronograma/cronograma-wrapper";
 import { NovaEtapaDialog } from "@/components/features/cronograma/nova-etapa-dialog";
 import { Badge } from "@/components/ui/badge";
 
@@ -85,14 +85,12 @@ export default async function CronogramaPage() {
   return (
     <div className="space-y-4">
       {/* Header compacto */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Cronograma</h1>
-          </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-4 min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Cronograma</h1>
           
-          {/* Mini Stats */}
-          <div className="flex items-center gap-2 text-sm">
+          {/* Mini Stats - hidden on mobile */}
+          <div className="hidden md:flex items-center gap-2 text-sm">
             <Badge variant="outline" className="gap-1.5">
               <span className="text-muted-foreground">Etapas:</span>
               <span className="text-green-500 font-medium">{etapasConcluidas}</span>
@@ -125,8 +123,8 @@ export default async function CronogramaPage() {
         />
       </div>
 
-      {/* Tabela do Cronograma */}
-      <CronogramaTable etapas={etapas} users={users} />
+      {/* Cronograma - Desktop: tabela, Mobile: lista */}
+      <CronogramaWrapper etapas={etapas} users={users} />
     </div>
   );
 }

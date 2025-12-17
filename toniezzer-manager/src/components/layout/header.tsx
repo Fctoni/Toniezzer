@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, Search, ChevronDown, LogOut, User as UserIcon } from "lucide-react";
+import { Bell, Search, ChevronDown, LogOut, User as UserIcon, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
+import { cn } from "@/lib/utils";
 
 interface Notificacao {
   id: string;
@@ -36,7 +37,12 @@ const formatarMensagem = (mensagem: string | null): string => {
   return mensagem.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1");
 };
 
-export function Header() {
+interface HeaderProps {
+  isMobile?: boolean;
+  onMenuClick?: () => void;
+}
+
+export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const { authUser, currentUser, signOut } = useCurrentUser();
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
@@ -129,9 +135,19 @@ export function Header() {
   const displayEmail = authUser?.email || "";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-      {/* Search */}
-      <div className="flex-1 max-w-md">
+    <header className={cn(
+      "sticky top-0 z-30 flex h-14 lg:h-16 items-center gap-2 lg:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      isMobile ? "px-4" : "px-6"
+    )}>
+      {/* Mobile: Menu button */}
+      {isMobile && onMenuClick && (
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+
+      {/* Search - hidden on mobile */}
+      <div className={cn("flex-1 max-w-md", isMobile && "hidden")}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -140,6 +156,13 @@ export function Header() {
           />
         </div>
       </div>
+
+      {/* Mobile: Logo/Title */}
+      {isMobile && (
+        <div className="flex-1">
+          <span className="font-semibold text-sm">Toniezzer Manager</span>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         {/* Notifications */}

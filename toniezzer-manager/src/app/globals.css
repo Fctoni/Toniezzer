@@ -227,4 +227,19 @@
   .glass {
     @apply bg-card/80 backdrop-blur-md border border-border/50;
   }
+  
+  /* Safe area for mobile devices (iPhone notch, etc) */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Touch target minimum size (44px as per Apple HIG) */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
