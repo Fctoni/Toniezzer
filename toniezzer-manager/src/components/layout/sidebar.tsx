@@ -48,6 +48,7 @@ const menuItems = [
       { title: "Lançamentos", href: "/financeiro/lancamentos" },
       { title: "Orçamento", href: "/financeiro/orcamento" },
       { title: "Fluxo de Caixa", href: "/financeiro/fluxo-caixa" },
+      { title: "Gastos por Etapa", href: "/financeiro/matriz-gastos" },
     ],
   },
   {
