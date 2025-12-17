@@ -87,3 +87,4 @@ export function MobileNav({ onMoreClick }: MobileNavProps) {
     </nav>
   );
 }
+

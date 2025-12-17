@@ -55,3 +55,4 @@ export function CronogramaWrapper({ etapas, users }: CronogramaWrapperProps) {
 
   return <CronogramaTable etapas={etapas} users={users} />;
 }
+

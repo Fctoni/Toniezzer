@@ -202,3 +202,4 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
     </Sheet>
   );
 }
+

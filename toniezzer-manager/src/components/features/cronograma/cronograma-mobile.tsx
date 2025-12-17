@@ -364,3 +364,4 @@ export function CronogramaMobile({ etapas: initialEtapas, users }: CronogramaMob
     </>
   );
 }
+
