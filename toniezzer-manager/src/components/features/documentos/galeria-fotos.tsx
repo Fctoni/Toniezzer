@@ -59,6 +59,8 @@ import { GaleriaGrid } from "./galeria-grid";
 import { GaleriaTimeline } from "./galeria-timeline";
 import { GaleriaEtapas } from "./galeria-etapas";
 import { GaleriaComparacao } from "./galeria-comparacao";
+import { FotoFullscreenModal } from "./foto-fullscreen-modal";
+import { useMobile } from "@/lib/hooks/use-media-query";
 
 interface Foto {
   id: string;
@@ -83,6 +85,7 @@ interface GaleriaFotosProps {
 
 export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
   const router = useRouter();
+  const isMobile = useMobile();
   
   // Estados de filtro
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todas");
@@ -411,9 +414,9 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Visualizacao */}
+      {/* Modal de Visualizacao (Desktop only) */}
       <Dialog
-        open={!!fotoSelecionada}
+        open={!!fotoSelecionada && !isMobile}
         onOpenChange={() => {
           setFotoSelecionada(null);
           cancelarEdicao();
@@ -677,6 +680,20 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal Fullscreen Mobile */}
+      {isMobile && (
+        <FotoFullscreenModal
+          foto={fotoSelecionada}
+          fotos={fotosFiltradas}
+          onClose={() => {
+            setFotoSelecionada(null);
+            cancelarEdicao();
+          }}
+          onDelete={(foto) => setFotoParaExcluir(foto)}
+          onNavigate={setFotoSelecionada}
+        />
+      )}
     </div>
   );
 }

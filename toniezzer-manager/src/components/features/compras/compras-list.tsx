@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ComprasTable } from "./compras-table";
+import { ComprasWrapper } from "./compras-wrapper";
 import {
   ComprasFiltersComponent,
   ComprasFilters,
   defaultFilters,
 } from "./compras-filters";
+import { useMobile } from "@/lib/hooks/use-media-query";
 
 interface Compra {
   id: string;
@@ -42,6 +43,7 @@ export function ComprasList({
   etapas,
 }: ComprasListProps) {
   const [filters, setFilters] = useState<ComprasFilters>(defaultFilters);
+  const isMobile = useMobile();
 
   // Calcular resumo (sempre sobre todos os dados)
   const resumo = useMemo(
@@ -157,12 +159,16 @@ export function ComprasList({
         resultadosFiltrados={comprasFiltradas.length}
       />
 
-      {/* Tabela */}
-      <Card>
-        <CardContent className="p-0">
-          <ComprasTable compras={comprasFiltradas} />
-        </CardContent>
-      </Card>
+      {/* Lista de Compras - Cards em mobile, Tabela em desktop */}
+      {isMobile ? (
+        <ComprasWrapper compras={comprasFiltradas} />
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <ComprasWrapper compras={comprasFiltradas} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

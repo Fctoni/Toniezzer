@@ -32,7 +32,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="min-h-screen antialiased">

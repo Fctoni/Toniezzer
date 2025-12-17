@@ -177,15 +177,16 @@ export default function ComunicacaoPage() {
   const abertos = topicos.filter((t) => t.status === "aberto").length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            Comunicação
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0" />
+            <span className="truncate">Comunicacao</span>
           </h1>
-          <p className="text-muted-foreground">
-            {totalTopicos} tópicos • {abertos} em aberto
+          <p className="text-sm text-muted-foreground">
+            {totalTopicos} topicos • {abertos} em aberto
           </p>
         </div>
         {currentUser && (
@@ -198,22 +199,23 @@ export default function ComunicacaoPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar tópico..."
+            placeholder="Buscar topico..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-9 w-full"
           />
         </div>
 
         <Tabs
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as TopicoStatus | "todos")}
+          className="w-full sm:w-auto"
         >
-          <TabsList className="h-9">
+          <TabsList className="h-9 w-full sm:w-auto grid grid-cols-3 sm:flex">
             <TabsTrigger value="todos" className="text-xs">Todos</TabsTrigger>
             <TabsTrigger value="aberto" className="text-xs">Abertos</TabsTrigger>
             <TabsTrigger value="resolvido" className="text-xs">Resolvidos</TabsTrigger>
