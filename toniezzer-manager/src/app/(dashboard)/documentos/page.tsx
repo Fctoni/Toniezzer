@@ -12,14 +12,20 @@ export default async function DocumentosPage() {
   const [{ data: documentos }, { data: etapas }] = await Promise.all([
     supabase
       .from("documentos")
-      .select("*, etapas(nome)")
+      .select("id, nome, url, tipo, tags, tamanho_bytes, created_at, etapa_relacionada_id, etapas(nome)")
       .order("created_at", { ascending: false }),
     supabase.from("etapas").select("id, nome").order("ordem"),
   ]);
 
   const fotos = documentos?.filter((d) => d.tipo === "foto" && d.created_at).map(d => ({
-    ...d,
-    created_at: d.created_at!
+    id: d.id,
+    nome: d.nome,
+    url: d.url,
+    created_at: d.created_at!,
+    etapa_relacionada_id: d.etapa_relacionada_id,
+    etapas: d.etapas,
+    tags: d.tags || [],
+    tamanho_bytes: d.tamanho_bytes,
   })) || [];
   const plantas = documentos?.filter((d) => d.tipo === "planta" && d.created_at).map(d => ({
     ...d,

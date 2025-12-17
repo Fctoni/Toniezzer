@@ -86,8 +86,7 @@ const menuItems = [
     icon: FolderOpen,
     subItems: [
       { title: "Galeria", href: "/documentos" },
-      { title: "Fotos", href: "/documentos/fotos" },
-      { title: "Plantas", href: "/documentos/plantas" },
+      { title: "Upload", href: "/documentos/upload" },
     ],
   },
   {

@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, X, File, Image, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Upload, X, File, Image, Loader2, Plus, Tag, Camera } from "lucide-react";
+import { CameraCapture } from "@/components/features/ocr/camera-capture";
 
 interface Etapa {
   id: string;
@@ -38,6 +41,40 @@ export function UploadForm({ etapas }: UploadFormProps) {
   const [tipo, setTipo] = useState<string>("foto");
   const [etapaId, setEtapaId] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState<string>("");
+  const [showCamera, setShowCamera] = useState(false);
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    const fileWithPreview: FileWithPreview = {
+      file,
+      preview: URL.createObjectURL(file),
+      progress: 0,
+      uploaded: false,
+    };
+    setFiles((prev) => [...prev, fileWithPreview]);
+    setShowCamera(false);
+    toast.success("Foto capturada com sucesso!");
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -116,6 +153,7 @@ export function UploadForm({ etapas }: UploadFormProps) {
           mime_type: file.type,
           etapa_relacionada_id: etapaId || null,
           created_by: userId,
+          tags: tags.length > 0 ? tags : null,
         });
 
         if (dbError) throw dbError;
@@ -190,33 +228,104 @@ export function UploadForm({ etapas }: UploadFormProps) {
         </div>
       </div>
 
-      {/* Dropzone */}
-      <div
-        className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        onClick={() => document.getElementById("file-input")?.click()}
-      >
-        <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-        <p className="text-sm text-muted-foreground">
-          Arraste arquivos aqui ou clique para selecionar
+      {/* Tags */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Tag className="h-4 w-4" />
+          Tags (opcional)
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Digite uma tag e pressione Enter"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            className="flex-1"
+          />
+          <Button type="button" variant="outline" size="icon" onClick={addTag}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="gap-1">
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Ex: fachada, fundacao, acabamento, antes, depois
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Suporta imagens, PDFs e outros documentos
-        </p>
-        <input
-          id="file-input"
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-          accept={
-            tipo === "foto"
-              ? "image/*"
-              : ".pdf,.doc,.docx,.xls,.xlsx,.dwg,.png,.jpg,.jpeg"
-          }
-        />
       </div>
+
+      {/* Camera Capture */}
+      {showCamera ? (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onCancel={() => setShowCamera(false)}
+        />
+      ) : (
+        <>
+          {/* Botoes de captura */}
+          {tipo === "foto" && (
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="h-20 flex-col gap-2"
+                onClick={() => setShowCamera(true)}
+              >
+                <Camera className="h-6 w-6" />
+                <span>Tirar Foto</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-20 flex-col gap-2"
+                onClick={() => document.getElementById("file-input")?.click()}
+              >
+                <Upload className="h-6 w-6" />
+                <span>Selecionar Arquivo</span>
+              </Button>
+            </div>
+          )}
+
+          {/* Dropzone */}
+          <div
+            className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => document.getElementById("file-input")?.click()}
+          >
+            <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+            <p className="text-sm text-muted-foreground">
+              Arraste arquivos aqui ou clique para selecionar
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Suporta imagens, PDFs e outros documentos
+            </p>
+            <input
+              id="file-input"
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+              accept={
+                tipo === "foto"
+                  ? "image/*"
+                  : ".pdf,.doc,.docx,.xls,.xlsx,.dwg,.png,.jpg,.jpeg"
+              }
+            />
+          </div>
+        </>
+      )}
 
       {/* Lista de Arquivos */}
       {files.length > 0 && (
