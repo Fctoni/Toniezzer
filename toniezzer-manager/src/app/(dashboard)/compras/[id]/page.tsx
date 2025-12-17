@@ -45,6 +45,7 @@ interface Compra {
   data_compra: string;
   fornecedor_id: string;
   categoria_id: string;
+  subcategoria_id: string | null;
   forma_pagamento: string;
   parcelas: number;
   parcelas_pagas: number;
@@ -56,6 +57,7 @@ interface Compra {
   observacoes: string | null;
   fornecedor?: { nome: string; cnpj_cpf?: string } | null;
   categoria?: { nome: string; cor: string } | null;
+  subcategoria?: { nome: string } | null;
   etapa?: { nome: string } | null;
 }
 
@@ -93,6 +95,7 @@ export default function CompraDetalhesPage() {
         *,
         fornecedor:fornecedores(nome, cnpj_cpf),
         categoria:categorias(nome, cor),
+        subcategoria:subcategorias(nome),
         etapa:etapas(nome)
       `
       )
@@ -112,6 +115,7 @@ export default function CompraDetalhesPage() {
       data_compra: compraData.data_compra,
       fornecedor_id: compraData.fornecedor_id,
       categoria_id: compraData.categoria_id,
+      subcategoria_id: compraData.subcategoria_id,
       forma_pagamento: compraData.forma_pagamento,
       parcelas: compraData.parcelas ?? 1,
       parcelas_pagas: compraData.parcelas_pagas ?? 0,
@@ -123,6 +127,7 @@ export default function CompraDetalhesPage() {
       observacoes: compraData.observacoes,
       fornecedor: compraData.fornecedor as { nome: string; cnpj_cpf?: string } | null,
       categoria: compraData.categoria as { nome: string; cor: string } | null,
+      subcategoria: compraData.subcategoria as { nome: string } | null,
       etapa: compraData.etapa as { nome: string } | null,
     });
 
@@ -392,9 +397,16 @@ export default function CompraDetalhesPage() {
                       style={{ backgroundColor: compra.categoria.cor }}
                     />
                   )}
-                  <p className="font-medium">
-                    {compra.categoria?.nome || "-"}
-                  </p>
+                  <div>
+                    <p className="font-medium">
+                      {compra.categoria?.nome || "-"}
+                    </p>
+                    {compra.subcategoria && (
+                      <p className="text-xs text-muted-foreground">
+                        {compra.subcategoria.nome}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

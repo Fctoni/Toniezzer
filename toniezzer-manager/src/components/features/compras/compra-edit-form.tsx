@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ const formSchema = z.object({
   data_compra: z.date({ message: "Data da compra é obrigatória" }),
   fornecedor_id: z.string().min(1, "Fornecedor é obrigatório"),
   categoria_id: z.string().min(1, "Categoria é obrigatória"),
+  subcategoria_id: z.string().optional(),
   etapa_relacionada_id: z.string().optional(),
   forma_pagamento: z.enum(["dinheiro", "pix", "cartao", "boleto", "cheque"]),
   nota_fiscal_numero: z.string().optional(),
@@ -65,6 +66,7 @@ interface Compra {
   data_compra: string;
   fornecedor_id: string;
   categoria_id: string;
+  subcategoria_id: string | null;
   forma_pagamento: string;
   parcelas: number;
   parcelas_pagas: number;
@@ -95,6 +97,7 @@ export function CompraEditForm({
   const [arquivoNF, setArquivoNF] = useState<File | null>(null);
   const [uploadingNF, setUploadingNF] = useState(false);
   const [fornecedores, setFornecedores] = useState(fornecedoresIniciais);
+  const [subcategorias, setSubcategorias] = useState<Array<{ id: string; nome: string; categoria_id: string }>>([]);
   const [notaFiscalUrlAtual, setNotaFiscalUrlAtual] = useState<string | null>(
     compra.nota_fiscal_url
   );
@@ -113,6 +116,7 @@ export function CompraEditForm({
       data_compra: parseDate(compra.data_compra),
       fornecedor_id: compra.fornecedor_id,
       categoria_id: compra.categoria_id,
+      subcategoria_id: compra.subcategoria_id || undefined,
       etapa_relacionada_id: compra.etapa_relacionada_id || "none",
       forma_pagamento: compra.forma_pagamento as
         | "dinheiro"
@@ -124,6 +128,45 @@ export function CompraEditForm({
       observacoes: compra.observacoes || "",
     },
   });
+
+  const categoriaSelecionada = useWatch({ control: form.control, name: "categoria_id" });
+
+  // Buscar subcategorias
+  useEffect(() => {
+    const fetchSubcategorias = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("subcategorias")
+        .select("id, nome, categoria_id")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (!error && data) {
+        setSubcategorias(data);
+      }
+    };
+
+    fetchSubcategorias();
+  }, []);
+
+  // Limpar subcategoria quando categoria mudar
+  useEffect(() => {
+    // Só limpa se a subcategoria atual não pertence à nova categoria
+    const subcategoriaAtual = form.getValues("subcategoria_id");
+    if (subcategoriaAtual && subcategoriaAtual !== "") {
+      const subcategoriaValida = subcategorias.find(
+        sub => sub.id === subcategoriaAtual && sub.categoria_id === categoriaSelecionada
+      );
+      if (!subcategoriaValida) {
+        form.setValue("subcategoria_id", undefined);
+      }
+    }
+  }, [categoriaSelecionada, form, subcategorias]);
+
+  // Filtrar subcategorias pela categoria selecionada
+  const subcategoriasDisponiveis = subcategorias.filter(
+    sub => sub.categoria_id === categoriaSelecionada
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -199,6 +242,7 @@ export function CompraEditForm({
 
       // Converter "none" para null
       const etapaId = data.etapa_relacionada_id === "none" ? null : data.etapa_relacionada_id || null;
+      const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
 
       // Atualizar a compra
       const { error: compraError } = await supabase
@@ -208,6 +252,7 @@ export function CompraEditForm({
           data_compra: formatDateToString(data.data_compra),
           fornecedor_id: data.fornecedor_id,
           categoria_id: data.categoria_id,
+          subcategoria_id: subcategoriaId,
           etapa_relacionada_id: etapaId,
           forma_pagamento: data.forma_pagamento,
           nota_fiscal_numero: data.nota_fiscal_numero || null,
@@ -225,6 +270,7 @@ export function CompraEditForm({
         .update({
           descricao: data.descricao,
           categoria_id: data.categoria_id,
+          subcategoria_id: subcategoriaId,
           fornecedor_id: data.fornecedor_id,
           forma_pagamento: data.forma_pagamento,
           etapa_relacionada_id: etapaId,
@@ -397,6 +443,38 @@ export function CompraEditForm({
                 )}
               />
             </div>
+
+            {/* Subcategoria (condicional) */}
+            {categoriaSelecionada && subcategoriasDisponiveis.length > 0 && (
+              <FormField
+                control={form.control}
+                name="subcategoria_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategoria (opcional)</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a subcategoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {subcategoriasDisponiveis.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>
+                            {sub.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Etapa Relacionada */}
             <FormField

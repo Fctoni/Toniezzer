@@ -43,6 +43,7 @@ interface Compra {
   forma_pagamento: string;
   fornecedor?: { nome: string } | null;
   categoria?: { nome: string; cor: string } | null;
+  subcategoria?: { nome: string } | null;
   etapa?: { nome: string } | null;
 }
 
@@ -151,12 +152,19 @@ export function ComprasTable({ compras }: ComprasTableProps) {
               </TableCell>
               <TableCell>
                 {compra.categoria && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     <div
-                      className="h-2 w-2 rounded-full shrink-0"
+                      className="h-2 w-2 rounded-full shrink-0 mt-1.5"
                       style={{ backgroundColor: compra.categoria.cor }}
                     />
-                    <span className="text-sm">{compra.categoria.nome}</span>
+                    <div>
+                      <span className="text-sm">{compra.categoria.nome}</span>
+                      {compra.subcategoria && (
+                        <p className="text-xs text-muted-foreground">
+                          {compra.subcategoria.nome}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </TableCell>

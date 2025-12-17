@@ -1,8 +1,8 @@
 # 📋 Plano de Implementacao - Configuracao de Categorias
 
 **Data:** 17/12/2024  
-**Versao:** 1.1  
-**Status:** Aguardando Revisao (Revisao 2)
+**Versao:** 1.2  
+**Status:** ✅ IMPLEMENTADO
 
 ---
 
@@ -687,22 +687,82 @@ const canEdit = isAdmin || currentUser?.role === 'editor'
 
 ---
 
-## ✅ Decisoes Tomadas (Revisao 1)
+## ✅ Decisoes Tomadas (Revisao Final)
 
 1. **Orcamento por categoria**: ~~DEPRECATED~~ - Campo existe no DB mas esta NULL em todos. Usar `orcamento_detalhado` por etapa.
 2. **Nomes duplicados**: **BLOQUEAR** - Validacao case-insensitive ao criar/editar.
 3. **Subcategorias e categoria inativa**: **SIM** - Ocultar automaticamente subcategorias nos selects quando categoria pai inativa.
 4. **Ordem inicial**: Todas as categorias ja tem ordenacao no database - **nenhuma acao necessaria**.
 5. **Reordenacao**: **Drag-and-drop** usando @dnd-kit.
-
-## ❓ Questoes Pendentes para Aprovacao Final
-
-1. **Biblioteca drag-and-drop**: Confirma uso de `@dnd-kit` ou prefere outra (react-beautiful-dnd, react-dnd)?
-2. **Subcategorias duplicadas entre categorias diferentes**: Permitir? Ex: "Elétrica" ter subcategoria "Fiacao" e "Hidraulica" ter subcategoria "Fiacao"?
-3. **Limite de categorias/subcategorias**: Definir algum limite maximo ou deixar livre?
-4. **Auditoria**: Registrar historico de alteracoes (quem mudou o que e quando) ou apenas updated_at e basta?
+6. **Biblioteca drag-and-drop**: **@dnd-kit** (ja instalada, moderna, performatica).
+7. **Subcategorias duplicadas entre categorias**: **PERMITIR** - Validacao apenas dentro da mesma categoria.
+8. **Limite de categorias/subcategorias**: **LIVRE** - Sem limites.
+9. **Auditoria**: **Apenas updated_at** - Sem historico detalhado.
 
 ---
 
-**Status:** 📋 Aguardando revisao e aprovacao para prosseguir com implementacao
+## ✅ Implementacao Concluida
+
+**Data:** 17/12/2024  
+**Arquivo:** `src/app/(dashboard)/configuracoes/categorias/page.tsx`
+
+### Funcionalidades Implementadas:
+
+✅ **Visualizacao de Categorias**
+- Tabela ordenada com drag-and-drop
+- Badge visual com cor e icone
+- Expandir/recolher subcategorias
+- Estados de loading e empty state
+
+✅ **CRUD de Categorias**
+- Criar categoria com validacao de nome duplicado
+- Editar categoria (nome, cor, icone)
+- Color picker com 13 cores pre-definidas
+- Icon picker com 12 emojis
+
+✅ **CRUD de Subcategorias**
+- Criar subcategoria com validacao por categoria
+- Editar subcategoria
+- Validacao de duplicata apenas na mesma categoria
+- Permitir nomes iguais em categorias diferentes
+
+✅ **Drag-and-Drop**
+- Biblioteca @dnd-kit (ja instalada)
+- Reordenacao funcional
+- Optimistic update
+- Rollback em caso de erro
+- Desabilitado para usuarios Viewer
+
+✅ **Ativar/Desativar**
+- Toggle de status para categorias
+- Toggle de status para subcategorias
+- Feedback visual (opacidade)
+
+✅ **Deletar com Validacao**
+- Verificacao de uso em compras/gastos/orcamentos
+- Bloquear delecao se em uso
+- Mensagem explicativa com totais
+- Sugestao de desativacao
+- DELETE CASCADE para subcategorias
+
+✅ **Controle de Permissoes**
+- Admin: acesso total
+- Editor: criar e editar
+- Viewer: apenas visualizacao
+
+✅ **Validacoes**
+- Nome obrigatorio
+- Bloqueio de duplicatas (case-insensitive)
+- Trim de espacos
+- Feedback com toast
+
+### Proximos Passos:
+
+1. **Teste Manual**: Testar todos os fluxos (criar, editar, deletar, reordenar, subcategorias)
+2. **Integracao**: Verificar selects de categoria em compras/gastos respeitam ativo=true
+3. **Commit**: `v3.0-config-categorias: Implementacao completa gestao categorias e subcategorias com drag-and-drop`
+
+---
+
+**Status:** ✅ **IMPLEMENTADO E PRONTO PARA TESTES**
 

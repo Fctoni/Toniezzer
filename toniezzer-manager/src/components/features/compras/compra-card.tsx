@@ -22,6 +22,7 @@ interface CompraCardProps {
     nota_fiscal_numero: string | null;
     fornecedor?: { nome: string } | null;
     categoria?: { nome: string; cor: string } | null;
+    subcategoria?: { nome: string } | null;
   };
 }
 
@@ -67,6 +68,7 @@ export function CompraCard({ compra }: CompraCardProps) {
                       }}
                     >
                       {compra.categoria.nome}
+                      {compra.subcategoria && ` › ${compra.subcategoria.nome}`}
                     </Badge>
                   )}
                 </div>

@@ -17,6 +17,7 @@ interface Compra {
   data_compra: string;
   fornecedor_id: string;
   categoria_id: string;
+  subcategoria_id: string | null;
   forma_pagamento: string;
   parcelas: number;
   parcelas_pagas: number;
@@ -88,6 +89,7 @@ export default function EditarCompraPage() {
       data_compra: compraData.data_compra,
       fornecedor_id: compraData.fornecedor_id,
       categoria_id: compraData.categoria_id,
+      subcategoria_id: compraData.subcategoria_id,
       forma_pagamento: compraData.forma_pagamento,
       parcelas: compraData.parcelas ?? 1,
       parcelas_pagas: compraData.parcelas_pagas ?? 0,
@@ -102,8 +104,8 @@ export default function EditarCompraPage() {
 
     // Buscar categorias, fornecedores e etapas
     const [categoriasRes, fornecedoresRes, etapasRes] = await Promise.all([
-      supabase.from("categorias").select("id, nome, cor").order("nome"),
-      supabase.from("fornecedores").select("id, nome").order("nome"),
+      supabase.from("categorias").select("id, nome, cor").eq("ativo", true).order("nome"),
+      supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("etapas").select("id, nome").order("ordem"),
     ]);
 

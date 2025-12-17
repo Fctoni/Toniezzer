@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,6 +47,7 @@ const formSchema = z.object({
   data_compra: z.date({ message: "Data da compra é obrigatória" }),
   fornecedor_id: z.string().min(1, "Fornecedor é obrigatório"),
   categoria_id: z.string().min(1, "Categoria é obrigatória"),
+  subcategoria_id: z.string().optional(),
   etapa_relacionada_id: z.string().optional(),
   forma_pagamento: z.enum(["dinheiro", "pix", "cartao", "boleto", "cheque"]),
   parcelas: z.string().min(1, "Parcelas é obrigatório"),
@@ -75,6 +76,7 @@ export function CompraForm({
   const [arquivoNF, setArquivoNF] = useState<File | null>(null);
   const [uploadingNF, setUploadingNF] = useState(false);
   const [fornecedores, setFornecedores] = useState(fornecedoresIniciais);
+  const [subcategorias, setSubcategorias] = useState<Array<{ id: string; nome: string; categoria_id: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormData>({
@@ -96,11 +98,40 @@ export function CompraForm({
     control: form.control,
     name: "data_primeira_parcela",
   });
+  const categoriaSelecionada = useWatch({ control: form.control, name: "categoria_id" });
 
   const valorNumerico = valorTotal
     ? parseFloat(valorTotal.replace(/\./g, "").replace(",", ".")) || 0
     : 0;
   const numeroParcelas = parseInt(parcelas) || 1;
+
+  // Buscar subcategorias
+  useEffect(() => {
+    const fetchSubcategorias = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("subcategorias")
+        .select("id, nome, categoria_id")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (!error && data) {
+        setSubcategorias(data);
+      }
+    };
+
+    fetchSubcategorias();
+  }, []);
+
+  // Limpar subcategoria quando categoria mudar
+  useEffect(() => {
+    form.setValue("subcategoria_id", undefined);
+  }, [categoriaSelecionada, form]);
+
+  // Filtrar subcategorias pela categoria selecionada
+  const subcategoriasDisponiveis = subcategorias.filter(
+    sub => sub.categoria_id === categoriaSelecionada
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -174,6 +205,8 @@ export function CompraForm({
       }
 
       // 1. Criar a compra
+      const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
+      
       const { data: compra, error: compraError } = await supabase
         .from("compras")
         .insert({
@@ -182,6 +215,7 @@ export function CompraForm({
           data_compra: formatDateToString(data.data_compra),
           fornecedor_id: data.fornecedor_id,
           categoria_id: data.categoria_id,
+          subcategoria_id: subcategoriaId,
           etapa_relacionada_id: data.etapa_relacionada_id || null,
           forma_pagamento: data.forma_pagamento,
           parcelas: numParcelas,
@@ -218,6 +252,7 @@ export function CompraForm({
           valor: valor,
           data: formatDateToString(dataParcela),
           categoria_id: data.categoria_id,
+          subcategoria_id: subcategoriaId,
           fornecedor_id: data.fornecedor_id,
           forma_pagamento: data.forma_pagamento,
           parcelas: numParcelas,
@@ -420,6 +455,38 @@ export function CompraForm({
                 )}
               />
             </div>
+
+            {/* Subcategoria (condicional) */}
+            {categoriaSelecionada && subcategoriasDisponiveis.length > 0 && (
+              <FormField
+                control={form.control}
+                name="subcategoria_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategoria (opcional)</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a subcategoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {subcategoriasDisponiveis.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>
+                            {sub.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Etapa Relacionada */}
             <FormField

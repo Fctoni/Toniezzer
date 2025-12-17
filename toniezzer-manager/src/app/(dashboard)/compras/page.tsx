@@ -17,9 +17,11 @@ type CompraComRelacoes = {
   forma_pagamento: string;
   fornecedor_id: string;
   categoria_id: string;
+  subcategoria_id: string | null;
   etapa_relacionada_id: string | null;
   fornecedor: { nome: string } | null;
   categoria: { nome: string; cor: string } | null;
+  subcategoria: { nome: string } | null;
   etapa: { nome: string } | null;
   [key: string]: unknown;
 };
@@ -35,6 +37,7 @@ export default async function ComprasPage() {
       *,
       fornecedor:fornecedores(nome),
       categoria:categorias(nome, cor),
+      subcategoria:subcategorias(nome),
       etapa:etapas(nome)
     `
     )
@@ -73,6 +76,7 @@ export default async function ComprasPage() {
       status: compra.status as "ativa" | "quitada" | "cancelada",
       fornecedor: compra.fornecedor,
       categoria: compra.categoria,
+      subcategoria: compra.subcategoria,
       etapa: compra.etapa,
     })) || [];
 
