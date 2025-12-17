@@ -17,14 +17,16 @@ interface ColunaEtapa {
   etapa_nome: string;
   etapa_ordem: number;
   total_etapa: number;
+  orcamento_previsto?: number | null;
 }
 
 interface MatrizTabelaWrapperProps {
   linhas: LinhaMatriz[];
   colunas: ColunaEtapa[];
+  detalhamentoMap: Map<string, number>;
 }
 
-export function MatrizTabelaWrapper({ linhas, colunas }: MatrizTabelaWrapperProps) {
+export function MatrizTabelaWrapper({ linhas, colunas, detalhamentoMap }: MatrizTabelaWrapperProps) {
   const [modalData, setModalData] = useState<{
     categoriaId: string;
     categoriaNome: string;
@@ -54,6 +56,7 @@ export function MatrizTabelaWrapper({ linhas, colunas }: MatrizTabelaWrapperProp
       <MatrizTabela
         linhas={linhas}
         colunas={colunas}
+        detalhamentoMap={detalhamentoMap}
         onCellClick={handleCellClick}
       />
 

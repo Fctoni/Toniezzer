@@ -57,9 +57,9 @@ export default async function DashboardPage() {
   const etapas = etapasRes.data;
   const notificacoes = notificacoesRes.data;
 
-  // Cálculos financeiros
+  // Cálculos financeiros - AGORA POR ETAPA
   const orcamentoTotal =
-    categorias?.reduce((acc, cat) => acc + (Number(cat.orcamento) || 0), 0) || 0;
+    etapas?.reduce((acc, etapa) => acc + (Number(etapa.orcamento) || 0), 0) || 0;
   const gastoTotal =
     gastos?.reduce((acc, g) => acc + Number(g.valor), 0) || 0;
   const percentualGasto = orcamentoTotal > 0 ? (gastoTotal / orcamentoTotal) * 100 : 0;

@@ -29,13 +29,14 @@ interface ColunaEtapa {
   etapa_nome: string;
   etapa_ordem: number;
   total_etapa: number;
+  orcamento_previsto?: number | null;
 }
 
 export default async function MatrizGastosPage() {
   const supabase = await createClient();
 
   // Buscar dados
-  const [{ data: categorias }, { data: etapas }, { data: gastos }] = await Promise.all([
+  const [{ data: categorias }, { data: etapas }, { data: gastos }, { data: detalhamentos }] = await Promise.all([
     supabase
       .from("categorias")
       .select("*")
@@ -49,6 +50,9 @@ export default async function MatrizGastosPage() {
       .from("gastos")
       .select("categoria_id, etapa_relacionada_id, valor")
       .eq("status", "aprovado"),
+    supabase
+      .from("orcamento_detalhado")
+      .select("etapa_id, categoria_id, valor_previsto"),
   ]);
 
   // Processar dados em estrutura de matriz
@@ -131,6 +135,23 @@ export default async function MatrizGastosPage() {
 
   // Ordenar etapas por ordem ASC (cronológica)
   colunasEtapas.sort((a, b) => a.etapa_ordem - b.etapa_ordem);
+
+  // Criar mapa de detalhamentos (orçamento previsto por categoria × etapa)
+  const detalhamentoMap = new Map<string, number>();
+  detalhamentos?.forEach((det) => {
+    const key = `${det.categoria_id}-${det.etapa_id}`;
+    detalhamentoMap.set(key, det.valor_previsto);
+  });
+
+  // Adicionar orçamentos das etapas às colunas
+  colunasEtapas.forEach((coluna) => {
+    if (coluna.etapa_id !== 'sem_etapa') {
+      const etapa = etapas?.find((e) => e.id === coluna.etapa_id);
+      if (etapa) {
+        coluna.orcamento_previsto = etapa.orcamento || null;
+      }
+    }
+  });
 
   // Calcular totais gerais
   const gastoTotal = linhasMatriz.reduce((acc, linha) => acc + linha.total_categoria, 0);
@@ -255,7 +276,11 @@ export default async function MatrizGastosPage() {
               <CardTitle>Matriz Detalhada</CardTitle>
             </CardHeader>
             <CardContent>
-              <MatrizTabelaWrapper linhas={linhasMatriz} colunas={colunasEtapas} />
+              <MatrizTabelaWrapper 
+                linhas={linhasMatriz} 
+                colunas={colunasEtapas}
+                detalhamentoMap={detalhamentoMap}
+              />
             </CardContent>
           </Card>
         </>

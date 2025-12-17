@@ -17,13 +17,15 @@ import { parseDateString } from "@/lib/utils";
 export default async function FinanceiroPage() {
   const supabase = await createClient();
 
-  const [{ data: categorias }, { data: gastos }] = await Promise.all([
+  const [{ data: categorias }, { data: gastos }, { data: etapas }] = await Promise.all([
     supabase.from("categorias").select("*").eq("ativo", true).order("ordem"),
     supabase.from("gastos").select("*, categorias(nome, cor)").eq("status", "aprovado"),
+    supabase.from("etapas").select("*").order("ordem"),
   ]);
 
+  // Orçamento agora vem das etapas
   const orcamentoTotal =
-    categorias?.reduce((acc, cat) => acc + (Number(cat.orcamento) || 0), 0) || 0;
+    etapas?.reduce((acc, etapa) => acc + (Number(etapa.orcamento) || 0), 0) || 0;
   const gastoTotal = gastos?.reduce((acc, g) => acc + Number(g.valor), 0) || 0;
   const percentualGasto = orcamentoTotal > 0 ? (gastoTotal / orcamentoTotal) * 100 : 0;
   const saldoRestante = orcamentoTotal - gastoTotal;
@@ -41,6 +43,23 @@ export default async function FinanceiroPage() {
       cor: cat.cor,
       orcamento: Number(cat.orcamento) || 0,
       gasto: gastoCat,
+      percentual,
+      status: percentual >= 100 ? "over" : percentual >= 80 ? "warning" : "ok",
+    };
+  }) || [];
+
+  // Dados por etapa
+  const dadosEtapas = etapas?.map((etapa) => {
+    const gastoEtapa =
+      gastos
+        ?.filter((g) => g.etapa_relacionada_id === etapa.id)
+        .reduce((acc, g) => acc + Number(g.valor), 0) || 0;
+    const percentual = etapa.orcamento ? (gastoEtapa / Number(etapa.orcamento)) * 100 : 0;
+    return {
+      id: etapa.id,
+      nome: etapa.nome,
+      orcamento: Number(etapa.orcamento) || 0,
+      gasto: gastoEtapa,
       percentual,
       status: percentual >= 100 ? "over" : percentual >= 80 ? "warning" : "ok",
     };
@@ -200,11 +219,11 @@ export default async function FinanceiroPage() {
         </Card>
       </div>
 
-      {/* Orçamento por Categoria */}
+      {/* Orçamento por Etapa */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Orçamento por Categoria</span>
+            <span>Orçamento por Etapa</span>
             <Link
               href="/financeiro/orcamento"
               className="text-sm font-normal text-primary hover:underline"
@@ -212,6 +231,66 @@ export default async function FinanceiroPage() {
               Editar orçamentos →
             </Link>
           </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {dadosEtapas.map((etapa) => (
+              <div key={etapa.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{etapa.nome}</span>
+                    {etapa.status === "over" && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        Estourado
+                      </Badge>
+                    )}
+                    {etapa.status === "warning" && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-yellow-500 text-yellow-500"
+                      >
+                        80%+
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-medium">
+                      {formatCurrency(etapa.gasto)}
+                    </span>
+                    {etapa.orcamento > 0 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        / {formatCurrency(etapa.orcamento)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {etapa.orcamento > 0 && (
+                  <Progress
+                    value={Math.min(etapa.percentual, 100)}
+                    className={`h-2 ${
+                      etapa.status === "over"
+                        ? "[&>div]:bg-destructive"
+                        : etapa.status === "warning"
+                        ? "[&>div]:bg-yellow-500"
+                        : ""
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+            {dadosEtapas.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                Nenhuma etapa com orçamento definido
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Distribuição por Categoria (mantido para análise) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Distribuição por Categoria</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -224,39 +303,14 @@ export default async function FinanceiroPage() {
                       style={{ backgroundColor: cat.cor }}
                     />
                     <span className="text-sm font-medium">{cat.nome}</span>
-                    {cat.status === "over" && (
-                      <Badge variant="destructive" className="text-[10px]">
-                        Estourado
-                      </Badge>
-                    )}
-                    {cat.status === "warning" && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-yellow-500 text-yellow-500"
-                      >
-                        80%+
-                      </Badge>
-                    )}
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-medium">
                       {formatCurrency(cat.gasto)}
                     </span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      / {formatCurrency(cat.orcamento)}
-                    </span>
                   </div>
                 </div>
-                <Progress
-                  value={Math.min(cat.percentual, 100)}
-                  className={`h-2 ${
-                    cat.status === "over"
-                      ? "[&>div]:bg-destructive"
-                      : cat.status === "warning"
-                      ? "[&>div]:bg-yellow-500"
-                      : ""
-                  }`}
-                />
+                <Progress value={100} className="h-2" />
               </div>
             ))}
           </div>

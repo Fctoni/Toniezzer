@@ -408,6 +408,7 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          orcamento: number | null
           ordem: number
           progresso_manual: boolean | null
           progresso_percentual: number | null
@@ -425,6 +426,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          orcamento?: number | null
           ordem: number
           progresso_manual?: boolean | null
           progresso_percentual?: number | null
@@ -442,6 +444,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          orcamento?: number | null
           ordem?: number
           progresso_manual?: boolean | null
           progresso_percentual?: number | null
@@ -883,6 +886,50 @@ export type Database = {
             columns: ["usuario_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orcamento_detalhado: {
+        Row: {
+          id: string
+          etapa_id: string
+          categoria_id: string
+          valor_previsto: number
+          observacoes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          etapa_id: string
+          categoria_id: string
+          valor_previsto: number
+          observacoes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          etapa_id?: string
+          categoria_id?: string
+          valor_previsto?: number
+          observacoes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_detalhado_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamento_detalhado_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
         ]

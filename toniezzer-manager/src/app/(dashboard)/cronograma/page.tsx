@@ -36,12 +36,14 @@ interface Etapa {
   responsavel_id: string | null;
   responsavel: User | null;
   tarefas: Tarefa[];
+  orcamento?: number | null;
+  gasto_realizado?: number;
 }
 
 export default async function CronogramaPage() {
   const supabase = await createClient();
 
-  const [{ data: etapasData }, { data: usersData }, { data: tarefasData }] =
+  const [{ data: etapasData }, { data: usersData }, { data: tarefasData }, { data: gastosData }] =
     await Promise.all([
       supabase
         .from("etapas")
@@ -49,19 +51,29 @@ export default async function CronogramaPage() {
         .order("ordem"),
       supabase.from("users").select("*").eq("ativo", true),
       supabase.from("tarefas").select("*").order("ordem"),
+      supabase.from("gastos").select("etapa_relacionada_id, valor").eq("status", "aprovado"),
     ]);
 
-  // Mapear etapas com responsável e tarefas
+  // Mapear etapas com responsável, tarefas e gastos
   const users = (usersData || []) as User[];
   const tarefas = (tarefasData || []) as Tarefa[];
+  const gastos = gastosData || [];
   const etapasRaw = etapasData || [];
-  const etapas: Etapa[] = etapasRaw.map((e: Record<string, unknown>) => ({
-    ...e,
-    responsavel: e.responsavel_id 
-      ? users.find(u => u.id === e.responsavel_id) || null 
-      : null,
-    tarefas: tarefas.filter(t => t.etapa_id === e.id)
-  })) as Etapa[];
+  const etapas: Etapa[] = etapasRaw.map((e: Record<string, unknown>) => {
+    // Calcular gasto total da etapa
+    const gastoEtapa = gastos
+      .filter((g) => g.etapa_relacionada_id === e.id)
+      .reduce((acc, g) => acc + Number(g.valor), 0);
+
+    return {
+      ...e,
+      responsavel: e.responsavel_id 
+        ? users.find(u => u.id === e.responsavel_id) || null 
+        : null,
+      tarefas: tarefas.filter(t => t.etapa_id === e.id),
+      gasto_realizado: gastoEtapa,
+    };
+  }) as Etapa[];
 
   // Estatísticas
   const etapasConcluidas = etapas.filter((e) => e.status === "concluida").length;

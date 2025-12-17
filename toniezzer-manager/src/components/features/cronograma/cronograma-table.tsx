@@ -83,6 +83,8 @@ interface Etapa {
   responsavel_id: string | null;
   responsavel: { nome_completo: string } | null;
   tarefas: Tarefa[];
+  orcamento?: number | null;
+  gasto_realizado?: number;
 }
 
 interface User {
@@ -104,8 +106,8 @@ const statusOptions = [
   { value: "concluida", label: "Concluída", icon: Check, color: "text-green-500" },
 ];
 
-// Grid columns configuration
-const gridCols = "grid-cols-[40px_40px_minmax(200px,1fr)_150px_100px_100px_150px_80px_50px]";
+// Grid columns configuration - Adicionadas colunas Orçamento e Gasto
+const gridCols = "grid-cols-[40px_40px_minmax(200px,1fr)_150px_100px_100px_150px_100px_100px_80px_50px]";
 
 // Componente para linha de etapa arrastável
 function SortableEtapaRow({
@@ -150,6 +152,19 @@ function SortableEtapaRow({
   const hasTarefas = etapa.tarefas.length > 0;
   const statusConfig = getStatusConfig(etapa.status);
   const progresso = calcularProgresso(etapa);
+  
+  // Calcular percentual de orçamento utilizado
+  const orcamento = Number(etapa.orcamento) || 0;
+  const gastoRealizado = etapa.gasto_realizado || 0;
+  const percentualOrcamento = orcamento > 0 ? (gastoRealizado / orcamento) * 100 : 0;
+  
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      notation: "compact",
+      maximumFractionDigits: 0,
+    }).format(value);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -292,6 +307,34 @@ function SortableEtapaRow({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Orçamento */}
+        <div className="p-2 text-right">
+          <span className="text-xs font-medium text-muted-foreground">
+            {orcamento > 0 ? formatCurrency(orcamento) : "-"}
+          </span>
+        </div>
+
+        {/* Gasto */}
+        <div className="p-2 text-right">
+          <div className="flex flex-col items-end">
+            <span
+              className={cn(
+                "text-xs font-medium",
+                percentualOrcamento >= 100 && "text-destructive",
+                percentualOrcamento >= 80 && percentualOrcamento < 100 && "text-yellow-500",
+                percentualOrcamento < 80 && gastoRealizado > 0 && "text-green-500"
+              )}
+            >
+              {gastoRealizado > 0 ? formatCurrency(gastoRealizado) : "-"}
+            </span>
+            {orcamento > 0 && gastoRealizado > 0 && (
+              <span className="text-[10px] text-muted-foreground">
+                {percentualOrcamento.toFixed(0)}%
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Progresso */}
@@ -535,6 +578,12 @@ function SortableTarefaRow({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Orçamento (vazio para tarefas) */}
+      <div className="p-2"></div>
+
+      {/* Gasto (vazio para tarefas) */}
+      <div className="p-2"></div>
 
       {/* Progresso (checkbox visual) */}
       <div className="text-right pr-4 flex items-center justify-end">
@@ -972,6 +1021,8 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
           <div className="p-2">Início</div>
           <div className="p-2">Fim</div>
           <div className="p-2">Responsável</div>
+          <div className="p-2 text-right">Orçamento</div>
+          <div className="p-2 text-right">Gasto</div>
           <div className="p-2 text-right">Progresso</div>
           <div className="p-2"></div>
         </div>
