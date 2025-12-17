@@ -155,57 +155,30 @@ Regras:
   }
 }
 
-// Processar PDF - extrair texto e enviar para Gemini
+// Processar PDF - enviar diretamente para Gemini (suporta PDF nativo)
 async function processarPDF(buffer: Buffer): Promise<DadosExtraidos> {
-  // Importar pdf-parse dinamicamente
   console.log('[PDF] Iniciando processamento, tamanho do buffer:', buffer.length)
   
-  let pdfData
-  try {
-    const pdfParse = (await import('pdf-parse')) as unknown as (buffer: Buffer) => Promise<{ text: string }>
-    pdfData = await pdfParse(buffer)
-  } catch (pdfError) {
-    console.error('[PDF] Erro ao parsear PDF:', pdfError)
-    throw new Error(`Erro ao parsear PDF: ${pdfError instanceof Error ? pdfError.message : 'erro desconhecido'}`)
-  }
-  
-  console.log('[PDF] Texto extraído (primeiros 500 chars):', pdfData.text.substring(0, 500))
-  console.log('[PDF] Total de caracteres extraídos:', pdfData.text.length)
-  
-  if (!pdfData.text || pdfData.text.trim().length < 10) {
-    console.log('[PDF] PDF sem texto extraível (pode ser imagem escaneada)')
-    return {
-      fornecedor: null,
-      cnpj: null,
-      valor: null,
-      data: null,
-      numero_nf: null,
-      descricao: 'PDF sem texto extraível (pode ser imagem escaneada)',
-      forma_pagamento: null,
-      categoria_sugerida: null,
-      confianca: 0
-    }
-  }
-
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY não configurada')
   }
 
+  // Converter PDF para base64 e enviar diretamente ao Gemini
+  const base64 = buffer.toString('base64')
+  console.log('[PDF] PDF convertido para base64, tamanho:', base64.length)
+
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
   
-  console.log('[GEMINI] Enviando texto do PDF para análise...')
+  console.log('[GEMINI] Enviando PDF diretamente para análise...')
   
   const response = await fetch(geminiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
-        parts: [{
-          text: `Analise este texto extraído de uma nota fiscal/recibo e extraia as informações.
-
-TEXTO DO DOCUMENTO:
-${pdfData.text.substring(0, 5000)}
-
+        parts: [
+          {
+            text: `Analise este documento PDF (nota fiscal/recibo) e extraia as informações.
 Retorne APENAS um JSON válido (sem markdown, sem \`\`\`) no formato:
 {
   "fornecedor": "Nome do estabelecimento ou null",
@@ -223,9 +196,17 @@ Regras:
 - valor deve ser número decimal (ex: 150.00) - soma total da NF
 - data deve ser formato ISO (YYYY-MM-DD)
 - forma_pagamento deve ser: pix, dinheiro, cartao, boleto ou cheque (ou null se não souber)
-- confianca de 0 a 1
-- Retorne APENAS o JSON`
-        }]
+- confianca de 0 a 1 indicando quão certo você está dos dados
+- Se não conseguir extrair algum campo, use null
+- Retorne APENAS o JSON, nada mais`
+          },
+          {
+            inline_data: {
+              mime_type: 'application/pdf',
+              data: base64
+            }
+          }
+        ]
       }],
       generationConfig: {
         temperature: 0.1,
@@ -247,7 +228,8 @@ Regras:
 
   if (!textResponse) {
     const finishReason = result.candidates?.[0]?.finishReason
-    console.error('[GEMINI] Resposta vazia. finishReason:', finishReason)
+    const safetyRatings = result.candidates?.[0]?.safetyRatings
+    console.error('[GEMINI] Resposta vazia. finishReason:', finishReason, 'safetyRatings:', safetyRatings)
     throw new Error(`Resposta vazia do Gemini. Motivo: ${finishReason || 'desconhecido'}`)
   }
 

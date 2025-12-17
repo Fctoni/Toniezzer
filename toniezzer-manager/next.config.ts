@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
     'pino',
     'pino-pretty',
     'thread-stream',
-    'pdf-parse',
     'xml2js',
     'sonic-boom',
   ],
