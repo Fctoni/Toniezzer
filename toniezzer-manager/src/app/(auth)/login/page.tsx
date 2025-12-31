@@ -66,7 +66,12 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form 
+            onSubmit={handleLogin} 
+            className="space-y-4"
+            method="post"
+            autoComplete="on"
+          >
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -78,14 +83,14 @@ export default function LoginPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                name="email"
+                name="username"
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
             
