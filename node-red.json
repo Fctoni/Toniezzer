@@ -1,0 +1,506 @@
+[
+    {
+        "id": "backup-supabase-flow",
+        "type": "tab",
+        "label": "Backup Supabase Completo",
+        "disabled": false,
+        "info": "Backup completo do Supabase (Roles + Schema + Data + Storage) - Executa diariamente às 03:00"
+    },
+    {
+        "id": "trigger-backup-cron",
+        "type": "inject",
+        "z": "backup-supabase-flow",
+        "name": "⏰ Backup Diário 03:00",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "0 3 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 100,
+        "wires": [
+            [
+                "set-timestamp"
+            ]
+        ]
+    },
+    {
+        "id": "trigger-manual",
+        "type": "inject",
+        "z": "backup-supabase-flow",
+        "name": "▶️ Executar Agora (Manual)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 160,
+        "wires": [
+            [
+                "set-timestamp"
+            ]
+        ]
+    },
+    {
+        "id": "set-timestamp",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "📅 Configurar Backup",
+        "func": "const now = new Date();\nconst pad = (n) => n.toString().padStart(2, '0');\n\nconst timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\n\n// Pasta base e temporária\nconst baseDir = '/root/backups';\nconst tempDir = `${baseDir}/temp_${timestamp}`;\nconst finalFile = `${baseDir}/backup_completo_${timestamp}.tar.gz`;\n\n// Arquivos SQL\nconst rolesFile = `${tempDir}/roles_${timestamp}.sql`;\nconst schemaFile = `${tempDir}/schema_${timestamp}.sql`;\nconst dataFile = `${tempDir}/data_${timestamp}.sql`;\nconst storageDir = `${tempDir}/storage`;\n\n// Comandos\nmsg.timestamp = timestamp;\nmsg.baseDir = baseDir;\nmsg.tempDir = tempDir;\nmsg.finalFile = finalFile;\nmsg.rolesFile = rolesFile;\nmsg.schemaFile = schemaFile;\nmsg.dataFile = dataFile;\nmsg.storageDir = storageDir;\n\n// Comando para criar estrutura\nmsg.mkdirCmd = `mkdir -p ${tempDir}`;\n\n// Comandos de dump\nmsg.rolesDumpCmd = `supabase db dump --linked -f ${rolesFile} --role-only`;\nmsg.schemaDumpCmd = `supabase db dump --linked -f ${schemaFile}`;\nmsg.dataDumpCmd = `supabase db dump --linked -f ${dataFile} --data-only --use-copy`;\nmsg.storageCpCmd = `supabase storage cp -r ss:/// ${storageDir} --experimental`;\n\n// Comando para comprimir\nmsg.tarCmd = `tar -czf ${finalFile} -C ${tempDir} .`;\n\n// Comando para limpar temp\nmsg.cleanupTempCmd = `rm -rf ${tempDir}`;\n\n// Comando para limpar backups antigos (> 7 dias)\nmsg.cleanupOldCmd = `find ${baseDir} -name 'backup_completo_*.tar.gz' -mtime +7 -delete`;\n\nnode.status({fill:\"blue\", shape:\"dot\", text:`Iniciando: ${timestamp}`});\nnode.warn(`🚀 Backup completo iniciado: ${timestamp}`);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 130,
+        "wires": [
+            [
+                "create-temp-dir"
+            ]
+        ]
+    },
+    {
+        "id": "create-temp-dir",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "mkdirCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "30",
+        "winHide": false,
+        "oldrc": false,
+        "name": "📁 Criar pasta temp",
+        "x": 670,
+        "y": 130,
+        "wires": [
+            [
+                "status-roles",
+                "exec-roles-dump"
+            ],
+            [
+                "log-error"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "status-roles",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "Status: Roles",
+        "func": "node.status({fill:\"yellow\", shape:\"ring\", text:\"1/4 Exportando roles...\"});\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 910,
+        "y": 60,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "exec-roles-dump",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "rolesDumpCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "120",
+        "winHide": false,
+        "oldrc": false,
+        "name": "1️⃣ Dump Roles",
+        "x": 900,
+        "y": 130,
+        "wires": [
+            [
+                "status-schema",
+                "exec-schema-dump"
+            ],
+            [
+                "log-error"
+            ],
+            [
+                "debug-roles"
+            ]
+        ]
+    },
+    {
+        "id": "debug-roles",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "Debug Roles",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "status-schema",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "Status: Schema",
+        "func": "node.status({fill:\"yellow\", shape:\"ring\", text:\"2/4 Exportando schema...\"});\nnode.warn('✅ Roles exportado');\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "exec-schema-dump",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "schemaDumpCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "300",
+        "winHide": false,
+        "oldrc": false,
+        "name": "2️⃣ Dump Schema",
+        "x": 1140,
+        "y": 130,
+        "wires": [
+            [
+                "status-data",
+                "exec-data-dump"
+            ],
+            [
+                "log-error"
+            ],
+            [
+                "debug-schema"
+            ]
+        ]
+    },
+    {
+        "id": "debug-schema",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "Debug Schema",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1360,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "status-data",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "Status: Data",
+        "func": "node.status({fill:\"yellow\", shape:\"ring\", text:\"3/4 Exportando dados...\"});\nnode.warn('✅ Schema exportado');\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1390,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "exec-data-dump",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "dataDumpCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "600",
+        "winHide": false,
+        "oldrc": false,
+        "name": "3️⃣ Dump Data",
+        "x": 1390,
+        "y": 130,
+        "wires": [
+            [
+                "status-storage",
+                "exec-storage-backup"
+            ],
+            [
+                "log-error"
+            ],
+            [
+                "debug-data"
+            ]
+        ]
+    },
+    {
+        "id": "debug-data",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "Debug Data",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1610,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "status-storage",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "Status: Storage",
+        "func": "node.status({fill:\"yellow\", shape:\"ring\", text:\"4/4 Baixando storage...\"});\nnode.warn('✅ Data exportado');\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1640,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "exec-storage-backup",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "storageCpCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "900",
+        "winHide": false,
+        "oldrc": false,
+        "name": "4️⃣ Backup Storage",
+        "x": 1650,
+        "y": 130,
+        "wires": [
+            [
+                "status-compress",
+                "exec-compress"
+            ],
+            [
+                "log-error"
+            ],
+            [
+                "debug-storage"
+            ]
+        ]
+    },
+    {
+        "id": "debug-storage",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "Debug Storage",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1880,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "status-compress",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "Status: Comprimindo",
+        "func": "node.status({fill:\"cyan\", shape:\"ring\", text:\"Comprimindo...\"});\nnode.warn('✅ Storage baixado');\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1900,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "exec-compress",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "tarCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "600",
+        "winHide": false,
+        "oldrc": false,
+        "name": "📦 Comprimir tudo",
+        "x": 1900,
+        "y": 130,
+        "wires": [
+            [
+                "exec-cleanup-temp"
+            ],
+            [
+                "log-error"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "exec-cleanup-temp",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "cleanupTempCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "120",
+        "winHide": false,
+        "oldrc": false,
+        "name": "🗑️ Limpar pasta temp",
+        "x": 2150,
+        "y": 130,
+        "wires": [
+            [
+                "exec-cleanup-old"
+            ],
+            [
+                "log-error"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "exec-cleanup-old",
+        "type": "exec",
+        "z": "backup-supabase-flow",
+        "command": "",
+        "addpay": "cleanupOldCmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "60",
+        "winHide": false,
+        "oldrc": false,
+        "name": "🧹 Remover backups > 7 dias",
+        "x": 2420,
+        "y": 130,
+        "wires": [
+            [
+                "backup-success"
+            ],
+            [
+                "log-error"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "backup-success",
+        "type": "function",
+        "z": "backup-supabase-flow",
+        "name": "✅ Sucesso",
+        "func": "const now = new Date();\nconst dataHora = now.toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});\n\nnode.status({fill:\"green\", shape:\"dot\", text:`Concluído: ${msg.timestamp}`});\n\nmsg.payload = {\n    status: \"success\",\n    message: `✅ Backup COMPLETO do Supabase concluído!`,\n    arquivo: msg.finalFile,\n    conteudo: [\n        'roles.sql (permissões PostgreSQL)',\n        'schema.sql (estrutura do banco)',\n        'data.sql (dados das tabelas)',\n        'storage/ (arquivos do Storage)'\n    ],\n    timestamp: msg.timestamp,\n    dataHora: dataHora\n};\n\nnode.warn(`✅ BACKUP COMPLETO: ${msg.finalFile}`);\nnode.warn(`   📁 Conteúdo: roles + schema + data + storage`);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2650,
+        "y": 130,
+        "wires": [
+            [
+                "debug-output"
+            ]
+        ]
+    },
+    {
+        "id": "debug-output",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "📋 Output Final",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2840,
+        "y": 130,
+        "wires": []
+    },
+    {
+        "id": "log-error",
+        "type": "debug",
+        "z": "backup-supabase-flow",
+        "name": "⚠️ Log Erros (stderr)",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1120,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "comment-info",
+        "type": "comment",
+        "z": "backup-supabase-flow",
+        "name": "ℹ️ BACKUP COMPLETO SUPABASE - Configuração",
+        "info": "## Backup Completo Automático do Supabase\n\n### O que este fluxo faz:\n1. ⏰ Executa automaticamente todo dia às 03:00\n2. 1️⃣ Exporta ROLES (usuários e permissões PostgreSQL)\n3. 2️⃣ Exporta SCHEMA (estrutura: tabelas, views, functions, triggers, RLS)\n4. 3️⃣ Exporta DATA (dados de todas as tabelas)\n5. 4️⃣ Baixa STORAGE (todos os arquivos: fotos, PDFs, etc)\n6. 📦 Comprime tudo em um único .tar.gz\n7. 🗑️ Remove pasta temporária\n8. 🧹 Remove backups com mais de 7 dias\n\n### Pré-requisitos na VPS:\n- Supabase CLI instalado (`supabase --version`)\n- Docker instalado (`docker --version`)\n- Login feito (`supabase login`)\n- Projeto linkado (`supabase link --project-ref SEU_PROJECT_REF`)\n\n### Pasta de backups:\n`/root/backups/`\n\n### Formato do arquivo:\n`backup_completo_YYYYMMDD_HHMMSS.tar.gz`\n\n### Conteúdo do backup:\n```\nbackup_completo_XXXXXX.tar.gz\n├── roles_XXXXXX.sql\n├── schema_XXXXXX.sql\n├── data_XXXXXX.sql\n└── storage/\n    ├── documentos/\n    ├── fotos-obra/\n    ├── fotos-temp/\n    └── notas-compras/\n```\n\n### Para executar manualmente:\nClique no botão \"Executar Agora (Manual)\"\n\n### Timeouts configurados:\n- Roles: 2 min\n- Schema: 5 min\n- Data: 10 min\n- Storage: 15 min\n- Compressão: 10 min\n\n### Retenção:\n7 dias (backups mais antigos são deletados automaticamente)",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    }
+]
