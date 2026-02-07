@@ -32,7 +32,6 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | # | Arquivo | Descrição | Status | PRD |
 |---|---------|-----------|--------|-----|
 | 01 | [spec-alteracao01.md](./spec-alteracao01.md) | Sistema de 3 níveis: Etapa → Subetapa → Tarefas | 🔵 Pronto para executar | ⏳ pendente |
-| 02 | [spec-alteracao02.md](./spec-alteracao02.md) | Substituir kanban por tabela na página de emails | 🔵 Pronto para executar | ⏳ pendente |
 
 ## PRD / Commit Pendente
 
@@ -40,6 +39,7 @@ Implementação finalizada, mas falta documentar no PRD ou commitar.
 
 | # | Arquivo | Descrição | PRD |
 |---|---------|-----------|-----|
+| 02 | [spec-alteracao02.md](./spec/spec-alteracao02.md) | Substituir kanban por tabela na página de emails | ⏳ pendente |
 
 
 ## Finalizados

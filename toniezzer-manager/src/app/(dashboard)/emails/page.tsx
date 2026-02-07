@@ -1,19 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { KanbanEmails } from '@/components/features/emails'
+import { EmailsTable } from '@/components/features/emails/emails-table'
+import { EmailFilters, type EmailFiltersState } from '@/components/features/emails/email-filters'
 import { Mail, Search, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { Tables } from '@/lib/types/database'
+import type { Tables, EmailStatus } from '@/lib/types/database'
 
 export default function EmailsPage() {
   const [emails, setEmails] = useState<Tables<'emails_monitorados'>[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [syncing, setSyncing] = useState(false)
+  const [filters, setFilters] = useState<EmailFiltersState>({
+    status: 'all',
+    categoria: 'all',
+  })
 
   const loadEmails = async () => {
     const supabase = createClient()
@@ -36,25 +41,6 @@ export default function EmailsPage() {
   useEffect(() => {
     loadEmails()
   }, [])
-
-  const handleIgnorar = async (id: string) => {
-    const supabase = createClient()
-    
-    const { error } = await supabase
-      .from('emails_monitorados')
-      .update({ status: 'ignorado' })
-      .eq('id', id)
-
-    if (error) {
-      toast.error('Erro ao ignorar email')
-      return
-    }
-
-    setEmails(prev => prev.map(e => 
-      e.id === id ? { ...e, status: 'ignorado' as const } : e
-    ))
-    toast.success('Email marcado como ignorado')
-  }
 
   const handleSync = async () => {
     setSyncing(true)
@@ -103,11 +89,45 @@ export default function EmailsPage() {
     }
   }
 
-  const emailsFiltrados = emails.filter(e =>
-    e.assunto.toLowerCase().includes(search.toLowerCase()) ||
-    e.remetente.toLowerCase().includes(search.toLowerCase()) ||
-    e.remetente_nome?.toLowerCase().includes(search.toLowerCase())
-  )
+  // Extrair categorias únicas dos emails
+  const categorias = useMemo(() => {
+    const cats = new Set<string>()
+    emails.forEach(email => {
+      const categoria = (email.dados_extraidos as any)?.categoria_sugerida
+      if (categoria) cats.add(categoria)
+    })
+    return Array.from(cats).sort()
+  }, [emails])
+
+  // Aplicar filtros
+  const emailsFiltrados = useMemo(() => {
+    return emails.filter(email => {
+      // Filtro de busca
+      const matchSearch =
+        email.assunto.toLowerCase().includes(search.toLowerCase()) ||
+        email.remetente.toLowerCase().includes(search.toLowerCase()) ||
+        email.remetente_nome?.toLowerCase().includes(search.toLowerCase())
+
+      if (!matchSearch) return false
+
+      // Filtro de status - por padrão oculta ignorados
+      if (filters.status === 'all') {
+        // Quando "all", oculta apenas os ignorados
+        if (email.status === 'ignorado') return false
+      } else {
+        // Quando filtro específico, mostra apenas aquele status
+        if (email.status !== filters.status) return false
+      }
+
+      // Filtro de categoria
+      if (filters.categoria !== 'all') {
+        const emailCategoria = (email.dados_extraidos as any)?.categoria_sugerida
+        if (emailCategoria !== filters.categoria) return false
+      }
+
+      return true
+    })
+  }, [emails, search, filters])
 
   return (
     <div className="container py-6 space-y-6">
@@ -139,14 +159,17 @@ export default function EmailsPage() {
         />
       </div>
 
-      {/* Kanban */}
+      {/* Filtros */}
+      <EmailFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        categorias={categorias}
+      />
+
+      {/* Tabela */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-96 rounded-lg bg-muted animate-pulse" />
-          ))}
-        </div>
-      ) : emailsFiltrados.length === 0 && !search ? (
+        <div className="h-96 rounded-lg bg-muted animate-pulse" />
+      ) : emails.length === 0 ? (
         <div className="text-center py-12">
           <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Nenhum email encontrado</h3>
@@ -159,7 +182,7 @@ export default function EmailsPage() {
           </Button>
         </div>
       ) : (
-        <KanbanEmails emails={emailsFiltrados} onIgnorar={handleIgnorar} />
+        <EmailsTable emails={emailsFiltrados} />
       )}
 
       {/* Info */}
