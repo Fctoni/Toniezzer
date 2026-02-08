@@ -19,6 +19,7 @@ import {
   FileText,
   Camera,
   Bot,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -55,6 +56,11 @@ const menuItems = [
     title: "Cronograma",
     href: "/cronograma",
     icon: Calendar,
+  },
+  {
+    title: "Tarefas",
+    href: "/tarefas",
+    icon: CheckSquare,
   },
   {
     title: "Comunicação",

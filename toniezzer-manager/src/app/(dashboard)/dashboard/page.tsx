@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { parseDateString } from "@/lib/utils";
 import { redirect } from "next/navigation";
+import { MinhasTarefasWidget } from "@/components/features/dashboard/minhas-tarefas-widget";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -25,12 +26,25 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  // Buscar user id na tabela users (mapeado por email)
+  let currentUserId: string | null = null;
+  if (user?.email) {
+    const { data: currentUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+    currentUserId = currentUser?.id || null;
+  }
+
   // Buscar dados
   const [
     categoriasRes,
     gastosRes,
     etapasRes,
     notificacoesRes,
+    tarefasRes,
+    subetapasRes,
   ] = await Promise.all([
     supabase.from("categorias").select("*").eq("ativo", true),
     supabase.from("gastos").select("*").eq("status", "aprovado"),
@@ -41,6 +55,20 @@ export default async function DashboardPage() {
       .eq("lida", false)
       .order("created_at", { ascending: false })
       .limit(5),
+    currentUserId
+      ? supabase
+          .from("tarefas")
+          .select("id, nome, status, data_prevista, prioridade, subetapa_id")
+          .eq("responsavel_id", currentUserId)
+          .neq("status", "cancelada")
+      : Promise.resolve({ data: [] }),
+    currentUserId
+      ? supabase
+          .from("subetapas")
+          .select("id, nome")
+          .eq("responsavel_id", currentUserId)
+          .neq("status", "cancelada")
+      : Promise.resolve({ data: [] }),
   ]);
 
   // Verificar erros nas queries (pode indicar problema de permissao/sessao)
@@ -91,6 +119,88 @@ export default async function DashboardPage() {
   const categoriasOrdenadas = [...gastosPorCategoria]
     .sort((a, b) => b.gasto - a.gasto)
     .slice(0, 5);
+
+  // Processar tarefas do usuário para o widget
+  const minhasTarefas = (tarefasRes.data || []) as {
+    id: string;
+    nome: string;
+    status: string;
+    data_prevista: string | null;
+    prioridade: string | null;
+    subetapa_id: string;
+  }[];
+
+  // Buscar nomes de subetapas para contexto
+  const subetapaIds = [...new Set(minhasTarefas.map((t) => t.subetapa_id))];
+  let subetapaNomeMap = new Map<string, string>();
+  if (subetapaIds.length > 0) {
+    const { data: subNomes } = await supabase
+      .from("subetapas")
+      .select("id, nome")
+      .in("id", subetapaIds);
+    subetapaNomeMap = new Map((subNomes || []).map((s) => [s.id, s.nome]));
+  }
+
+  const hoje = new Date().toISOString().split("T")[0];
+  const em7dias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+
+  const tarefasComSubetapa = minhasTarefas.map((t) => ({
+    ...t,
+    subetapa_nome: subetapaNomeMap.get(t.subetapa_id) || "—",
+  }));
+
+  const tarefasAtrasadasWidget = tarefasComSubetapa.filter(
+    (t) =>
+      t.data_prevista &&
+      t.data_prevista < hoje &&
+      t.status !== "concluida"
+  );
+  const tarefasEmAndamentoWidget = tarefasComSubetapa.filter(
+    (t) => t.status === "em_andamento"
+  );
+  const tarefasProximasWidget = tarefasComSubetapa.filter(
+    (t) =>
+      t.data_prevista &&
+      t.data_prevista >= hoje &&
+      t.data_prevista <= em7dias &&
+      t.status === "pendente"
+  );
+
+  // Minhas subetapas com progresso
+  const minhasSubetapasRaw = (subetapasRes.data || []) as {
+    id: string;
+    nome: string;
+  }[];
+
+  let minhasSubetapasComProgresso: {
+    id: string;
+    nome: string;
+    total_tarefas: number;
+    tarefas_concluidas: number;
+  }[] = [];
+
+  if (minhasSubetapasRaw.length > 0) {
+    const subIds = minhasSubetapasRaw.map((s) => s.id);
+    const { data: tarefasSub } = await supabase
+      .from("tarefas")
+      .select("id, subetapa_id, status")
+      .in("subetapa_id", subIds);
+
+    minhasSubetapasComProgresso = minhasSubetapasRaw.map((s) => {
+      const tarefas = (tarefasSub || []).filter(
+        (t) => t.subetapa_id === s.id
+      );
+      return {
+        id: s.id,
+        nome: s.nome,
+        total_tarefas: tarefas.length,
+        tarefas_concluidas: tarefas.filter((t) => t.status === "concluida")
+          .length,
+      };
+    });
+  }
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -184,6 +294,14 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Widget Minhas Tarefas */}
+      <MinhasTarefasWidget
+        atrasadas={tarefasAtrasadasWidget}
+        emAndamento={tarefasEmAndamentoWidget}
+        proximas={tarefasProximasWidget}
+        minhasSubetapas={minhasSubetapasComProgresso}
+      />
 
       {/* Grid de conteúdo */}
       <div className="grid gap-6 md:grid-cols-2">

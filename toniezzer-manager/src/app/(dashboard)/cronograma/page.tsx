@@ -8,7 +8,23 @@ interface User {
   nome_completo: string;
 }
 
-interface Tarefa {
+interface TarefaDB {
+  id: string;
+  subetapa_id: string;
+  nome: string;
+  descricao: string | null;
+  status: string;
+  data_prevista: string | null;
+  data_inicio_real: string | null;
+  data_conclusao_real: string | null;
+  prioridade: string | null;
+  responsavel_id: string | null;
+  tags: string[] | null;
+  notas: string | null;
+  ordem: number;
+}
+
+interface SubetapaDB {
   id: string;
   etapa_id: string;
   nome: string;
@@ -20,6 +36,16 @@ interface Tarefa {
   data_fim_real: string | null;
   responsavel_id: string | null;
   ordem: number;
+  progresso_percentual: number | null;
+}
+
+interface Tarefa extends TarefaDB {
+  responsavel?: User | null;
+}
+
+interface Subetapa extends SubetapaDB {
+  responsavel?: User | null;
+  tarefas: Tarefa[];
 }
 
 interface Etapa {
@@ -35,7 +61,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: User | null;
-  tarefas: Tarefa[];
+  subetapas: Subetapa[];
   orcamento?: number | null;
   gasto_realizado?: number;
 }
@@ -43,79 +69,135 @@ interface Etapa {
 export default async function CronogramaPage() {
   const supabase = await createClient();
 
-  const [{ data: etapasData }, { data: usersData }, { data: tarefasData }, { data: gastosData }] =
-    await Promise.all([
-      supabase
-        .from("etapas")
-        .select("*")
-        .order("ordem"),
-      supabase.from("users").select("*").eq("ativo", true),
-      supabase.from("tarefas").select("*").order("ordem"),
-      supabase.from("gastos").select("etapa_relacionada_id, valor").eq("status", "aprovado"),
-    ]);
+  const [
+    { data: etapasData },
+    { data: usersData },
+    { data: subetapasData },
+    { data: tarefasData },
+    { data: gastosData },
+  ] = await Promise.all([
+    supabase.from("etapas").select("*").order("ordem"),
+    supabase.from("users").select("*").eq("ativo", true),
+    supabase.from("subetapas").select("*").order("ordem"),
+    supabase.from("tarefas").select("*").order("ordem"),
+    supabase
+      .from("gastos")
+      .select("etapa_relacionada_id, valor")
+      .eq("status", "aprovado"),
+  ]);
 
-  // Mapear etapas com responsável, tarefas e gastos
   const users = (usersData || []) as User[];
-  const tarefas = (tarefasData || []) as Tarefa[];
+  const subetapasRaw = (subetapasData || []) as SubetapaDB[];
+  const tarefasRaw = (tarefasData || []) as TarefaDB[];
   const gastos = gastosData || [];
   const etapasRaw = etapasData || [];
+
+  // Aninhar tarefas dentro de subetapas
+  const subetapasComTarefas: Subetapa[] = subetapasRaw.map((s) => ({
+    ...s,
+    responsavel: s.responsavel_id
+      ? users.find((u) => u.id === s.responsavel_id) || null
+      : null,
+    tarefas: tarefasRaw
+      .filter((t) => t.subetapa_id === s.id)
+      .map((t) => ({
+        ...t,
+        responsavel: t.responsavel_id
+          ? users.find((u) => u.id === t.responsavel_id) || null
+          : null,
+      })),
+  }));
+
+  // Aninhar subetapas dentro de etapas
   const etapas: Etapa[] = etapasRaw.map((e: Record<string, unknown>) => {
-    // Calcular gasto total da etapa
     const gastoEtapa = gastos
       .filter((g) => g.etapa_relacionada_id === e.id)
       .reduce((acc, g) => acc + Number(g.valor), 0);
 
+    const etapaSubetapas = subetapasComTarefas.filter(
+      (s) => s.etapa_id === e.id
+    );
+
     return {
       ...e,
-      responsavel: e.responsavel_id 
-        ? users.find(u => u.id === e.responsavel_id) || null 
+      responsavel: e.responsavel_id
+        ? users.find((u) => u.id === e.responsavel_id) || null
         : null,
-      tarefas: tarefas.filter(t => t.etapa_id === e.id),
+      subetapas: etapaSubetapas,
       gasto_realizado: gastoEtapa,
     };
   }) as Etapa[];
 
   // Estatísticas
-  const etapasConcluidas = etapas.filter((e) => e.status === "concluida").length;
+  const etapasConcluidas = etapas.filter(
+    (e) => e.status === "concluida"
+  ).length;
   const etapasTotal = etapas.length;
-  const etapasEmAndamento = etapas.filter((e) => e.status === "em_andamento").length;
-  const totalTarefas = tarefas.length;
-  const tarefasConcluidas = tarefas.filter((t) => t.status === "concluida").length;
+  const etapasEmAndamento = etapas.filter(
+    (e) => e.status === "em_andamento"
+  ).length;
+  const totalSubetapas = subetapasComTarefas.length;
+  const subetapasConcluidas = subetapasComTarefas.filter(
+    (s) => s.status === "concluida"
+  ).length;
+  const totalTarefas = tarefasRaw.length;
+  const tarefasConcluidas = tarefasRaw.filter(
+    (t) => t.status === "concluida"
+  ).length;
 
   return (
     <div className="space-y-4">
       {/* Header compacto */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-4 min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Cronograma</h1>
-          
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+            Cronograma
+          </h1>
+
           {/* Mini Stats - hidden on mobile */}
           <div className="hidden md:flex items-center gap-2 text-sm">
             <Badge variant="outline" className="gap-1.5">
               <span className="text-muted-foreground">Etapas:</span>
-              <span className="text-green-500 font-medium">{etapasConcluidas}</span>
+              <span className="text-green-500 font-medium">
+                {etapasConcluidas}
+              </span>
               <span className="text-muted-foreground">/</span>
               <span>{etapasTotal}</span>
             </Badge>
-            
+
             {etapasEmAndamento > 0 && (
               <Badge variant="outline" className="gap-1.5">
-                <span className="text-blue-500 font-medium">{etapasEmAndamento}</span>
+                <span className="text-blue-500 font-medium">
+                  {etapasEmAndamento}
+                </span>
                 <span className="text-muted-foreground">em andamento</span>
               </Badge>
             )}
-            
+
+            {totalSubetapas > 0 && (
+              <Badge variant="secondary" className="gap-1.5">
+                <span className="text-muted-foreground">Subetapas:</span>
+                <span className="text-green-500 font-medium">
+                  {subetapasConcluidas}
+                </span>
+                <span className="text-muted-foreground">/</span>
+                <span>{totalSubetapas}</span>
+              </Badge>
+            )}
+
             {totalTarefas > 0 && (
               <Badge variant="secondary" className="gap-1.5">
                 <span className="text-muted-foreground">Tarefas:</span>
-                <span className="text-green-500 font-medium">{tarefasConcluidas}</span>
+                <span className="text-green-500 font-medium">
+                  {tarefasConcluidas}
+                </span>
                 <span className="text-muted-foreground">/</span>
                 <span>{totalTarefas}</span>
               </Badge>
             )}
           </div>
         </div>
-        
+
         <NovaEtapaDialog
           users={users}
           etapas={etapas}

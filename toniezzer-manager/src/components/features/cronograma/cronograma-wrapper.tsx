@@ -6,6 +6,22 @@ import { useMobile } from "@/lib/hooks/use-media-query";
 
 interface Tarefa {
   id: string;
+  subetapa_id: string;
+  nome: string;
+  descricao: string | null;
+  status: string;
+  data_prevista: string | null;
+  data_inicio_real: string | null;
+  data_conclusao_real: string | null;
+  prioridade: string | null;
+  responsavel_id: string | null;
+  tags: string[] | null;
+  notas: string | null;
+  ordem: number;
+}
+
+interface Subetapa {
+  id: string;
   etapa_id: string;
   nome: string;
   descricao: string | null;
@@ -16,6 +32,8 @@ interface Tarefa {
   data_fim_real: string | null;
   responsavel_id: string | null;
   ordem: number;
+  progresso_percentual: number | null;
+  tarefas: Tarefa[];
 }
 
 interface Etapa {
@@ -31,7 +49,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: { nome_completo: string } | null;
-  tarefas: Tarefa[];
+  subetapas: Subetapa[];
   orcamento?: number | null;
   gasto_realizado?: number;
 }
@@ -55,4 +73,3 @@ export function CronogramaWrapper({ etapas, users }: CronogramaWrapperProps) {
 
   return <CronogramaTable etapas={etapas} users={users} />;
 }
-

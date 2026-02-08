@@ -33,10 +33,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TarefasList } from "./tarefas-list";
+import { SubetapasList } from "./subetapas-list";
 import { formatDateToString, parseDateString } from "@/lib/utils";
 
-interface Tarefa {
+interface Subetapa {
   id: string;
   etapa_id: string;
   nome: string;
@@ -48,6 +48,7 @@ interface Tarefa {
   data_fim_real: string | null;
   responsavel_id: string | null;
   ordem: number;
+  progresso_percentual: number | null;
 }
 
 interface Etapa {
@@ -63,7 +64,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: { nome_completo: string } | null;
-  tarefas: Tarefa[];
+  subetapas: Subetapa[];
 }
 
 interface Dependencia {
@@ -213,10 +214,10 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
       });
   };
 
-  const calcularProgressoTarefas = (tarefas: Tarefa[]) => {
-    if (tarefas.length === 0) return null;
-    const concluidas = tarefas.filter(t => t.status === "concluida").length;
-    return Math.round((concluidas / tarefas.length) * 100);
+  const calcularProgressoSubetapas = (subetapas: Subetapa[]) => {
+    if (subetapas.length === 0) return null;
+    const concluidas = subetapas.filter(s => s.status === "concluida").length;
+    return Math.round((concluidas / subetapas.length) * 100);
   };
 
   if (etapas.length === 0) {
@@ -236,8 +237,8 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
         const config = statusConfig[etapa.status] || statusConfig.nao_iniciada;
         const deps = getDependencias(etapa.id);
         const isExpanded = expandedEtapas.has(etapa.id);
-        const tarefasConcluidas = etapa.tarefas.filter(t => t.status === "concluida").length;
-        const progressoTarefas = calcularProgressoTarefas(etapa.tarefas);
+        const subetapasConcluidas = etapa.subetapas.filter(s => s.status === "concluida").length;
+        const progressoSubetapas = calcularProgressoSubetapas(etapa.subetapas);
 
         return (
           <Collapsible
@@ -288,11 +289,11 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Tasks Counter Badge */}
-                      {etapa.tarefas.length > 0 && (
+                      {/* Subetapas Counter Badge */}
+                      {etapa.subetapas.length > 0 && (
                         <Badge variant="secondary" className="gap-1">
                           <ListTodo className="h-3 w-3" />
-                          {tarefasConcluidas}/{etapa.tarefas.length}
+                          {subetapasConcluidas}/{etapa.subetapas.length}
                         </Badge>
                       )}
                       
@@ -389,13 +390,13 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
                   {/* Progress */}
                   <div className="mt-3 flex items-center gap-4">
                     <div className="flex-1">
-                      <Progress 
-                        value={progressoTarefas !== null ? progressoTarefas : etapa.progresso_percentual} 
-                        className="h-2" 
+                      <Progress
+                        value={progressoSubetapas !== null ? progressoSubetapas : etapa.progresso_percentual}
+                        className="h-2"
                       />
                     </div>
                     <span className="text-sm text-muted-foreground w-12 text-right">
-                      {progressoTarefas !== null ? progressoTarefas : etapa.progresso_percentual}%
+                      {progressoSubetapas !== null ? progressoSubetapas : etapa.progresso_percentual}%
                     </span>
                   </div>
 
@@ -435,11 +436,11 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
                 </div>
               </div>
 
-              {/* Tarefas List (Collapsible) */}
+              {/* Subetapas List (Collapsible) */}
               <CollapsibleContent>
                 <div className="border-t">
-                  <TarefasList
-                    tarefas={etapa.tarefas}
+                  <SubetapasList
+                    subetapas={etapa.subetapas}
                     etapaId={etapa.id}
                     etapaNome={etapa.nome}
                     users={users}

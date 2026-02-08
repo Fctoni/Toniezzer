@@ -46,16 +46,36 @@ import {
   Pause,
   Play,
   Pencil,
+  Lock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDateToString, parseDateString } from "@/lib/utils";
-import { NovaTarefaDialog } from "./nova-tarefa-dialog";
+import { NovaSubetapaDialog } from "./nova-subetapa-dialog";
 import { NovaEtapaDialog } from "./nova-etapa-dialog";
 import { EditarEtapaDialog } from "./editar-etapa-dialog";
-import { EditarTarefaDialog } from "./editar-tarefa-dialog";
+import { EditarSubetapaDialog } from "./editar-subetapa-dialog";
+import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
+
+// --- Interfaces ---
 
 interface Tarefa {
+  id: string;
+  subetapa_id: string;
+  nome: string;
+  descricao: string | null;
+  status: string;
+  data_prevista: string | null;
+  data_inicio_real: string | null;
+  data_conclusao_real: string | null;
+  prioridade: string | null;
+  responsavel_id: string | null;
+  tags: string[] | null;
+  notas: string | null;
+  ordem: number;
+}
+
+interface Subetapa {
   id: string;
   etapa_id: string;
   nome: string;
@@ -67,6 +87,8 @@ interface Tarefa {
   data_fim_real: string | null;
   responsavel_id: string | null;
   ordem: number;
+  progresso_percentual: number | null;
+  tarefas: Tarefa[];
 }
 
 interface Etapa {
@@ -82,7 +104,7 @@ interface Etapa {
   ordem: number;
   responsavel_id: string | null;
   responsavel: { nome_completo: string } | null;
-  tarefas: Tarefa[];
+  subetapas: Subetapa[];
   orcamento?: number | null;
   gasto_realizado?: number;
 }
@@ -97,6 +119,8 @@ interface CronogramaTableProps {
   users: User[];
 }
 
+// --- Constantes ---
+
 const statusOptions = [
   { value: "nao_iniciada", label: "Não Iniciada", icon: Circle, color: "text-muted-foreground" },
   { value: "em_andamento", label: "Em Andamento", icon: Play, color: "text-blue-500" },
@@ -106,34 +130,619 @@ const statusOptions = [
   { value: "concluida", label: "Concluída", icon: Check, color: "text-green-500" },
 ];
 
-// Grid columns configuration - Adicionadas colunas Orçamento e Gasto
+const subetapaStatusOptions = [
+  { value: "nao_iniciada", label: "Não Iniciada", icon: Circle, color: "text-muted-foreground" },
+  { value: "em_andamento", label: "Em Andamento", icon: Play, color: "text-blue-500" },
+  { value: "pausada", label: "Pausada", icon: Pause, color: "text-gray-500" },
+  { value: "concluida", label: "Concluída", icon: Check, color: "text-green-500" },
+  { value: "cancelada", label: "Cancelada", icon: AlertTriangle, color: "text-red-500" },
+];
+
+const tarefaStatusOptions = [
+  { value: "pendente", label: "Pendente", icon: Circle, color: "text-muted-foreground" },
+  { value: "bloqueada", label: "Bloqueada", icon: Lock, color: "text-orange-500" },
+  { value: "em_andamento", label: "Em Andamento", icon: Play, color: "text-blue-500" },
+  { value: "concluida", label: "Concluída", icon: Check, color: "text-green-500" },
+  { value: "cancelada", label: "Cancelada", icon: AlertTriangle, color: "text-red-500" },
+];
+
+const prioridadeConfig: Record<string, { label: string; color: string }> = {
+  baixa: { label: "Baixa", color: "text-green-500" },
+  media: { label: "Média", color: "text-yellow-500" },
+  alta: { label: "Alta", color: "text-orange-500" },
+  critica: { label: "Crítica", color: "text-red-500" },
+};
+
 const gridCols = "grid-cols-[40px_40px_minmax(200px,1fr)_150px_100px_100px_150px_100px_100px_80px_50px]";
 
-// Componente para linha de etapa arrastável
-function SortableEtapaRow({
-  etapa,
+// --- Helpers ---
+
+function formatDate(date: string | null) {
+  if (!date) return "-";
+  return format(parseDateString(date), "dd/MM", { locale: ptBR });
+}
+
+function parseDate(date: string | null): Date | undefined {
+  if (!date) return undefined;
+  return parseDateString(date);
+}
+
+function getStatusConfig(status: string, options: typeof statusOptions = statusOptions) {
+  return options.find((s) => s.value === status) || options[0];
+}
+
+function calcularProgressoEtapa(etapa: Etapa) {
+  if (etapa.subetapas.length === 0) return etapa.progresso_percentual;
+  const concluidas = etapa.subetapas.filter((s) => s.status === "concluida").length;
+  return Math.round((concluidas / etapa.subetapas.length) * 100);
+}
+
+function calcularProgressoSubetapa(subetapa: Subetapa) {
+  if (subetapa.tarefas.length === 0) return subetapa.progresso_percentual || 0;
+  const concluidas = subetapa.tarefas.filter((t) => t.status === "concluida").length;
+  return Math.round((concluidas / subetapa.tarefas.length) * 100);
+}
+
+function calcularDatasEtapa(subetapas: Subetapa[]): { inicio: string | null; fim: string | null } {
+  if (subetapas.length === 0) return { inicio: null, fim: null };
+
+  const datasInicio = subetapas
+    .map((s) => s.data_inicio_prevista)
+    .filter((d): d is string => d !== null);
+  const datasFim = subetapas
+    .map((s) => s.data_fim_prevista)
+    .filter((d): d is string => d !== null);
+
+  if (datasInicio.length === 0 && datasFim.length === 0) return { inicio: null, fim: null };
+
+  const inicio = datasInicio.length > 0
+    ? datasInicio.reduce((min, date) => (date < min ? date : min))
+    : null;
+  const fim = datasFim.length > 0
+    ? datasFim.reduce((max, date) => (date > max ? date : max))
+    : null;
+
+  return { inicio, fim };
+}
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+// --- Componente: Linha de Tarefa Arrastável ---
+
+function SortableTarefaRow({
+  tarefa,
+  isLast,
+  users,
+  updating,
+  onUpdateTarefa,
+}: {
+  tarefa: Tarefa;
+  isLast: boolean;
+  users: User[];
+  updating: string | null;
+  onUpdateTarefa: (tarefaId: string, field: string, value: string | null) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tarefa.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const tarefaStatus = getStatusConfig(tarefa.status, tarefaStatusOptions);
+  const prioridade = prioridadeConfig[tarefa.prioridade || "media"];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "grid items-center border-b group bg-muted/10 hover:bg-muted/30",
+        gridCols,
+        updating === tarefa.id && "opacity-50",
+        isDragging && "opacity-50 bg-muted z-10"
+      )}
+    >
+      {/* Empty for align */}
+      <div className="p-0"></div>
+
+      {/* Drag handle + Tree indicator (deeper indent) */}
+      <div className="p-0 pl-1 flex items-center gap-0.5">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100"
+        >
+          <GripVertical className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground" />
+        </button>
+        <span className="text-muted-foreground/30 text-[10px] ml-2">
+          {isLast ? "└" : "├"}
+        </span>
+      </div>
+
+      {/* Nome - clicável para detalhes */}
+      <div className="p-1 pl-4">
+        <a
+          href={`/tarefas/${tarefa.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "text-xs hover:text-primary hover:underline transition-colors",
+            tarefa.status === "concluida" && "line-through text-muted-foreground"
+          )}
+        >
+          {tarefa.nome}
+        </a>
+      </div>
+
+      {/* Status */}
+      <div className="p-1">
+        <Select
+          value={tarefa.status}
+          onValueChange={(value) => onUpdateTarefa(tarefa.id, "status", value)}
+        >
+          <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
+            <div className={cn("flex items-center gap-2", tarefaStatus.color)}>
+              <tarefaStatus.icon className="h-3 w-3" />
+              <span className="text-[11px]">{tarefaStatus.label}</span>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {tarefaStatusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className={cn("flex items-center gap-2", option.color)}>
+                  <option.icon className="h-3 w-3" />
+                  <span>{option.label}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Data Prevista */}
+      <div className="p-1">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-7 px-2 text-xs font-normal justify-start hover:bg-muted/50"
+            >
+              {formatDate(tarefa.data_prevista)}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={parseDate(tarefa.data_prevista)}
+              onSelect={(date) =>
+                onUpdateTarefa(
+                  tarefa.id,
+                  "data_prevista",
+                  date ? formatDateToString(date) : null
+                )
+              }
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Empty (fim) */}
+      <div className="p-1">
+        <span className="text-xs text-muted-foreground/50 px-2">-</span>
+      </div>
+
+      {/* Responsável */}
+      <div className="p-1">
+        <Select
+          value={tarefa.responsavel_id || "none"}
+          onValueChange={(value) =>
+            onUpdateTarefa(tarefa.id, "responsavel_id", value === "none" ? null : value)
+          }
+        >
+          <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
+            <span className="text-xs truncate">
+              {users.find((u) => u.id === tarefa.responsavel_id)?.nome_completo || "-"}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum</SelectItem>
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.nome_completo}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Prioridade (em vez de Orçamento) */}
+      <div className="p-2 text-right">
+        <span className={cn("text-[10px] font-medium", prioridade?.color)}>
+          {prioridade?.label || "-"}
+        </span>
+      </div>
+
+      {/* Empty (gasto) */}
+      <div className="p-2"></div>
+
+      {/* Progresso (checkbox) */}
+      <div className="text-right pr-4 flex items-center justify-end">
+        {tarefa.status === "concluida" ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        )}
+      </div>
+
+      <div></div>
+    </div>
+  );
+}
+
+// --- Componente: Linha de Subetapa Arrastável ---
+
+function SortableSubetapaRow({
+  subetapa,
+  isLast,
   isExpanded,
   onToggleExpand,
   users,
   updating,
-  onUpdateEtapa,
+  onUpdateSubetapa,
   onUpdateTarefa,
   onReorderTarefas,
-  onEditEtapa,
-  onEditTarefa,
+  onEditSubetapa,
+  subetapasOptions,
   onTarefaCreated,
 }: {
-  etapa: Etapa;
+  subetapa: Subetapa;
+  isLast: boolean;
   isExpanded: boolean;
   onToggleExpand: () => void;
   users: User[];
   updating: string | null;
-  onUpdateEtapa: (etapaId: string, field: string, value: string | null) => void;
+  onUpdateSubetapa: (subetapaId: string, field: string, value: string | null) => void;
   onUpdateTarefa: (tarefaId: string, field: string, value: string | null) => void;
-  onReorderTarefas: (etapaId: string, tarefas: Tarefa[]) => void;
+  onReorderTarefas: (subetapaId: string, tarefas: Tarefa[]) => void;
+  onEditSubetapa: (subetapa: Subetapa) => void;
+  subetapasOptions: { id: string; nome: string; etapa_nome: string }[];
+  onTarefaCreated: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: subetapa.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const hasTarefas = subetapa.tarefas.length > 0;
+  const subetapaStatus = getStatusConfig(subetapa.status, subetapaStatusOptions);
+  const progresso = calcularProgressoSubetapa(subetapa);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleTarefaDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = subetapa.tarefas.findIndex((t) => t.id === active.id);
+      const newIndex = subetapa.tarefas.findIndex((t) => t.id === over.id);
+      const newTarefas = arrayMove(subetapa.tarefas, oldIndex, newIndex);
+      onReorderTarefas(subetapa.id, newTarefas);
+    }
+  };
+
+  return (
+    <>
+      {/* Linha da Subetapa */}
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "grid items-center border-b group bg-muted/20 hover:bg-muted/40",
+          gridCols,
+          updating === subetapa.id && "opacity-50",
+          isDragging && "opacity-50 bg-muted z-10"
+        )}
+      >
+        {/* Expand/Collapse */}
+        <div className="p-0 pl-2 flex items-center justify-center">
+          {hasTarefas ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={onToggleExpand}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </Button>
+          ) : (
+            <div className="w-5" />
+          )}
+        </div>
+
+        {/* Drag Handle + Tree indicator */}
+        <div className="p-0 pl-1 flex items-center gap-1">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100"
+          >
+            <GripVertical className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground" />
+          </button>
+          <span className="text-muted-foreground/50 text-xs">
+            {isLast ? "└" : "├"}
+          </span>
+        </div>
+
+        {/* Nome - Clicável para editar */}
+        <div className="p-1 pl-1">
+          <button
+            onClick={() => onEditSubetapa(subetapa)}
+            className="flex items-center gap-2 text-sm hover:text-primary transition-colors text-left"
+          >
+            {subetapa.nome}
+            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50" />
+          </button>
+          {hasTarefas && (
+            <span className="text-[10px] text-muted-foreground ml-1">
+              ({subetapa.tarefas.filter((t) => t.status === "concluida").length}/{subetapa.tarefas.length})
+            </span>
+          )}
+        </div>
+
+        {/* Status */}
+        <div className="p-1">
+          <Select
+            value={subetapa.status}
+            onValueChange={(value) => onUpdateSubetapa(subetapa.id, "status", value)}
+          >
+            <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
+              <div className={cn("flex items-center gap-2", subetapaStatus.color)}>
+                <subetapaStatus.icon className="h-3 w-3" />
+                <span className="text-xs">{subetapaStatus.label}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {subetapaStatusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className={cn("flex items-center gap-2", option.color)}>
+                    <option.icon className="h-3 w-3" />
+                    <span>{option.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Data Início */}
+        <div className="p-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-7 px-2 text-xs font-normal justify-start hover:bg-muted/50"
+              >
+                {formatDate(subetapa.data_inicio_prevista)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parseDate(subetapa.data_inicio_prevista)}
+                onSelect={(date) =>
+                  onUpdateSubetapa(
+                    subetapa.id,
+                    "data_inicio_prevista",
+                    date ? formatDateToString(date) : null
+                  )
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Data Fim */}
+        <div className="p-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-7 px-2 text-xs font-normal justify-start hover:bg-muted/50"
+              >
+                {formatDate(subetapa.data_fim_prevista)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parseDate(subetapa.data_fim_prevista)}
+                onSelect={(date) =>
+                  onUpdateSubetapa(
+                    subetapa.id,
+                    "data_fim_prevista",
+                    date ? formatDateToString(date) : null
+                  )
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Responsável */}
+        <div className="p-1">
+          <Select
+            value={subetapa.responsavel_id || "none"}
+            onValueChange={(value) =>
+              onUpdateSubetapa(subetapa.id, "responsavel_id", value === "none" ? null : value)
+            }
+          >
+            <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
+              <span className="text-xs truncate">
+                {users.find((u) => u.id === subetapa.responsavel_id)?.nome_completo || "-"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.nome_completo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Orçamento (vazio para subetapas) */}
+        <div className="p-2"></div>
+
+        {/* Gasto (vazio para subetapas) */}
+        <div className="p-2"></div>
+
+        {/* Progresso */}
+        <div className="text-right pr-4">
+          <span
+            className={cn(
+              "text-xs font-medium",
+              progresso === 100 && "text-green-500",
+              progresso > 0 && progresso < 100 && "text-blue-500"
+            )}
+          >
+            {progresso}%
+          </span>
+        </div>
+
+        <div className="p-1"></div>
+      </div>
+
+      {/* Linhas das Tarefas */}
+      {isExpanded && subetapa.tarefas.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleTarefaDragEnd}
+        >
+          <SortableContext
+            items={subetapa.tarefas.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {subetapa.tarefas.map((tarefa, idx) => (
+              <SortableTarefaRow
+                key={tarefa.id}
+                tarefa={tarefa}
+                isLast={idx === subetapa.tarefas.length - 1}
+                users={users}
+                updating={updating}
+                onUpdateTarefa={onUpdateTarefa}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {/* + Nova Tarefa */}
+      {isExpanded && (
+        <div className={cn("grid items-center border-b", gridCols)}>
+          <div />
+          <div />
+          <div className="p-1 pl-4">
+            <NovaTarefaDialog
+              users={users}
+              subetapas={subetapasOptions}
+              defaultSubetapaId={subetapa.id}
+              proximaOrdem={subetapa.tarefas.length + 1}
+              onSuccess={onTarefaCreated}
+              trigger={
+                <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-0.5">
+                  <Plus className="h-3 w-3" />
+                  Nova Tarefa
+                </button>
+              }
+            />
+          </div>
+          <div />
+          <div />
+          <div />
+          <div />
+          <div />
+          <div />
+          <div />
+          <div />
+        </div>
+      )}
+    </>
+  );
+}
+
+// --- Componente: Linha de Etapa Arrastável ---
+
+function SortableEtapaRow({
+  etapa,
+  isExpanded,
+  expandedSubetapas,
+  onToggleExpand,
+  onToggleSubetapaExpand,
+  users,
+  updating,
+  onUpdateEtapa,
+  onUpdateSubetapa,
+  onUpdateTarefa,
+  onReorderSubetapas,
+  onReorderTarefas,
+  onEditEtapa,
+  onEditSubetapa,
+  onSubetapaCreated,
+  subetapasOptions,
+  onTarefaCreated,
+}: {
+  etapa: Etapa;
+  isExpanded: boolean;
+  expandedSubetapas: Set<string>;
+  onToggleExpand: () => void;
+  onToggleSubetapaExpand: (subetapaId: string) => void;
+  users: User[];
+  updating: string | null;
+  onUpdateEtapa: (etapaId: string, field: string, value: string | null) => void;
+  onUpdateSubetapa: (subetapaId: string, field: string, value: string | null) => void;
+  onUpdateTarefa: (tarefaId: string, field: string, value: string | null) => void;
+  onReorderSubetapas: (etapaId: string, subetapas: Subetapa[]) => void;
+  onReorderTarefas: (subetapaId: string, tarefas: Tarefa[]) => void;
   onEditEtapa: (etapa: Etapa) => void;
-  onEditTarefa: (tarefa: Tarefa) => void;
-  onTarefaCreated: (etapaId?: string) => void;
+  onEditSubetapa: (subetapa: Subetapa) => void;
+  onSubetapaCreated: (etapaId?: string) => void;
+  subetapasOptions: { id: string; nome: string; etapa_nome: string }[];
+  onTarefaCreated: () => void;
 }) {
   const {
     attributes,
@@ -149,39 +758,26 @@ function SortableEtapaRow({
     transition,
   };
 
-  const hasTarefas = etapa.tarefas.length > 0;
+  const hasSubetapas = etapa.subetapas.length > 0;
   const statusConfig = getStatusConfig(etapa.status);
-  const progresso = calcularProgresso(etapa);
-  
-  // Calcular percentual de orçamento utilizado
+  const progresso = calcularProgressoEtapa(etapa);
+
   const orcamento = Number(etapa.orcamento) || 0;
   const gastoRealizado = etapa.gasto_realizado || 0;
   const percentualOrcamento = orcamento > 0 ? (gastoRealizado / orcamento) * 100 : 0;
-  
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      notation: "compact",
-      maximumFractionDigits: 0,
-    }).format(value);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleTarefaDragEnd = (event: DragEndEvent) => {
+  const handleSubetapaDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = etapa.tarefas.findIndex((t) => t.id === active.id);
-      const newIndex = etapa.tarefas.findIndex((t) => t.id === over.id);
-      const newTarefas = arrayMove(etapa.tarefas, oldIndex, newIndex);
-      onReorderTarefas(etapa.id, newTarefas);
+      const oldIndex = etapa.subetapas.findIndex((s) => s.id === active.id);
+      const newIndex = etapa.subetapas.findIndex((s) => s.id === over.id);
+      const newSubetapas = arrayMove(etapa.subetapas, oldIndex, newIndex);
+      onReorderSubetapas(etapa.id, newSubetapas);
     }
   };
 
@@ -200,7 +796,7 @@ function SortableEtapaRow({
       >
         {/* Expand/Collapse */}
         <div className="p-0 pl-2 flex items-center justify-center">
-          {hasTarefas ? (
+          {hasSubetapas ? (
             <Button
               variant="ghost"
               size="icon"
@@ -229,7 +825,7 @@ function SortableEtapaRow({
           </button>
         </div>
 
-        {/* Nome - Clicável para editar */}
+        {/* Nome */}
         <div className="p-2">
           <button
             onClick={() => onEditEtapa(etapa)}
@@ -265,23 +861,17 @@ function SortableEtapaRow({
           </Select>
         </div>
 
-        {/* Data Início - Calculada automaticamente */}
+        {/* Data Início - Calculada das subetapas */}
         <div className="p-1">
           <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
-            {(() => {
-              const { inicio } = calcularDatasEtapa(etapa.tarefas);
-              return formatDate(inicio);
-            })()}
+            {formatDate(calcularDatasEtapa(etapa.subetapas).inicio)}
           </div>
         </div>
 
-        {/* Data Fim - Calculada automaticamente */}
+        {/* Data Fim - Calculada das subetapas */}
         <div className="p-1">
           <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
-            {(() => {
-              const { fim } = calcularDatasEtapa(etapa.tarefas);
-              return formatDate(fim);
-            })()}
+            {formatDate(calcularDatasEtapa(etapa.subetapas).fim)}
           </div>
         </div>
 
@@ -350,14 +940,14 @@ function SortableEtapaRow({
           </span>
         </div>
 
-        {/* Add Task Button */}
+        {/* Add Subetapa Button */}
         <div className="p-1 flex items-center justify-center">
-          <NovaTarefaDialog
+          <NovaSubetapaDialog
             etapaId={etapa.id}
             etapaNome={etapa.nome}
             users={users}
-            proximaOrdem={etapa.tarefas.length + 1}
-            onSuccess={() => onTarefaCreated(etapa.id)}
+            proximaOrdem={etapa.subetapas.length + 1}
+            onSuccess={() => onSubetapaCreated(etapa.id)}
             trigger={
               <Button
                 variant="ghost"
@@ -371,26 +961,32 @@ function SortableEtapaRow({
         </div>
       </div>
 
-      {/* Linhas das Tarefas */}
-      {isExpanded && etapa.tarefas.length > 0 && (
+      {/* Linhas das Subetapas */}
+      {isExpanded && etapa.subetapas.length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleTarefaDragEnd}
+          onDragEnd={handleSubetapaDragEnd}
         >
           <SortableContext
-            items={etapa.tarefas.map((t) => t.id)}
+            items={etapa.subetapas.map((s) => s.id)}
             strategy={verticalListSortingStrategy}
           >
-            {etapa.tarefas.map((tarefa, idx) => (
-              <SortableTarefaRow
-                key={tarefa.id}
-                tarefa={tarefa}
-                isLast={idx === etapa.tarefas.length - 1}
+            {etapa.subetapas.map((subetapa, idx) => (
+              <SortableSubetapaRow
+                key={subetapa.id}
+                subetapa={subetapa}
+                isLast={idx === etapa.subetapas.length - 1}
+                isExpanded={expandedSubetapas.has(subetapa.id)}
+                onToggleExpand={() => onToggleSubetapaExpand(subetapa.id)}
                 users={users}
                 updating={updating}
+                onUpdateSubetapa={onUpdateSubetapa}
                 onUpdateTarefa={onUpdateTarefa}
-                onEditTarefa={onEditTarefa}
+                onReorderTarefas={onReorderTarefas}
+                onEditSubetapa={onEditSubetapa}
+                subetapasOptions={subetapasOptions}
+                onTarefaCreated={onTarefaCreated}
               />
             ))}
           </SortableContext>
@@ -400,344 +996,278 @@ function SortableEtapaRow({
   );
 }
 
-// Componente para linha de tarefa arrastável
-function SortableTarefaRow({
-  tarefa,
-  isLast,
-  users,
-  updating,
-  onUpdateTarefa,
-  onEditTarefa,
-}: {
-  tarefa: Tarefa;
-  isLast: boolean;
-  users: User[];
-  updating: string | null;
-  onUpdateTarefa: (tarefaId: string, field: string, value: string | null) => void;
-  onEditTarefa: (tarefa: Tarefa) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: tarefa.id });
+// --- Componente Principal ---
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const tarefaStatusConfig = getStatusConfig(tarefa.status);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "grid items-center border-b group bg-muted/20 hover:bg-muted/40",
-        gridCols,
-        updating === tarefa.id && "opacity-50",
-        isDragging && "opacity-50 bg-muted z-10"
-      )}
-    >
-      {/* Empty for align */}
-      <div className="p-0"></div>
-
-      {/* Drag handle + Tree indicator */}
-      <div className="p-0 pl-1 flex items-center gap-1">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100"
-        >
-          <GripVertical className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground" />
-        </button>
-        <span className="text-muted-foreground/50 text-xs">
-          {isLast ? "└" : "├"}
-        </span>
-      </div>
-
-      {/* Nome - Clicável para editar */}
-      <div className="p-1 pl-1">
-        <button
-          onClick={() => onEditTarefa(tarefa)}
-          className={cn(
-            "flex items-center gap-2 text-sm hover:text-primary transition-colors text-left",
-            tarefa.status === "concluida" && "line-through text-muted-foreground"
-          )}
-        >
-          {tarefa.nome}
-          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50" />
-        </button>
-      </div>
-
-      {/* Status */}
-      <div className="p-1">
-        <Select
-          value={tarefa.status}
-          onValueChange={(value) => onUpdateTarefa(tarefa.id, "status", value)}
-        >
-          <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
-            <div className={cn("flex items-center gap-2", tarefaStatusConfig.color)}>
-              <tarefaStatusConfig.icon className="h-3 w-3" />
-              <span className="text-xs">{tarefaStatusConfig.label}</span>
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className={cn("flex items-center gap-2", option.color)}>
-                  <option.icon className="h-3 w-3" />
-                  <span>{option.label}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Data Início */}
-      <div className="p-1">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className="h-7 px-2 text-xs font-normal justify-start hover:bg-muted/50"
-            >
-              {formatDate(tarefa.data_inicio_prevista)}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={parseDate(tarefa.data_inicio_prevista)}
-              onSelect={(date) =>
-                onUpdateTarefa(
-                  tarefa.id,
-                  "data_inicio_prevista",
-                  date ? formatDateToString(date) : null
-                )
-              }
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Data Fim */}
-      <div className="p-1">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className="h-7 px-2 text-xs font-normal justify-start hover:bg-muted/50"
-            >
-              {formatDate(tarefa.data_fim_prevista)}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={parseDate(tarefa.data_fim_prevista)}
-              onSelect={(date) =>
-                onUpdateTarefa(
-                  tarefa.id,
-                  "data_fim_prevista",
-                  date ? formatDateToString(date) : null
-                )
-              }
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Responsável */}
-      <div className="p-1">
-        <Select
-          value={tarefa.responsavel_id || "none"}
-          onValueChange={(value) =>
-            onUpdateTarefa(tarefa.id, "responsavel_id", value === "none" ? null : value)
-          }
-        >
-          <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted/50 focus:ring-0">
-            <span className="text-xs truncate">
-              {users.find((u) => u.id === tarefa.responsavel_id)?.nome_completo || "-"}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Nenhum</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.nome_completo}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Orçamento (vazio para tarefas) */}
-      <div className="p-2"></div>
-
-      {/* Gasto (vazio para tarefas) */}
-      <div className="p-2"></div>
-
-      {/* Progresso (checkbox visual) */}
-      <div className="text-right pr-4 flex items-center justify-end">
-        {tarefa.status === "concluida" ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <span className="text-xs text-muted-foreground">-</span>
-        )}
-      </div>
-
-      {/* Empty cell */}
-      <div></div>
-    </div>
-  );
-}
-
-// Helper functions
-function formatDate(date: string | null) {
-  if (!date) return "-";
-  return format(parseDateString(date), "dd/MM", { locale: ptBR });
-}
-
-function parseDate(date: string | null): Date | undefined {
-  if (!date) return undefined;
-  return parseDateString(date);
-}
-
-function calcularProgresso(etapa: Etapa) {
-  if (etapa.tarefas.length === 0) return etapa.progresso_percentual;
-  const concluidas = etapa.tarefas.filter((t) => t.status === "concluida").length;
-  return Math.round((concluidas / etapa.tarefas.length) * 100);
-}
-
-function calcularDatasEtapa(tarefas: Tarefa[]): { inicio: string | null; fim: string | null } {
-  if (tarefas.length === 0) {
-    return { inicio: null, fim: null };
-  }
-
-  const datasInicio = tarefas
-    .map((t) => t.data_inicio_prevista)
-    .filter((d): d is string => d !== null);
-  const datasFim = tarefas
-    .map((t) => t.data_fim_prevista)
-    .filter((d): d is string => d !== null);
-
-  if (datasInicio.length === 0 && datasFim.length === 0) {
-    return { inicio: null, fim: null };
-  }
-
-  const inicio = datasInicio.length > 0
-    ? datasInicio.reduce((min, date) => (date < min ? date : min))
-    : null;
-  const fim = datasFim.length > 0
-    ? datasFim.reduce((max, date) => (date > max ? date : max))
-    : null;
-
-  return { inicio, fim };
-}
-
-function getStatusConfig(status: string) {
-  return statusOptions.find((s) => s.value === status) || statusOptions[0];
-}
-
-// Componente principal
 export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTableProps) {
   const router = useRouter();
   const [etapas, setEtapas] = useState(initialEtapas);
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(
     new Set(initialEtapas.map((e) => e.id))
   );
+  const [expandedSubetapas, setExpandedSubetapas] = useState<Set<string>>(
+    new Set(initialEtapas.flatMap((e) => e.subetapas.map((s) => s.id)))
+  );
   const [updating, setUpdating] = useState<string | null>(null);
-  
-  // Estados para edição
   const [editingEtapa, setEditingEtapa] = useState<Etapa | null>(null);
-  const [editingTarefa, setEditingTarefa] = useState<Tarefa | null>(null);
+  const [editingSubetapa, setEditingSubetapa] = useState<Subetapa | null>(null);
 
-  // Função para recarregar dados do servidor
+  // Recarregar dados do servidor
   const refreshData = async () => {
     const supabase = createClient();
-    
-    const [{ data: etapasData }, { data: tarefasData }] = await Promise.all([
-      supabase.from("etapas").select("*").order("ordem"),
-      supabase.from("tarefas").select("*").order("ordem"),
-    ]);
 
-    if (etapasData && tarefasData) {
-      const newEtapas: Etapa[] = etapasData.map((e) => {
-        const tarefasEtapa = tarefasData.filter((t) => t.etapa_id === e.id) as Tarefa[];
-        const { inicio, fim } = calcularDatasEtapa(tarefasEtapa);
-        return {
-          ...e,
-          progresso_percentual: e.progresso_percentual ?? 0,
-          responsavel: e.responsavel_id ? users.find((u) => u.id === e.responsavel_id) || null : null,
-          tarefas: tarefasEtapa,
-          data_inicio_prevista: inicio,
-          data_fim_prevista: fim,
-        } as Etapa;
-      });
+    const [{ data: etapasData }, { data: subetapasData }, { data: tarefasData }] =
+      await Promise.all([
+        supabase.from("etapas").select("*").order("ordem"),
+        supabase.from("subetapas").select("*").order("ordem"),
+        supabase.from("tarefas").select("*").order("ordem"),
+      ]);
+
+    if (etapasData && subetapasData && tarefasData) {
+      const subetapasComTarefas: Subetapa[] = (subetapasData as unknown as Subetapa[]).map((s) => ({
+        ...s,
+        tarefas: (tarefasData as Tarefa[]).filter((t) => t.subetapa_id === s.id),
+      }));
+
+      const newEtapas: Etapa[] = etapasData.map((e) => ({
+        ...e,
+        progresso_percentual: e.progresso_percentual ?? 0,
+        responsavel: e.responsavel_id
+          ? users.find((u) => u.id === e.responsavel_id) || null
+          : null,
+        subetapas: subetapasComTarefas.filter((s) => s.etapa_id === e.id),
+      })) as Etapa[];
+
       setEtapas(newEtapas);
-
-      // Atualizar datas no banco para todas as etapas
-      const supabase = createClient();
-      for (const etapa of newEtapas) {
-        const { inicio, fim } = calcularDatasEtapa(etapa.tarefas);
-        await supabase
-          .from("etapas")
-          .update({
-            data_inicio_prevista: inicio,
-            data_fim_prevista: fim,
-          })
-          .eq("id", etapa.id);
-      }
     }
   };
 
-  // Função para atualizar datas da etapa baseado nas tarefas
-  const atualizarDatasEtapa = async (etapaId: string) => {
-    // Usar função de callback para garantir que temos o estado mais recente
-    let etapaAtual: Etapa | undefined;
-    let novasDatas: { inicio: string | null; fim: string | null } = { inicio: null, fim: null };
+  const toggleExpanded = (etapaId: string) => {
+    const newExpanded = new Set(expandedEtapas);
+    if (newExpanded.has(etapaId)) {
+      newExpanded.delete(etapaId);
+    } else {
+      newExpanded.add(etapaId);
+    }
+    setExpandedEtapas(newExpanded);
+  };
 
-    setEtapas((prev) => {
-      const etapa = prev.find((e) => e.id === etapaId);
-      if (!etapa) return prev;
+  const toggleSubetapaExpanded = (subetapaId: string) => {
+    const newExpanded = new Set(expandedSubetapas);
+    if (newExpanded.has(subetapaId)) {
+      newExpanded.delete(subetapaId);
+    } else {
+      newExpanded.add(subetapaId);
+    }
+    setExpandedSubetapas(newExpanded);
+  };
 
-      etapaAtual = etapa;
-      novasDatas = calcularDatasEtapa(etapa.tarefas);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-      // Atualizar estado local
-      return prev.map((e) =>
-        e.id === etapaId
-          ? { ...e, data_inicio_prevista: novasDatas.inicio, data_fim_prevista: novasDatas.fim }
-          : e
-      );
-    });
+  // --- Handlers de Drag ---
 
-    // Atualizar no banco de dados
-    if (etapaAtual) {
-      const supabase = createClient();
-      try {
+  const handleEtapaDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = etapas.findIndex((e) => e.id === active.id);
+    const newIndex = etapas.findIndex((e) => e.id === over.id);
+    const newEtapas = arrayMove(etapas, oldIndex, newIndex);
+
+    setEtapas(newEtapas);
+
+    const supabase = createClient();
+    try {
+      for (let i = 0; i < newEtapas.length; i++) {
         await supabase
           .from("etapas")
-          .update({
-            data_inicio_prevista: novasDatas.inicio,
-            data_fim_prevista: novasDatas.fim,
-          })
-          .eq("id", etapaId);
-      } catch (error) {
-        console.error("Erro ao atualizar datas da etapa:", error);
+          .update({ ordem: i + 1 })
+          .eq("id", newEtapas[i].id);
       }
+      toast.success("Ordem atualizada!");
+    } catch {
+      toast.error("Erro ao reordenar");
+      setEtapas(initialEtapas);
     }
   };
 
-  // Callback para quando uma etapa é editada via dialog
+  const handleReorderSubetapas = async (etapaId: string, newSubetapas: Subetapa[]) => {
+    setEtapas((prev) =>
+      prev.map((e) => (e.id === etapaId ? { ...e, subetapas: newSubetapas } : e))
+    );
+
+    const supabase = createClient();
+    try {
+      for (let i = 0; i < newSubetapas.length; i++) {
+        await supabase
+          .from("subetapas")
+          .update({ ordem: i + 1 })
+          .eq("id", newSubetapas[i].id);
+      }
+      toast.success("Ordem atualizada!");
+    } catch {
+      toast.error("Erro ao reordenar subetapas");
+      router.refresh();
+    }
+  };
+
+  const handleReorderTarefas = async (subetapaId: string, newTarefas: Tarefa[]) => {
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        subetapas: e.subetapas.map((s) =>
+          s.id === subetapaId ? { ...s, tarefas: newTarefas } : s
+        ),
+      }))
+    );
+
+    const supabase = createClient();
+    try {
+      for (let i = 0; i < newTarefas.length; i++) {
+        await supabase
+          .from("tarefas")
+          .update({ ordem: i + 1 })
+          .eq("id", newTarefas[i].id);
+      }
+      toast.success("Ordem atualizada!");
+    } catch {
+      toast.error("Erro ao reordenar tarefas");
+      router.refresh();
+    }
+  };
+
+  // --- Handlers de Update ---
+
+  const updateEtapa = async (etapaId: string, field: string, value: string | null) => {
+    setUpdating(etapaId);
+    const supabase = createClient();
+    const previousEtapas = etapas;
+
+    setEtapas((prev) =>
+      prev.map((e) => {
+        if (e.id !== etapaId) return e;
+        const updated = { ...e, [field]: value };
+        if (field === "responsavel_id") {
+          updated.responsavel = value ? users.find((u) => u.id === value) || null : null;
+        }
+        if (field === "status") {
+          if (value === "em_andamento") updated.data_inicio_real = formatDateToString(new Date());
+          else if (value === "concluida") {
+            updated.data_fim_real = formatDateToString(new Date());
+            updated.progresso_percentual = 100;
+          }
+        }
+        return updated;
+      })
+    );
+
+    try {
+      const updates: Record<string, unknown> = { [field]: value };
+      if (field === "status") {
+        if (value === "em_andamento") updates.data_inicio_real = formatDateToString(new Date());
+        else if (value === "concluida") {
+          updates.data_fim_real = formatDateToString(new Date());
+          updates.progresso_percentual = 100;
+        }
+      }
+      const { error } = await supabase.from("etapas").update(updates).eq("id", etapaId);
+      if (error) throw error;
+      toast.success("Atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar");
+      setEtapas(previousEtapas);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const updateSubetapa = async (subetapaId: string, field: string, value: string | null) => {
+    setUpdating(subetapaId);
+    const supabase = createClient();
+    const previousEtapas = etapas;
+
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        subetapas: e.subetapas.map((s) => {
+          if (s.id !== subetapaId) return s;
+          const updated = { ...s, [field]: value };
+          if (field === "status") {
+            if (value === "em_andamento")
+              updated.data_inicio_real = new Date().toISOString().split("T")[0];
+            else if (value === "concluida")
+              updated.data_fim_real = new Date().toISOString().split("T")[0];
+          }
+          return updated;
+        }),
+      }))
+    );
+
+    try {
+      const updates: Record<string, unknown> = { [field]: value };
+      if (field === "status") {
+        if (value === "em_andamento")
+          updates.data_inicio_real = new Date().toISOString().split("T")[0];
+        else if (value === "concluida")
+          updates.data_fim_real = new Date().toISOString().split("T")[0];
+      }
+      const { error } = await supabase.from("subetapas").update(updates).eq("id", subetapaId);
+      if (error) throw error;
+      toast.success("Atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar");
+      setEtapas(previousEtapas);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const updateTarefa = async (tarefaId: string, field: string, value: string | null) => {
+    setUpdating(tarefaId);
+    const supabase = createClient();
+    const previousEtapas = etapas;
+
+    setEtapas((prev) =>
+      prev.map((e) => ({
+        ...e,
+        subetapas: e.subetapas.map((s) => ({
+          ...s,
+          tarefas: s.tarefas.map((t) => {
+            if (t.id !== tarefaId) return t;
+            const updated = { ...t, [field]: value };
+            if (field === "status") {
+              if (value === "em_andamento")
+                updated.data_inicio_real = new Date().toISOString();
+              else if (value === "concluida")
+                updated.data_conclusao_real = new Date().toISOString();
+            }
+            return updated;
+          }),
+        })),
+      }))
+    );
+
+    try {
+      const updates: Record<string, unknown> = { [field]: value };
+      if (field === "status") {
+        if (value === "em_andamento") updates.data_inicio_real = new Date().toISOString();
+        else if (value === "concluida") updates.data_conclusao_real = new Date().toISOString();
+      }
+      const { error } = await supabase.from("tarefas").update(updates).eq("id", tarefaId);
+      if (error) throw error;
+      toast.success("Atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar");
+      setEtapas(previousEtapas);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // --- Handlers de Edição Dialog ---
+
   const handleEtapaUpdated = (updatedEtapa: Partial<Etapa> & { id: string }) => {
     setEtapas((prev) =>
       prev.map((e) => {
@@ -754,251 +1284,41 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     setEditingEtapa(null);
   };
 
-  // Callback para quando uma etapa é excluída via dialog
   const handleEtapaDeleted = (etapaId: string) => {
     setEtapas((prev) => prev.filter((e) => e.id !== etapaId));
     setEditingEtapa(null);
   };
 
-  // Callback para quando uma tarefa é editada via dialog
-  const handleTarefaUpdated = async (updatedTarefa: Partial<Tarefa> & { id: string }) => {
-    // Encontrar a etapa da tarefa
-    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === updatedTarefa.id));
-
+  const handleSubetapaUpdated = (updatedSubetapa: Partial<Subetapa> & { id: string }) => {
     setEtapas((prev) =>
       prev.map((e) => ({
         ...e,
-        tarefas: e.tarefas.map((t) =>
-          t.id === updatedTarefa.id ? { ...t, ...updatedTarefa } : t
+        subetapas: e.subetapas.map((s) =>
+          s.id === updatedSubetapa.id ? { ...s, ...updatedSubetapa } : s
         ),
       }))
     );
-    setEditingTarefa(null);
-
-    // Atualizar datas da etapa se a tarefa tem datas
-    if (etapaDaTarefa && (updatedTarefa.data_inicio_prevista !== undefined || updatedTarefa.data_fim_prevista !== undefined)) {
-      await atualizarDatasEtapa(etapaDaTarefa.id);
-    }
+    setEditingSubetapa(null);
   };
 
-  // Callback para quando uma tarefa é excluída via dialog
-  const handleTarefaDeleted = async (tarefaId: string) => {
-    // Encontrar a etapa da tarefa antes de excluir
-    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === tarefaId));
-
+  const handleSubetapaDeleted = (subetapaId: string) => {
     setEtapas((prev) =>
       prev.map((e) => ({
         ...e,
-        tarefas: e.tarefas.filter((t) => t.id !== tarefaId),
+        subetapas: e.subetapas.filter((s) => s.id !== subetapaId),
       }))
     );
-    setEditingTarefa(null);
-
-    // Atualizar datas da etapa após excluir tarefa
-    if (etapaDaTarefa) {
-      await atualizarDatasEtapa(etapaDaTarefa.id);
-    }
+    setEditingSubetapa(null);
   };
 
-  // Callback para quando uma nova etapa é criada
-  const handleEtapaCreated = () => {
-    refreshData();
-  };
-
-  // Callback para quando uma nova tarefa é criada
-  const handleTarefaCreated = async (etapaId?: string) => {
-    if (etapaId) {
-      // Recarregar dados e atualizar datas da etapa
-      await refreshData();
-      await atualizarDatasEtapa(etapaId);
-    } else {
-      refreshData();
-    }
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+  // Construir opções de subetapas para NovaTarefaDialog
+  const subetapasOptions = etapas.flatMap((e) =>
+    e.subetapas.map((s) => ({
+      id: s.id,
+      nome: s.nome,
+      etapa_nome: e.nome,
+    }))
   );
-
-  const toggleExpanded = (etapaId: string) => {
-    const newExpanded = new Set(expandedEtapas);
-    if (newExpanded.has(etapaId)) {
-      newExpanded.delete(etapaId);
-    } else {
-      newExpanded.add(etapaId);
-    }
-    setExpandedEtapas(newExpanded);
-  };
-
-  const handleEtapaDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = etapas.findIndex((e) => e.id === active.id);
-    const newIndex = etapas.findIndex((e) => e.id === over.id);
-    const newEtapas = arrayMove(etapas, oldIndex, newIndex);
-    
-    // Atualizar estado local imediatamente
-    setEtapas(newEtapas);
-
-    // Salvar no banco
-    const supabase = createClient();
-    try {
-      const updates = newEtapas.map((etapa, index) => ({
-        id: etapa.id,
-        ordem: index + 1,
-      }));
-
-      for (const update of updates) {
-        await supabase.from("etapas").update({ ordem: update.ordem }).eq("id", update.id);
-      }
-
-      toast.success("Ordem atualizada!");
-    } catch (error) {
-      toast.error("Erro ao reordenar");
-      setEtapas(initialEtapas); // Reverter em caso de erro
-    }
-  };
-
-  const handleReorderTarefas = async (etapaId: string, newTarefas: Tarefa[]) => {
-    // Atualizar estado local
-    setEtapas((prev) =>
-      prev.map((e) => (e.id === etapaId ? { ...e, tarefas: newTarefas } : e))
-    );
-
-    // Salvar no banco
-    const supabase = createClient();
-    try {
-      const updates = newTarefas.map((tarefa, index) => ({
-        id: tarefa.id,
-        ordem: index + 1,
-      }));
-
-      for (const update of updates) {
-        await supabase.from("tarefas").update({ ordem: update.ordem }).eq("id", update.id);
-      }
-
-      // Recalcular datas da etapa após reordenar
-      await atualizarDatasEtapa(etapaId);
-
-      toast.success("Ordem atualizada!");
-    } catch (error) {
-      toast.error("Erro ao reordenar tarefas");
-      router.refresh(); // Reverter em caso de erro
-    }
-  };
-
-  const updateEtapa = async (etapaId: string, field: string, value: string | null) => {
-    setUpdating(etapaId);
-    const supabase = createClient();
-
-    // Atualização otimista do estado local
-    const previousEtapas = etapas;
-    setEtapas((prev) =>
-      prev.map((e) => {
-        if (e.id !== etapaId) return e;
-        const updated = { ...e, [field]: value };
-        if (field === "responsavel_id") {
-          updated.responsavel = value ? users.find((u) => u.id === value) || null : null;
-        }
-        if (field === "status") {
-          if (value === "em_andamento") {
-            updated.data_inicio_real = formatDateToString(new Date());
-          } else if (value === "concluida") {
-            updated.data_fim_real = formatDateToString(new Date());
-            updated.progresso_percentual = 100;
-          }
-        }
-        return updated;
-      })
-    );
-
-    try {
-      const updates: Record<string, unknown> = { [field]: value };
-
-      if (field === "status") {
-        if (value === "em_andamento") {
-          updates.data_inicio_real = formatDateToString(new Date());
-        } else if (value === "concluida") {
-          updates.data_fim_real = formatDateToString(new Date());
-          updates.progresso_percentual = 100;
-        }
-      }
-
-      const { error } = await supabase.from("etapas").update(updates).eq("id", etapaId);
-
-      if (error) throw error;
-
-      toast.success("Atualizado!");
-    } catch (error) {
-      toast.error("Erro ao atualizar");
-      setEtapas(previousEtapas); // Reverter em caso de erro
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const updateTarefa = async (tarefaId: string, field: string, value: string | null) => {
-    setUpdating(tarefaId);
-    const supabase = createClient();
-
-    // Encontrar a etapa da tarefa para atualizar datas depois
-    const etapaDaTarefa = etapas.find((e) => e.tarefas.some((t) => t.id === tarefaId));
-
-    // Atualização otimista do estado local
-    const previousEtapas = etapas;
-    setEtapas((prev) =>
-      prev.map((e) => ({
-        ...e,
-        tarefas: e.tarefas.map((t) => {
-          if (t.id !== tarefaId) return t;
-          const updated = { ...t, [field]: value };
-          if (field === "status") {
-            if (value === "em_andamento") {
-              updated.data_inicio_real = formatDateToString(new Date());
-            } else if (value === "concluida") {
-              updated.data_fim_real = formatDateToString(new Date());
-            }
-          }
-          return updated;
-        }),
-      }))
-    );
-
-    try {
-      const updates: Record<string, unknown> = { [field]: value };
-
-      if (field === "status") {
-        if (value === "em_andamento") {
-          updates.data_inicio_real = formatDateToString(new Date());
-        } else if (value === "concluida") {
-          updates.data_fim_real = formatDateToString(new Date());
-        }
-      }
-
-      const { error } = await supabase.from("tarefas").update(updates).eq("id", tarefaId);
-
-      if (error) throw error;
-
-      // Sempre recalcular datas da etapa quando uma tarefa é atualizada
-      // (especialmente se foi atualizada uma data)
-      if (etapaDaTarefa) {
-        await atualizarDatasEtapa(etapaDaTarefa.id);
-      }
-
-      toast.success("Atualizado!");
-    } catch (error) {
-      toast.error("Erro ao atualizar");
-      setEtapas(previousEtapas); // Reverter em caso de erro
-    } finally {
-      setUpdating(null);
-    }
-  };
 
   if (etapas.length === 0) {
     return (
@@ -1013,7 +1333,12 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     <>
       <div className="border rounded-lg overflow-hidden">
         {/* Header */}
-        <div className={cn("grid items-center bg-muted/50 border-b text-sm font-medium text-muted-foreground", gridCols)}>
+        <div
+          className={cn(
+            "grid items-center bg-muted/50 border-b text-sm font-medium text-muted-foreground",
+            gridCols
+          )}
+        >
           <div className="p-2"></div>
           <div className="p-2"></div>
           <div className="p-2">Nome</div>
@@ -1042,15 +1367,21 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
                 key={etapa.id}
                 etapa={etapa}
                 isExpanded={expandedEtapas.has(etapa.id)}
+                expandedSubetapas={expandedSubetapas}
                 onToggleExpand={() => toggleExpanded(etapa.id)}
+                onToggleSubetapaExpand={toggleSubetapaExpanded}
                 users={users}
                 updating={updating}
                 onUpdateEtapa={updateEtapa}
+                onUpdateSubetapa={updateSubetapa}
                 onUpdateTarefa={updateTarefa}
+                onReorderSubetapas={handleReorderSubetapas}
                 onReorderTarefas={handleReorderTarefas}
                 onEditEtapa={setEditingEtapa}
-                onEditTarefa={setEditingTarefa}
-                onTarefaCreated={handleTarefaCreated}
+                onEditSubetapa={setEditingSubetapa}
+                onSubetapaCreated={() => refreshData()}
+                subetapasOptions={subetapasOptions}
+                onTarefaCreated={() => refreshData()}
               />
             ))}
           </SortableContext>
@@ -1069,15 +1400,15 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
         />
       )}
 
-      {/* Dialog de Edição de Tarefa */}
-      {editingTarefa && (
-        <EditarTarefaDialog
-          tarefa={editingTarefa}
+      {/* Dialog de Edição de Subetapa */}
+      {editingSubetapa && (
+        <EditarSubetapaDialog
+          subetapa={editingSubetapa}
           users={users}
-          open={!!editingTarefa}
-          onOpenChange={(open) => !open && setEditingTarefa(null)}
-          onSuccess={handleTarefaUpdated}
-          onDelete={handleTarefaDeleted}
+          open={!!editingSubetapa}
+          onOpenChange={(open) => !open && setEditingSubetapa(null)}
+          onSuccess={handleSubetapaUpdated}
+          onDelete={handleSubetapaDeleted}
         />
       )}
     </>

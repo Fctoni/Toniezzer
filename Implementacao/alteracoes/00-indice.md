@@ -31,7 +31,8 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 
 | # | Arquivo | Descrição | Status | PRD |
 |---|---------|-----------|--------|-----|
-| 01 | [spec-alteracao01.md](./spec-alteracao01.md) | Sistema de 3 níveis: Etapa → Subetapa → Tarefas | 🔵 Pronto para executar | ⏳ pendente |
+| 03 | [alteracao03.md](./alteracao/alteracao03.md) | Centralizar CRUD em funções utilitárias (services) | 🟡 Em discussão | ⏳ pendente |
+| 04 | [alteracao04.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
 
 ## PRD / Commit Pendente
 
@@ -39,6 +40,7 @@ Implementação finalizada, mas falta documentar no PRD ou commitar.
 
 | # | Arquivo | Descrição | PRD |
 |---|---------|-----------|-----|
+| 01 | [spec-alteracao01.md](./spec-alteracao01.md) | Sistema de 3 níveis: Etapa → Subetapa → Tarefas | ⏳ pendente |
 | 02 | [spec-alteracao02.md](./spec/spec-alteracao02.md) | Substituir kanban por tabela na página de emails | ⏳ pendente |
 
 
