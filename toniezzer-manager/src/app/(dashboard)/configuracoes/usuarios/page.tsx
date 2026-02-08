@@ -177,7 +177,7 @@ export default function UsuariosPage() {
       email: user.email || '',
       password: '', // Nao preencher senha ao editar
       nome_completo: user.nome_completo,
-      role: user.role || 'viewer',
+      role: (user.role || 'viewer') as UserRole,
       especialidade: user.especialidade || '',
       telefone: user.telefone || '',
     })
@@ -390,7 +390,7 @@ export default function UsuariosPage() {
                   <TableCell className="text-muted-foreground">
                     {user.email || '-'}
                   </TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>{getRoleBadge(user.role as UserRole)}</TableCell>
                   <TableCell>
                     {user.ativo ? (
                       <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">

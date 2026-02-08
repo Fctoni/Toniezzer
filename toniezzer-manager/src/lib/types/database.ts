@@ -1655,6 +1655,17 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
+// --- Custom type aliases (not auto-generated) ---
+
+export type TopicoStatus = "aberto" | "resolvido" | "arquivado"
+export type TopicoPrioridade = "baixa" | "normal" | "alta" | "urgente"
+export type FeedTipo = "post" | "decisao" | "alerta" | "sistema"
+export type EmailStatus = "aguardando_revisao" | "processando" | "nao_processado" | "processado" | "erro" | "ignorado"
+export type NotificacaoTipo = "orcamento_80" | "orcamento_100" | "etapa_atrasada" | "etapa_aguardando" | "mencao" | "gasto_aprovacao" | "mudanca_escopo" | "email_novo" | "tarefa_atribuida" | "sistema"
+export type AcaoStatus = "pendente" | "em_andamento" | "concluido" | "cancelado"
+export type AcaoTipo = "decisao" | "tarefa" | "gasto" | "problema" | "mudanca_escopo"
+export type UserRole = "admin" | "editor" | "viewer"
+
 export const Constants = {
   public: {
     Enums: {},
