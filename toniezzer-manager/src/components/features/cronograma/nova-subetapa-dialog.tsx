@@ -45,6 +45,7 @@ const formSchema = z.object({
   data_inicio_prevista: z.date().optional(),
   data_fim_prevista: z.date().optional(),
   responsavel_id: z.string().optional(),
+  orcamento_previsto: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -54,7 +55,7 @@ interface User {
   nome_completo: string;
 }
 
-interface NovaTarefaDialogProps {
+interface NovaSubetapaDialogProps {
   etapaId: string;
   etapaNome: string;
   users: User[];
@@ -63,14 +64,14 @@ interface NovaTarefaDialogProps {
   onSuccess?: (etapaId?: string) => void;
 }
 
-export function NovaTarefaDialog({
+export function NovaSubetapaDialog({
   etapaId,
   etapaNome,
   users,
   proximaOrdem,
   trigger,
   onSuccess,
-}: NovaTarefaDialogProps) {
+}: NovaSubetapaDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,7 +90,12 @@ export function NovaTarefaDialog({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("tarefas").insert({
+      // Parse orçamento previsto se fornecido
+      const orcamentoPrevisto = data.orcamento_previsto
+        ? parseFloat(data.orcamento_previsto.replace(/[^\d,.-]/g, '').replace(',', '.'))
+        : null;
+
+      const { error } = await supabase.from("subetapas").insert({
         etapa_id: etapaId,
         nome: data.nome,
         descricao: data.descricao || null,
@@ -100,17 +106,18 @@ export function NovaTarefaDialog({
           ? formatDateToString(data.data_fim_prevista)
           : null,
         responsavel_id: data.responsavel_id || null,
+        orcamento_previsto: orcamentoPrevisto,
         ordem: proximaOrdem,
         status: "nao_iniciada",
-        peso_percentual: 0,
+        progresso_percentual: 0,
       });
 
       if (error) throw error;
 
-      toast.success("Tarefa criada com sucesso!");
+      toast.success("Subetapa criada com sucesso!");
       setOpen(false);
       form.reset();
-      
+
       // Notificar o parent ou fazer refresh da página
       if (onSuccess) {
         onSuccess(etapaId);
@@ -119,7 +126,7 @@ export function NovaTarefaDialog({
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar tarefa");
+      toast.error("Erro ao criar subetapa");
     } finally {
       setIsSubmitting(false);
     }
@@ -131,15 +138,15 @@ export function NovaTarefaDialog({
         {trigger || (
           <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
             <Plus className="h-3 w-3" />
-            Tarefa
+            Subetapa
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Nova Tarefa</DialogTitle>
+          <DialogTitle>Nova Subetapa</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Adicionando tarefa em: <strong>{etapaNome}</strong>
+            Adicionando subetapa em: <strong>{etapaNome}</strong>
           </p>
         </DialogHeader>
 
@@ -150,9 +157,9 @@ export function NovaTarefaDialog({
               name="nome"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome da Tarefa *</FormLabel>
+                  <FormLabel>Nome *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Escavação" {...field} />
+                    <Input placeholder="Ex: Base da caixa de entrada" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,8 +174,9 @@ export function NovaTarefaDialog({
                   <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Detalhes da tarefa..."
-                      className="resize-none h-20"
+                      placeholder="Detalhes da subetapa..."
+                      className="resize-none"
+                      rows={3}
                       {...field}
                     />
                   </FormControl>
@@ -177,12 +185,12 @@ export function NovaTarefaDialog({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="data_inicio_prevista"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Data Início</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -190,7 +198,7 @@ export function NovaTarefaDialog({
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -208,7 +216,8 @@ export function NovaTarefaDialog({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          initialFocus
+                          locale={ptBR}
+                          disabled={(date) => date < new Date("1900-01-01")}
                         />
                       </PopoverContent>
                     </Popover>
@@ -221,7 +230,7 @@ export function NovaTarefaDialog({
                 control={form.control}
                 name="data_fim_prevista"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Data Fim</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -229,7 +238,7 @@ export function NovaTarefaDialog({
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -247,7 +256,8 @@ export function NovaTarefaDialog({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          initialFocus
+                          locale={ptBR}
+                          disabled={(date) => date < new Date("1900-01-01")}
                         />
                       </PopoverContent>
                     </Popover>
@@ -263,10 +273,10 @@ export function NovaTarefaDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione (opcional)" />
+                        <SelectValue placeholder="Selecione um responsável" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -282,7 +292,25 @@ export function NovaTarefaDialog({
               )}
             />
 
-            <div className="flex gap-4 pt-4">
+            <FormField
+              control={form.control}
+              name="orcamento_previsto"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Orçamento Previsto (R$)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Ex: 5000.00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -293,7 +321,7 @@ export function NovaTarefaDialog({
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Criando..." : "Criar Tarefa"}
+                Criar Subetapa
               </Button>
             </div>
           </form>
@@ -302,4 +330,3 @@ export function NovaTarefaDialog({
     </Dialog>
   );
 }
-

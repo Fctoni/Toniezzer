@@ -892,44 +892,45 @@ export type Database = {
       }
       orcamento_detalhado: {
         Row: {
-          id: string
-          etapa_id: string
           categoria_id: string
-          valor_previsto: number
+          created_at: string | null
+          etapa_id: string
+          id: string
           observacoes: string | null
-          created_at: string
-          updated_at: string
+          updated_at: string | null
+          valor_previsto: number
         }
         Insert: {
-          id?: string
-          etapa_id: string
           categoria_id: string
-          valor_previsto: number
+          created_at?: string | null
+          etapa_id: string
+          id?: string
           observacoes?: string | null
-          created_at?: string
-          updated_at?: string
+          updated_at?: string | null
+          valor_previsto: number
         }
         Update: {
-          id?: string
-          etapa_id?: string
           categoria_id?: string
-          valor_previsto?: number
+          created_at?: string | null
+          etapa_id?: string
+          id?: string
           observacoes?: string | null
-          updated_at?: string
+          updated_at?: string | null
+          valor_previsto?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "orcamento_detalhado_etapa_id_fkey"
-            columns: ["etapa_id"]
-            isOneToOne: false
-            referencedRelation: "etapas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "orcamento_detalhado_categoria_id_fkey"
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orcamento_detalhado_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "etapas"
             referencedColumns: ["id"]
           },
         ]
@@ -1114,7 +1115,7 @@ export type Database = {
           },
         ]
       }
-      tarefas: {
+      subetapas: {
         Row: {
           created_at: string | null
           created_by: string | null
@@ -1126,11 +1127,13 @@ export type Database = {
           etapa_id: string
           id: string
           nome: string
+          orcamento_previsto: number | null
           ordem: number
-          peso_percentual: number | null
+          progresso_percentual: number | null
           responsavel_id: string | null
-          status: string | null
+          status: string
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1143,11 +1146,13 @@ export type Database = {
           etapa_id: string
           id?: string
           nome: string
-          ordem: number
-          peso_percentual?: number | null
+          orcamento_previsto?: number | null
+          ordem?: number
+          progresso_percentual?: number | null
           responsavel_id?: string | null
-          status?: string | null
+          status?: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1160,18 +1165,112 @@ export type Database = {
           etapa_id?: string
           id?: string
           nome?: string
+          orcamento_previsto?: number | null
           ordem?: number
-          peso_percentual?: number | null
+          progresso_percentual?: number | null
           responsavel_id?: string | null
-          status?: string | null
+          status?: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "tarefas_etapa_id_fkey"
+            foreignKeyName: "subetapas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subetapas_etapa_id_fkey"
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subetapas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subetapas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefas: {
+        Row: {
+          bloqueada_por: string[] | null
+          created_at: string | null
+          created_by: string | null
+          data_conclusao_real: string | null
+          data_inicio_real: string | null
+          data_prevista: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          notas: string | null
+          ordem: number
+          prioridade: string | null
+          responsavel_id: string | null
+          status: string
+          subetapa_id: string
+          tags: string[] | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          bloqueada_por?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          data_conclusao_real?: string | null
+          data_inicio_real?: string | null
+          data_prevista?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          notas?: string | null
+          ordem?: number
+          prioridade?: string | null
+          responsavel_id?: string | null
+          status?: string
+          subetapa_id: string
+          tags?: string[] | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          bloqueada_por?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          data_conclusao_real?: string | null
+          data_inicio_real?: string | null
+          data_prevista?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          notas?: string | null
+          ordem?: number
+          prioridade?: string | null
+          responsavel_id?: string | null
+          status?: string
+          subetapa_id?: string
+          tags?: string[] | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -1179,6 +1278,71 @@ export type Database = {
             columns: ["responsavel_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_subetapa_id_fkey"
+            columns: ["subetapa_id"]
+            isOneToOne: false
+            referencedRelation: "subetapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefas_anexos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          nome_arquivo: string
+          nome_original: string
+          storage_path: string
+          tamanho_bytes: number | null
+          tarefa_id: string
+          tipo_arquivo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          nome_arquivo: string
+          nome_original: string
+          storage_path: string
+          tamanho_bytes?: number | null
+          tarefa_id: string
+          tipo_arquivo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          nome_arquivo?: string
+          nome_original?: string
+          storage_path?: string
+          tamanho_bytes?: number | null
+          tarefa_id?: string
+          tipo_arquivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_anexos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_anexos_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
             referencedColumns: ["id"]
           },
         ]
@@ -1246,7 +1410,7 @@ export type Database = {
           especialidade: string | null
           id: string
           nome_completo: string
-          role: UserRole
+          role: string
           telefone: string | null
           updated_at: string | null
         }
@@ -1258,7 +1422,7 @@ export type Database = {
           especialidade?: string | null
           id?: string
           nome_completo: string
-          role?: UserRole
+          role?: string
           telefone?: string | null
           updated_at?: string | null
         }
@@ -1270,7 +1434,7 @@ export type Database = {
           especialidade?: string | null
           id?: string
           nome_completo?: string
-          role?: UserRole
+          role?: string
           telefone?: string | null
           updated_at?: string | null
         }
@@ -1414,50 +1578,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// Helper types
-export type EtapaStatus = 'nao_iniciada' | 'em_andamento' | 'aguardando_aprovacao' | 'aguardando_qualidade' | 'em_retrabalho' | 'pausada' | 'atrasada' | 'concluida'
-
-export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao' | 'boleto' | 'cheque'
-
-export type GastoStatus = 'pendente_aprovacao' | 'aprovado' | 'rejeitado'
-
-export type CriadoVia = 'manual' | 'email' | 'ocr' | 'bancario'
-
-export type CompraStatus = 'ativa' | 'quitada' | 'cancelada'
-
-export type CompraCriadoVia = 'manual' | 'email' | 'ocr' | 'plaud'
-
-export type DocumentoTipo = 'foto' | 'planta' | 'contrato' | 'nota_fiscal' | 'outro'
-
-export type NotificacaoTipo = 
-  | 'orcamento_80' 
-  | 'orcamento_100' 
-  | 'etapa_atrasada' 
-  | 'etapa_aguardando'
-  | 'mencao' 
-  | 'gasto_aprovacao'
-  | 'mudanca_escopo'
-  | 'email_novo'
-  | 'tarefa_atribuida'
-  | 'sistema'
-
-export type FeedTipo = 'post' | 'decisao' | 'alerta' | 'sistema'
-
-export type TopicoStatus = 'aberto' | 'resolvido' | 'arquivado'
-
-export type TopicoPrioridade = 'baixa' | 'normal' | 'alta' | 'urgente'
-
-export type EmailStatus =
-  | 'nao_processado'
-  | 'processando'
-  | 'aguardando_revisao'
-  | 'processado'
-  | 'erro'
-  | 'ignorado'
-
-export type AcaoTipo = 'decisao' | 'tarefa' | 'gasto' | 'problema' | 'mudanca_escopo'
-
-export type AcaoStatus = 'pendente' | 'em_andamento' | 'concluido' | 'cancelado'
-
-export type UserRole = 'admin' | 'editor' | 'viewer'

@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { TarefasList } from "./tarefas-list";
+// import { TarefasList } from "./tarefas-list"; // TODO: Atualizar para 3 níveis (subetapas)
 import { formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Tarefa {
@@ -435,16 +435,10 @@ export function TimelineEtapas({ etapas, dependencias, users, onRefresh }: Timel
                 </div>
               </div>
 
-              {/* Tarefas List (Collapsible) */}
+              {/* TODO: Atualizar para mostrar subetapas ao invés de tarefas */}
               <CollapsibleContent>
-                <div className="border-t">
-                  <TarefasList
-                    tarefas={etapa.tarefas}
-                    etapaId={etapa.id}
-                    etapaNome={etapa.nome}
-                    users={users}
-                    onRefresh={onRefresh}
-                  />
+                <div className="border-t p-4 text-sm text-muted-foreground">
+                  Visualização de subetapas/tarefas em desenvolvimento
                 </div>
               </CollapsibleContent>
             </div>

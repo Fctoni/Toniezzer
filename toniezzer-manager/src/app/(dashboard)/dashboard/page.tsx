@@ -13,6 +13,32 @@ import {
 import Link from "next/link";
 import { parseDateString } from "@/lib/utils";
 import { redirect } from "next/navigation";
+import { MinhasTarefasWidget } from "@/components/features/dashboard/minhas-tarefas-widget";
+
+interface TarefaUsuario {
+  id: string;
+  nome: string;
+  status: string;
+  prioridade: string;
+  data_prevista: string | null;
+  subetapa: {
+    nome: string;
+    etapa: {
+      nome: string;
+    };
+  };
+}
+
+interface SubetapaUsuario {
+  id: string;
+  nome: string;
+  progresso_percentual: number;
+  tarefas_total: number;
+  tarefas_concluidas: number;
+  etapa: {
+    nome: string;
+  };
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -31,6 +57,8 @@ export default async function DashboardPage() {
     gastosRes,
     etapasRes,
     notificacoesRes,
+    tarefasUsuarioRes,
+    subetapasUsuarioRes,
   ] = await Promise.all([
     supabase.from("categorias").select("*").eq("ativo", true),
     supabase.from("gastos").select("*").eq("status", "aprovado"),
@@ -41,6 +69,30 @@ export default async function DashboardPage() {
       .eq("lida", false)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("tarefas")
+      .select(`
+        id,
+        nome,
+        status,
+        prioridade,
+        data_prevista,
+        subetapa:subetapas(
+          nome,
+          etapa:etapas(nome)
+        )
+      `)
+      .eq("responsavel_id", user.id)
+      .order("data_prevista", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("subetapas")
+      .select(`
+        id,
+        nome,
+        progresso_percentual,
+        etapa:etapas(nome)
+      `)
+      .eq("responsavel_id", user.id),
   ]);
 
   // Verificar erros nas queries (pode indicar problema de permissao/sessao)
@@ -56,6 +108,33 @@ export default async function DashboardPage() {
   const gastos = gastosRes.data;
   const etapas = etapasRes.data;
   const notificacoes = notificacoesRes.data;
+  const tarefasUsuario = (tarefasUsuarioRes.data || []) as TarefaUsuario[];
+  const subetapasUsuarioRaw = subetapasUsuarioRes.data || [];
+
+  // Adicionar contagem de tarefas para cada subetapa
+  const subetapasUsuario: SubetapaUsuario[] = await Promise.all(
+    subetapasUsuarioRaw.map(async (subetapa) => {
+      const { count: totalCount } = await supabase
+        .from("tarefas")
+        .select("*", { count: "exact", head: true })
+        .eq("subetapa_id", subetapa.id);
+
+      const { count: concluidasCount } = await supabase
+        .from("tarefas")
+        .select("*", { count: "exact", head: true })
+        .eq("subetapa_id", subetapa.id)
+        .eq("status", "concluida");
+
+      return {
+        id: subetapa.id,
+        nome: subetapa.nome,
+        progresso_percentual: subetapa.progresso_percentual || 0,
+        etapa: subetapa.etapa,
+        tarefas_total: totalCount || 0,
+        tarefas_concluidas: concluidasCount || 0,
+      };
+    })
+  );
 
   // Cálculos financeiros - AGORA POR ETAPA
   const orcamentoTotal =
@@ -333,6 +412,14 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Widget Minhas Tarefas */}
+      {(tarefasUsuario.length > 0 || subetapasUsuario.length > 0) && (
+        <MinhasTarefasWidget
+          tarefas={tarefasUsuario}
+          subetapas={subetapasUsuario}
+        />
+      )}
     </div>
   );
 }
