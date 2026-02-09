@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { atualizarTarefa, deletarTarefa } from "@/lib/services/tarefas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,7 +122,7 @@ export function EditarTarefaDialog({
     try {
       const supabase = createClient();
 
-      const updatedData: Record<string, unknown> = {
+      const updatedData = {
         nome: data.nome,
         descricao: data.descricao || null,
         responsavel_id: data.responsavel_id || null,
@@ -132,20 +133,8 @@ export function EditarTarefaDialog({
         status: data.status,
       };
 
-      // Auto-fill real dates based on status change
-      if (data.status === "em_andamento" && tarefa.status !== "em_andamento") {
-        updatedData.data_inicio_real = new Date().toISOString();
-      }
-      if (data.status === "concluida" && tarefa.status !== "concluida") {
-        updatedData.data_conclusao_real = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from("tarefas")
-        .update(updatedData)
-        .eq("id", tarefa.id);
-
-      if (error) throw error;
+      // Lógica de datas automáticas agora está no service
+      await atualizarTarefa(supabase, tarefa.id, updatedData);
 
       toast.success("Tarefa atualizada!");
 
@@ -169,12 +158,7 @@ export function EditarTarefaDialog({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase
-        .from("tarefas")
-        .delete()
-        .eq("id", tarefa.id);
-
-      if (error) throw error;
+      await deletarTarefa(supabase, tarefa.id);
 
       toast.success("Tarefa excluída!");
       setShowDeleteAlert(false);

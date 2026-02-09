@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { buscarEtapas, atualizarEtapa, reordenarEtapas, calcularProgressoEtapa, calcularDatasEtapa } from "@/lib/services/etapas";
+import { buscarSubetapas, atualizarSubetapa, reordenarSubetapas, calcularProgressoSubetapa } from "@/lib/services/subetapas";
+import { buscarTarefas, atualizarTarefa, reordenarTarefas } from "@/lib/services/tarefas";
 import {
   DndContext,
   closestCenter,
@@ -171,39 +174,8 @@ function getStatusConfig(status: string, options: typeof statusOptions = statusO
   return options.find((s) => s.value === status) || options[0];
 }
 
-function calcularProgressoEtapa(etapa: Etapa) {
-  if (etapa.subetapas.length === 0) return etapa.progresso_percentual;
-  const concluidas = etapa.subetapas.filter((s) => s.status === "concluida").length;
-  return Math.round((concluidas / etapa.subetapas.length) * 100);
-}
-
-function calcularProgressoSubetapa(subetapa: Subetapa) {
-  if (subetapa.tarefas.length === 0) return subetapa.progresso_percentual || 0;
-  const concluidas = subetapa.tarefas.filter((t) => t.status === "concluida").length;
-  return Math.round((concluidas / subetapa.tarefas.length) * 100);
-}
-
-function calcularDatasEtapa(subetapas: Subetapa[]): { inicio: string | null; fim: string | null } {
-  if (subetapas.length === 0) return { inicio: null, fim: null };
-
-  const datasInicio = subetapas
-    .map((s) => s.data_inicio_prevista)
-    .filter((d): d is string => d !== null);
-  const datasFim = subetapas
-    .map((s) => s.data_fim_prevista)
-    .filter((d): d is string => d !== null);
-
-  if (datasInicio.length === 0 && datasFim.length === 0) return { inicio: null, fim: null };
-
-  const inicio = datasInicio.length > 0
-    ? datasInicio.reduce((min, date) => (date < min ? date : min))
-    : null;
-  const fim = datasFim.length > 0
-    ? datasFim.reduce((max, date) => (date > max ? date : max))
-    : null;
-
-  return { inicio, fim };
-}
+// calcularProgressoEtapa, calcularProgressoSubetapa e calcularDatasEtapa
+// agora são importados de @/lib/services/etapas e @/lib/services/subetapas
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -1015,30 +987,27 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
   const refreshData = async () => {
     const supabase = createClient();
 
-    const [{ data: etapasData }, { data: subetapasData }, { data: tarefasData }] =
-      await Promise.all([
-        supabase.from("etapas").select("*").order("ordem"),
-        supabase.from("subetapas").select("*").order("ordem"),
-        supabase.from("tarefas").select("*").order("ordem"),
-      ]);
+    const [etapasData, subetapasData, tarefasData] = await Promise.all([
+      buscarEtapas(supabase),
+      buscarSubetapas(supabase),
+      buscarTarefas(supabase),
+    ]);
 
-    if (etapasData && subetapasData && tarefasData) {
-      const subetapasComTarefas: Subetapa[] = (subetapasData as unknown as Subetapa[]).map((s) => ({
-        ...s,
-        tarefas: (tarefasData as Tarefa[]).filter((t) => t.subetapa_id === s.id),
-      }));
+    const subetapasComTarefas: Subetapa[] = (subetapasData as unknown as Subetapa[]).map((s) => ({
+      ...s,
+      tarefas: (tarefasData as Tarefa[]).filter((t) => t.subetapa_id === s.id),
+    }));
 
-      const newEtapas: Etapa[] = etapasData.map((e) => ({
-        ...e,
-        progresso_percentual: e.progresso_percentual ?? 0,
-        responsavel: e.responsavel_id
-          ? users.find((u) => u.id === e.responsavel_id) || null
-          : null,
-        subetapas: subetapasComTarefas.filter((s) => s.etapa_id === e.id),
-      })) as Etapa[];
+    const newEtapas: Etapa[] = etapasData.map((e) => ({
+      ...e,
+      progresso_percentual: e.progresso_percentual ?? 0,
+      responsavel: e.responsavel_id
+        ? users.find((u) => u.id === e.responsavel_id) || null
+        : null,
+      subetapas: subetapasComTarefas.filter((s) => s.etapa_id === e.id),
+    })) as Etapa[];
 
-      setEtapas(newEtapas);
-    }
+    setEtapas(newEtapas);
   };
 
   const toggleExpanded = (etapaId: string) => {
@@ -1080,12 +1049,10 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      for (let i = 0; i < newEtapas.length; i++) {
-        await supabase
-          .from("etapas")
-          .update({ ordem: i + 1 })
-          .eq("id", newEtapas[i].id);
-      }
+      await reordenarEtapas(
+        supabase,
+        newEtapas.map((e, i) => ({ id: e.id, ordem: i + 1 }))
+      );
       toast.success("Ordem atualizada!");
     } catch {
       toast.error("Erro ao reordenar");
@@ -1100,12 +1067,10 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      for (let i = 0; i < newSubetapas.length; i++) {
-        await supabase
-          .from("subetapas")
-          .update({ ordem: i + 1 })
-          .eq("id", newSubetapas[i].id);
-      }
+      await reordenarSubetapas(
+        supabase,
+        newSubetapas.map((s, i) => ({ id: s.id, ordem: i + 1 }))
+      );
       toast.success("Ordem atualizada!");
     } catch {
       toast.error("Erro ao reordenar subetapas");
@@ -1125,12 +1090,10 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      for (let i = 0; i < newTarefas.length; i++) {
-        await supabase
-          .from("tarefas")
-          .update({ ordem: i + 1 })
-          .eq("id", newTarefas[i].id);
-      }
+      await reordenarTarefas(
+        supabase,
+        newTarefas.map((t, i) => ({ id: t.id, ordem: i + 1 }))
+      );
       toast.success("Ordem atualizada!");
     } catch {
       toast.error("Erro ao reordenar tarefas");
@@ -1164,16 +1127,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      const updates: Record<string, unknown> = { [field]: value };
-      if (field === "status") {
-        if (value === "em_andamento") updates.data_inicio_real = formatDateToString(new Date());
-        else if (value === "concluida") {
-          updates.data_fim_real = formatDateToString(new Date());
-          updates.progresso_percentual = 100;
-        }
-      }
-      const { error } = await supabase.from("etapas").update(updates).eq("id", etapaId);
-      if (error) throw error;
+      await atualizarEtapa(supabase, etapaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");
@@ -1206,15 +1160,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      const updates: Record<string, unknown> = { [field]: value };
-      if (field === "status") {
-        if (value === "em_andamento")
-          updates.data_inicio_real = new Date().toISOString().split("T")[0];
-        else if (value === "concluida")
-          updates.data_fim_real = new Date().toISOString().split("T")[0];
-      }
-      const { error } = await supabase.from("subetapas").update(updates).eq("id", subetapaId);
-      if (error) throw error;
+      await atualizarSubetapa(supabase, subetapaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");
@@ -1250,13 +1196,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      const updates: Record<string, unknown> = { [field]: value };
-      if (field === "status") {
-        if (value === "em_andamento") updates.data_inicio_real = new Date().toISOString();
-        else if (value === "concluida") updates.data_conclusao_real = new Date().toISOString();
-      }
-      const { error } = await supabase.from("tarefas").update(updates).eq("id", tarefaId);
-      if (error) throw error;
+      await atualizarTarefa(supabase, tarefaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");

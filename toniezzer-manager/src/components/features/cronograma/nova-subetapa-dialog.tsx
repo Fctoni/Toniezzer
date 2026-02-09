@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { criarSubetapa } from "@/lib/services/subetapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,7 +90,7 @@ export function NovaSubetapaDialog({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("subetapas").insert({
+      await criarSubetapa(supabase, {
         etapa_id: etapaId,
         nome: data.nome,
         descricao: data.descricao || null,
@@ -101,10 +102,7 @@ export function NovaSubetapaDialog({
           : null,
         responsavel_id: data.responsavel_id || null,
         ordem: proximaOrdem,
-        status: "nao_iniciada",
       });
-
-      if (error) throw error;
 
       toast.success("Subetapa criada com sucesso!");
       setOpen(false);

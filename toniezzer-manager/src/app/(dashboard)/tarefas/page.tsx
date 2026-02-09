@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { TarefasTable } from "@/components/features/tarefas/tarefas-table";
 import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
+import { buscarTarefas } from "@/lib/services/tarefas";
+import { buscarSubetapasResumidas } from "@/lib/services/subetapas";
 
 interface User {
   id: string;
@@ -38,21 +40,19 @@ export default async function TarefasPage() {
   const supabase = await createClient();
 
   const [
-    { data: tarefasData },
-    { data: subetapasData },
+    tarefasRaw,
+    subetapasRaw,
     { data: etapasData },
     { data: usersData },
   ] = await Promise.all([
-    supabase.from("tarefas").select("*").order("ordem"),
-    supabase.from("subetapas").select("id, etapa_id, nome").order("ordem"),
+    buscarTarefas(supabase),
+    buscarSubetapasResumidas(supabase),
     supabase.from("etapas").select("id, nome").order("ordem"),
     supabase.from("users").select("id, nome_completo").eq("ativo", true),
   ]);
 
   const users = (usersData || []) as User[];
   const etapas = (etapasData || []) as EtapaDB[];
-  const subetapasRaw = (subetapasData || []) as SubetapaDB[];
-  const tarefasRaw = (tarefasData || []) as TarefaDB[];
 
   // Montar mapa etapa_id -> nome
   const etapaMap = new Map(etapas.map((e) => [e.id, e.nome]));

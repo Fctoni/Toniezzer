@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { buscarEtapas } from "@/lib/services/etapas";
+import { buscarSubetapasDoResponsavel, buscarSubetapasPorIds } from "@/lib/services/subetapas";
+import { buscarTarefasDoResponsavel, buscarTarefasPorSubetapas } from "@/lib/services/tarefas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -41,14 +44,14 @@ export default async function DashboardPage() {
   const [
     categoriasRes,
     gastosRes,
-    etapasRes,
+    etapas,
     notificacoesRes,
-    tarefasRes,
-    subetapasRes,
+    minhasTarefasRaw,
+    minhasSubetapasRaw,
   ] = await Promise.all([
     supabase.from("categorias").select("*").eq("ativo", true),
     supabase.from("gastos").select("*").eq("status", "aprovado"),
-    supabase.from("etapas").select("*").order("ordem"),
+    buscarEtapas(supabase),
     supabase
       .from("notificacoes")
       .select("*")
@@ -56,33 +59,23 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(5),
     currentUserId
-      ? supabase
-          .from("tarefas")
-          .select("id, nome, status, data_prevista, prioridade, subetapa_id")
-          .eq("responsavel_id", currentUserId)
-          .neq("status", "cancelada")
-      : Promise.resolve({ data: [] }),
+      ? buscarTarefasDoResponsavel(supabase, currentUserId)
+      : Promise.resolve([]),
     currentUserId
-      ? supabase
-          .from("subetapas")
-          .select("id, nome")
-          .eq("responsavel_id", currentUserId)
-          .neq("status", "cancelada")
-      : Promise.resolve({ data: [] }),
+      ? buscarSubetapasDoResponsavel(supabase, currentUserId)
+      : Promise.resolve([]),
   ]);
 
   // Verificar erros nas queries (pode indicar problema de permissao/sessao)
-  if (categoriasRes.error || gastosRes.error || etapasRes.error) {
+  if (categoriasRes.error || gastosRes.error) {
     console.error("[Dashboard] Erro nas queries:", {
       categorias: categoriasRes.error?.message,
       gastos: gastosRes.error?.message,
-      etapas: etapasRes.error?.message,
     });
   }
 
   const categorias = categoriasRes.data;
   const gastos = gastosRes.data;
-  const etapas = etapasRes.data;
   const notificacoes = notificacoesRes.data;
 
   // Cálculos financeiros - AGORA POR ETAPA
@@ -121,24 +114,14 @@ export default async function DashboardPage() {
     .slice(0, 5);
 
   // Processar tarefas do usuário para o widget
-  const minhasTarefas = (tarefasRes.data || []) as {
-    id: string;
-    nome: string;
-    status: string;
-    data_prevista: string | null;
-    prioridade: string | null;
-    subetapa_id: string;
-  }[];
+  const minhasTarefas = minhasTarefasRaw;
 
   // Buscar nomes de subetapas para contexto
   const subetapaIds = [...new Set(minhasTarefas.map((t) => t.subetapa_id))];
   let subetapaNomeMap = new Map<string, string>();
   if (subetapaIds.length > 0) {
-    const { data: subNomes } = await supabase
-      .from("subetapas")
-      .select("id, nome")
-      .in("id", subetapaIds);
-    subetapaNomeMap = new Map((subNomes || []).map((s) => [s.id, s.nome]));
+    const subNomes = await buscarSubetapasPorIds(supabase, subetapaIds);
+    subetapaNomeMap = new Map(subNomes.map((s) => [s.id, s.nome]));
   }
 
   const hoje = new Date().toISOString().split("T")[0];
@@ -169,11 +152,6 @@ export default async function DashboardPage() {
   );
 
   // Minhas subetapas com progresso
-  const minhasSubetapasRaw = (subetapasRes.data || []) as {
-    id: string;
-    nome: string;
-  }[];
-
   let minhasSubetapasComProgresso: {
     id: string;
     nome: string;
@@ -183,13 +161,10 @@ export default async function DashboardPage() {
 
   if (minhasSubetapasRaw.length > 0) {
     const subIds = minhasSubetapasRaw.map((s) => s.id);
-    const { data: tarefasSub } = await supabase
-      .from("tarefas")
-      .select("id, subetapa_id, status")
-      .in("subetapa_id", subIds);
+    const tarefasSub = await buscarTarefasPorSubetapas(supabase, subIds);
 
     minhasSubetapasComProgresso = minhasSubetapasRaw.map((s) => {
-      const tarefas = (tarefasSub || []).filter(
+      const tarefas = tarefasSub.filter(
         (t) => t.subetapa_id === s.id
       );
       return {

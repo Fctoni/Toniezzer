@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { atualizarEtapa, deletarEtapa } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,16 +104,10 @@ export function EditarEtapaDialog({
       const updatedData = {
         nome: data.nome,
         descricao: data.descricao || null,
-        // Datas são calculadas automaticamente baseadas nas tarefas
         responsavel_id: data.responsavel_id || null,
       };
 
-      const { error } = await supabase
-        .from("etapas")
-        .update(updatedData)
-        .eq("id", etapa.id);
-
-      if (error) throw error;
+      await atualizarEtapa(supabase, etapa.id, updatedData);
 
       toast.success("Etapa atualizada!");
       
@@ -135,13 +130,8 @@ export function EditarEtapaDialog({
     try {
       const supabase = createClient();
 
-      // Primeiro exclui as tarefas relacionadas
-      await supabase.from("tarefas").delete().eq("etapa_id", etapa.id);
-      
-      // Depois exclui a etapa
-      const { error } = await supabase.from("etapas").delete().eq("id", etapa.id);
-
-      if (error) throw error;
+      // O banco faz cascade: etapa → subetapas → tarefas → anexos/comentários/dependências
+      await deletarEtapa(supabase, etapa.id);
 
       toast.success("Etapa excluída!");
       setShowDeleteAlert(false);

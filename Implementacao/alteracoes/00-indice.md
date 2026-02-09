@@ -31,8 +31,8 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 
 | # | Arquivo | Descrição | Status | PRD |
 |---|---------|-----------|--------|-----|
-| 03 | [alteracao03.md](./alteracao/alteracao03.md) | Centralizar CRUD em funções utilitárias (services) | 🟡 Em discussão | ⏳ pendente |
-| 04 | [alteracao04.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
+| 03 | [spec-alteracao03.md](./spec-alteracao03.md) | Centralizar CRUD em services (Fase 1: Cronograma) | 🔵 Pronto para executar | ⏳ pendente |
+| 10 | [alteracao10.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
 
 ## PRD / Commit Pendente
 

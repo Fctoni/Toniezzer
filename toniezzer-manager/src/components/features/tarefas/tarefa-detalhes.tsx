@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { atualizarTarefa, deletarTarefa } from "@/lib/services/tarefas";
+import { uploadAnexo, downloadAnexo as downloadAnexoService, deletarAnexo } from "@/lib/services/tarefas-anexos";
+import { criarComentario } from "@/lib/services/tarefas-comentarios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,12 +155,7 @@ export function TarefaDetalhes({
     setSaving(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("tarefas")
-        .update({ [field]: value })
-        .eq("id", tarefa.id);
-
-      if (error) throw error;
+      await atualizarTarefa(supabase, tarefa.id, { [field]: value });
 
       setTarefa((prev) => ({ ...prev, [field]: value }));
       toast.success("Salvo!");
@@ -182,30 +180,12 @@ export function TarefaDetalhes({
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !currentUserId) return;
 
     setUploading(true);
     try {
       const supabase = createClient();
-      const fileName = `${tarefa.id}/${Date.now()}-${file.name}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("tarefas-anexos")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { error: dbError } = await supabase.from("tarefas_anexos").insert({
-        tarefa_id: tarefa.id,
-        nome_arquivo: fileName,
-        nome_original: file.name,
-        tipo_arquivo: file.type,
-        tamanho_bytes: file.size,
-        storage_path: fileName,
-        created_by: currentUserId,
-      });
-
-      if (dbError) throw dbError;
+      await uploadAnexo(supabase, tarefa.id, file, currentUserId);
 
       toast.success("Arquivo enviado!");
       router.refresh();
@@ -216,14 +196,10 @@ export function TarefaDetalhes({
     }
   };
 
-  const downloadAnexo = async (anexo: Anexo) => {
+  const handleDownloadAnexo = async (anexo: Anexo) => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.storage
-        .from("tarefas-anexos")
-        .download(anexo.storage_path);
-
-      if (error) throw error;
+      const data = await downloadAnexoService(supabase, anexo.storage_path);
 
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
@@ -239,14 +215,7 @@ export function TarefaDetalhes({
   const deleteAnexo = async (anexoId: string, storagePath: string) => {
     try {
       const supabase = createClient();
-
-      await supabase.storage.from("tarefas-anexos").remove([storagePath]);
-      const { error } = await supabase
-        .from("tarefas_anexos")
-        .delete()
-        .eq("id", anexoId);
-
-      if (error) throw error;
+      await deletarAnexo(supabase, anexoId, storagePath);
 
       setAnexos((prev) => prev.filter((a) => a.id !== anexoId));
       toast.success("Anexo removido!");
@@ -256,18 +225,12 @@ export function TarefaDetalhes({
   };
 
   const submitComentario = async () => {
-    if (!novoComentario.trim()) return;
+    if (!novoComentario.trim() || !currentUserId) return;
 
     setSubmittingComment(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.from("tarefas_comentarios").insert({
-        tarefa_id: tarefa.id,
-        conteudo: novoComentario.trim(),
-        created_by: currentUserId,
-      });
-
-      if (error) throw error;
+      await criarComentario(supabase, tarefa.id, novoComentario.trim(), currentUserId);
 
       setNovoComentario("");
       toast.success("Comentário adicionado!");
@@ -283,12 +246,7 @@ export function TarefaDetalhes({
     setDeleting(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("tarefas")
-        .delete()
-        .eq("id", tarefa.id);
-
-      if (error) throw error;
+      await deletarTarefa(supabase, tarefa.id);
 
       toast.success("Tarefa excluída!");
       router.push("/tarefas");
@@ -606,7 +564,7 @@ export function TarefaDetalhes({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => downloadAnexo(anexo)}
+                    onClick={() => handleDownloadAnexo(anexo)}
                   >
                     <Download className="h-4 w-4" />
                   </Button>

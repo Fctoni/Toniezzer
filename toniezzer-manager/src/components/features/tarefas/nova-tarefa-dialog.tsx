@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { criarTarefa } from "@/lib/services/tarefas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -105,7 +106,7 @@ export function NovaTarefaDialog({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("tarefas").insert({
+      await criarTarefa(supabase, {
         subetapa_id: data.subetapa_id,
         nome: data.nome,
         descricao: data.descricao || null,
@@ -114,12 +115,9 @@ export function NovaTarefaDialog({
         data_prevista: data.data_prevista
           ? formatDateToString(data.data_prevista)
           : null,
-        status: "pendente",
         ordem: proximaOrdem,
         tags: [],
       });
-
-      if (error) throw error;
 
       toast.success("Tarefa criada!");
       form.reset();

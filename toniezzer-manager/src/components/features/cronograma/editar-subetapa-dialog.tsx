@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { atualizarSubetapa, deletarSubetapa } from "@/lib/services/subetapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,12 +126,7 @@ export function EditarSubetapaDialog({
         responsavel_id: data.responsavel_id || null,
       };
 
-      const { error } = await supabase
-        .from("subetapas")
-        .update(updatedData)
-        .eq("id", subetapa.id);
-
-      if (error) throw error;
+      await atualizarSubetapa(supabase, subetapa.id, updatedData);
 
       toast.success("Subetapa atualizada!");
 
@@ -152,9 +148,7 @@ export function EditarSubetapaDialog({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("subetapas").delete().eq("id", subetapa.id);
-
-      if (error) throw error;
+      await deletarSubetapa(supabase, subetapa.id);
 
       toast.success("Subetapa excluída!");
       setShowDeleteAlert(false);

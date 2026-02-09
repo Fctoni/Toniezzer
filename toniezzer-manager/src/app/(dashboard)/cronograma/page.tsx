@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { CronogramaWrapper } from "@/components/features/cronograma/cronograma-wrapper";
 import { NovaEtapaDialog } from "@/components/features/cronograma/nova-etapa-dialog";
 import { Badge } from "@/components/ui/badge";
+import { buscarEtapas } from "@/lib/services/etapas";
+import { buscarSubetapas } from "@/lib/services/subetapas";
+import { buscarTarefas } from "@/lib/services/tarefas";
 
 interface User {
   id: string;
@@ -70,16 +73,16 @@ export default async function CronogramaPage() {
   const supabase = await createClient();
 
   const [
-    { data: etapasData },
+    etapasRaw,
     { data: usersData },
-    { data: subetapasData },
-    { data: tarefasData },
+    subetapasRaw,
+    tarefasRaw,
     { data: gastosData },
   ] = await Promise.all([
-    supabase.from("etapas").select("*").order("ordem"),
+    buscarEtapas(supabase),
     supabase.from("users").select("*").eq("ativo", true),
-    supabase.from("subetapas").select("*").order("ordem"),
-    supabase.from("tarefas").select("*").order("ordem"),
+    buscarSubetapas(supabase),
+    buscarTarefas(supabase),
     supabase
       .from("gastos")
       .select("etapa_relacionada_id, valor")
@@ -87,10 +90,7 @@ export default async function CronogramaPage() {
   ]);
 
   const users = (usersData || []) as User[];
-  const subetapasRaw = (subetapasData || []) as SubetapaDB[];
-  const tarefasRaw = (tarefasData || []) as TarefaDB[];
   const gastos = gastosData || [];
-  const etapasRaw = etapasData || [];
 
   // Aninhar tarefas dentro de subetapas
   const subetapasComTarefas: Subetapa[] = subetapasRaw.map((s) => ({

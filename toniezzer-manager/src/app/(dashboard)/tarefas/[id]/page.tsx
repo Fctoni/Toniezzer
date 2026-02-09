@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { TarefaDetalhes } from "@/components/features/tarefas/tarefa-detalhes";
 import { notFound } from "next/navigation";
+import { buscarTarefaPorId, buscarTarefasPorIds } from "@/lib/services/tarefas";
+import { buscarSubetapaPorId } from "@/lib/services/subetapas";
+import { buscarEtapaNome } from "@/lib/services/etapas";
+import { buscarAnexosDaTarefa } from "@/lib/services/tarefas-anexos";
+import { buscarComentariosDaTarefa } from "@/lib/services/tarefas-comentarios";
+import { buscarDependenciasDaTarefa } from "@/lib/services/tarefas-dependencias";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -11,57 +17,39 @@ export default async function TarefaPage({ params }: PageProps) {
   const supabase = await createClient();
 
   // Buscar tarefa
-  const { data: tarefa, error: tarefaError } = await supabase
-    .from("tarefas")
-    .select("*")
-    .eq("id", id)
-    .single();
+  let tarefa;
+  try {
+    tarefa = await buscarTarefaPorId(supabase, id);
+  } catch {
+    notFound();
+  }
 
-  if (tarefaError || !tarefa) {
+  if (!tarefa) {
     notFound();
   }
 
   // Buscar subetapa + etapa
-  const { data: subetapa } = await supabase
-    .from("subetapas")
-    .select("id, nome, etapa_id")
-    .eq("id", tarefa.subetapa_id)
-    .single();
+  const subetapa = await buscarSubetapaPorId(supabase, tarefa.subetapa_id);
 
   let etapaNome = "—";
   if (subetapa?.etapa_id) {
-    const { data: etapa } = await supabase
-      .from("etapas")
-      .select("nome")
-      .eq("id", subetapa.etapa_id)
-      .single();
+    const etapa = await buscarEtapaNome(supabase, subetapa.etapa_id);
     etapaNome = etapa?.nome || "—";
   }
 
   // Buscar dados em paralelo
   const [
-    { data: depsData },
-    { data: anexosData },
-    { data: comentariosData },
+    depsData,
+    anexosData,
+    comentariosData,
     { data: usersData },
     {
       data: { user: authUser },
     },
   ] = await Promise.all([
-    supabase
-      .from("tarefas_dependencias")
-      .select("id, depende_de_tarefa_id")
-      .eq("tarefa_id", id),
-    supabase
-      .from("tarefas_anexos")
-      .select("id, nome_original, tipo_arquivo, tamanho_bytes, storage_path, created_at, created_by")
-      .eq("tarefa_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("tarefas_comentarios")
-      .select("id, conteudo, created_at, created_by")
-      .eq("tarefa_id", id)
-      .order("created_at", { ascending: true }),
+    buscarDependenciasDaTarefa(supabase, id),
+    buscarAnexosDaTarefa(supabase, id),
+    buscarComentariosDaTarefa(supabase, id),
     supabase.from("users").select("id, nome_completo").eq("ativo", true),
     supabase.auth.getUser(),
   ]);
@@ -70,15 +58,11 @@ export default async function TarefaPage({ params }: PageProps) {
   const userMap = new Map(users.map((u) => [u.id, u.nome_completo]));
 
   // Enriquecer dependências com nome da tarefa
-  const deps = depsData || [];
+  const deps = depsData;
   const depTarefaIds = deps.map((d) => d.depende_de_tarefa_id);
   let depTarefas: { id: string; nome: string; status: string }[] = [];
   if (depTarefaIds.length > 0) {
-    const { data } = await supabase
-      .from("tarefas")
-      .select("id, nome, status")
-      .in("id", depTarefaIds);
-    depTarefas = data || [];
+    depTarefas = await buscarTarefasPorIds(supabase, depTarefaIds);
   }
 
   const dependencias = deps.map((d) => {

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { criarEtapa } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,22 +85,12 @@ export function NovaEtapaDialog({
     try {
       const supabase = createClient();
 
-      // Criar etapa (datas serão calculadas automaticamente baseadas nas tarefas)
-      const { data: etapa, error } = await supabase
-        .from("etapas")
-        .insert({
-          nome: data.nome,
-          descricao: data.descricao || null,
-          data_inicio_prevista: null, // Calculado automaticamente pelas tarefas
-          data_fim_prevista: null, // Calculado automaticamente pelas tarefas
-          responsavel_id: data.responsavel_id || null,
-          ordem: proximaOrdem,
-          status: "nao_iniciada",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const etapa = await criarEtapa(supabase, {
+        nome: data.nome,
+        descricao: data.descricao || null,
+        responsavel_id: data.responsavel_id || null,
+        ordem: proximaOrdem,
+      });
 
       // Criar dependência se especificada
       if (data.depende_de && etapa) {
