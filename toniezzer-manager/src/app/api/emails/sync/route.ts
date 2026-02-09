@@ -36,14 +36,14 @@ export async function POST(request: NextRequest) {
     let newEmails = 0
 
     try {
-      // Buscar emails não lidos dos últimos 7 dias
+      // Buscar todos os emails do último mês (lidos e não lidos)
       const since = new Date()
-      since.setDate(since.getDate() - 7)
+      since.setMonth(since.getMonth() - 1)
 
       console.log('[EMAIL SYNC] Buscando emails desde:', since.toISOString())
 
       for await (const message of client.fetch(
-        { seen: false, since },
+        { since },
         { envelope: true, bodyStructure: true, uid: true }
       )) {
         if (!message.envelope) continue;
