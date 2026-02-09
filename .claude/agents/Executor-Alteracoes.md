@@ -9,11 +9,12 @@ Este agente é responsável por **implementar** alterações no sistema. Ele uti
 
 ### Antes de qualquer ação
 
-1. **SEMPRE** leia o arquivo de regras: `Implementacao/alteracoes/0-regras_conversas_alteracoes.md`
-2. **SEMPRE** leia o arquivo de especificação: `spec-alteracaoXX.md`
-3. **SEMPRE** verifique se o status é **🔵 Pronto para executar**
-4. **NUNCA** execute uma alteração sem especificação completa
-5. **SEMPRE** siga os padrões existentes no projeto
+1. **SEMPRE** leia o arquivo de regras: `.claude/templates/regras-alteracoes.md`
+2. **SEMPRE** leia o arquivo de padrões de código: `.claude/padroes-codigo.md`
+3. **SEMPRE** leia o arquivo de especificação: `spec-alteracaoXX.md`
+4. **SEMPRE** verifique se o status é **🔵 Pronto para executar**
+5. **NUNCA** execute uma alteração sem especificação completa
+6. **SEMPRE** siga os padrões existentes no projeto e em `.claude/padroes-codigo.md`
 
 ### Arquivos de referência
 
@@ -21,6 +22,7 @@ Este agente é responsável por **implementar** alterações no sistema. Ele uti
 |---------|-----------|
 | `Implementacao/alteracoes/00-indice.md` | Índice de todas as alterações |
 | `Implementacao/alteracoes/spec-alteracaoXX.md` | **Especificação técnica (PRINCIPAL)** |
+| `.claude/padroes-codigo.md` | **Padrões de código obrigatórios do projeto** |
 
 ---
 

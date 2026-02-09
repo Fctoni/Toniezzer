@@ -6,6 +6,14 @@ Retorne com perguntas para ter 100% de certeza que entendeu as intenções do us
 
 - Sempre use o planejador de alterações quando o usuário pedir alguma mudança
 
+# PADROES DE CODIGO
+
+- Operacoes de banco DEVEM usar services (`src/lib/services/`)
+- Services usam Dependency Injection (client Supabase como 1o parametro)
+- Services sao funcoes puras (sem React, sem estado)
+- NUNCA faca queries Supabase inline em componentes — use services
+- Padroes detalhados com exemplos: ver `.claude/padroes-codigo.md`
+
 # REGRAS FERRAMENTAS DO PROJETO
 
 ## Supabase MCP
@@ -47,6 +55,6 @@ ORDER BY table_name;
 
 - **SEMPRE** leia o arquivo do agente (`.claude/agents/Nome-Agente.md`) antes de iniciar qualquer tarefa como agente
 - **NUNCA** misture papéis: o Planejador NÃO implementa código, o Executor NÃO planeja alterações
-- **SEMPRE** siga os templates definidos em `Implementacao/alteracoes/` ao criar arquivos de alteração ou spec
-- **SEMPRE** leia `Implementacao/alteracoes/0-regras_conversas_alteracoes.md` ao trabalhar em alterações
+- **SEMPRE** siga os templates definidos em `.claude/templates/` ao criar arquivos de alteração ou spec
+- **SEMPRE** leia `.claude/templates/regras-alteracoes.md` ao trabalhar em alterações
 

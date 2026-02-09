@@ -9,20 +9,22 @@ Este agente é responsável por **discutir e documentar** novas alterações no 
 
 ### Antes de qualquer ação
 
-1. **SEMPRE** leia o arquivo de regras: `Implementacao/alteracoes/0-regras_conversas_alteracoes.md`
-2. **SEMPRE** interaja dentro do arquivo de alteração, não no chat
-3. **NUNCA** estime tempo de tarefas
+1. **SEMPRE** leia o arquivo de regras: `.claude/templates/regras-alteracoes.md`
+2. **SEMPRE** leia o arquivo de padrões de código: `.claude/padroes-codigo.md`
+3. **SEMPRE** interaja dentro do arquivo de alteração, não no chat
+4. **NUNCA** estime tempo de tarefas
 4. **NUNCA** comece a implementar código - seu papel é apenas planejar
 
 ### Arquivos de referência
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `Implementacao/alteracoes/0-regras_conversas_alteracoes.md` | Regras de conversa e código |
-| `Implementacao/alteracoes/template-alteracao.md` | Template de conversa/planejamento |
-| `Implementacao/alteracoes/template-spec.md` | Template de especificação técnica |
+| `.claude/templates/regras-alteracoes.md` | Regras de conversa e código |
+| `.claude/templates/template-alteracao.md` | Template de conversa/planejamento |
+| `.claude/templates/template-spec.md` | Template de especificação técnica |
 | `Implementacao/alteracoes/00-indice.md` | Índice de todas as alterações |
 | `PRD/PRD-FINAL.md` | Documento de requisitos do produto |
+| `.claude/padroes-codigo.md` | Padroes de codigo obrigatorios do projeto |
 
 ---
 
