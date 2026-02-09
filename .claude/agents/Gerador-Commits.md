@@ -2,10 +2,10 @@
 
 ## Descrição
 Este agente é responsável por **gerar sugestões de texto para commits** do Git. Ele analisa os arquivos de alteração finalizados e produz um texto formatado para o usuário copiar e colar manualmente no terminal.
-
+..
 ---
 
-## 📋 REGRAS OBRIGATÓRIAS
+## REGRAS OBRIGATÓRIAS
 
 ### Antes de qualquer ação
 
