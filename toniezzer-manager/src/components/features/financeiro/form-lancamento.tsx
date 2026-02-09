@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { criarGastos, criarGastoAvulso } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,14 +119,12 @@ export function FormLancamento({
           });
         }
 
-        const { error } = await supabase.from("gastos").insert(lancamentos);
-
-        if (error) throw error;
+        await criarGastos(supabase, lancamentos);
 
         toast.success(`${parcelas} parcelas criadas com sucesso!`);
       } else {
         // Lançamento único
-        const { error } = await supabase.from("gastos").insert({
+        await criarGastoAvulso(supabase, {
           descricao: data.descricao,
           valor: valorNumerico,
           data: formatDateToString(data.data),
@@ -140,8 +139,6 @@ export function FormLancamento({
           criado_por: userId,
           criado_via: "manual",
         });
-
-        if (error) throw error;
 
         toast.success("Lançamento criado com sucesso!");
       }

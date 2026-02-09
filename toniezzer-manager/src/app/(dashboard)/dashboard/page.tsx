@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarEtapas } from "@/lib/services/etapas";
 import { buscarSubetapasDoResponsavel, buscarSubetapasPorIds } from "@/lib/services/subetapas";
 import { buscarTarefasDoResponsavel, buscarTarefasPorSubetapas } from "@/lib/services/tarefas";
+import { buscarCategoriasAtivas } from "@/lib/services/categorias";
+import { buscarGastosAprovados } from "@/lib/services/gastos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -42,15 +44,15 @@ export default async function DashboardPage() {
 
   // Buscar dados
   const [
-    categoriasRes,
-    gastosRes,
+    categorias,
+    gastos,
     etapas,
     notificacoesRes,
     minhasTarefasRaw,
     minhasSubetapasRaw,
   ] = await Promise.all([
-    supabase.from("categorias").select("*").eq("ativo", true),
-    supabase.from("gastos").select("*").eq("status", "aprovado"),
+    buscarCategoriasAtivas(supabase),
+    buscarGastosAprovados(supabase),
     buscarEtapas(supabase),
     supabase
       .from("notificacoes")
@@ -66,16 +68,6 @@ export default async function DashboardPage() {
       : Promise.resolve([]),
   ]);
 
-  // Verificar erros nas queries (pode indicar problema de permissao/sessao)
-  if (categoriasRes.error || gastosRes.error) {
-    console.error("[Dashboard] Erro nas queries:", {
-      categorias: categoriasRes.error?.message,
-      gastos: gastosRes.error?.message,
-    });
-  }
-
-  const categorias = categoriasRes.data;
-  const gastos = gastosRes.data;
   const notificacoes = notificacoesRes.data;
 
   // Cálculos financeiros - AGORA POR ETAPA

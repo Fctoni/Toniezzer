@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, DollarSign, Tags, Grid3x3 } from "lucide-react";
 import { MatrizTabelaWrapper } from "@/components/features/financeiro/matriz-tabela-wrapper";
 import { MatrizGrafico } from "@/components/features/financeiro/matriz-grafico";
+import { buscarCategoriasAtivas } from "@/lib/services/categorias";
+import { buscarGastosMatriz } from "@/lib/services/gastos";
+import { buscarDetalhamentoMatriz } from "@/lib/services/orcamento-detalhado";
 
 // Tipos
 interface CelulaMatriz {
@@ -36,23 +39,14 @@ export default async function MatrizGastosPage() {
   const supabase = await createClient();
 
   // Buscar dados
-  const [{ data: categorias }, { data: etapas }, { data: gastos }, { data: detalhamentos }] = await Promise.all([
-    supabase
-      .from("categorias")
-      .select("*")
-      .eq("ativo", true)
-      .order("ordem"),
+  const [categorias, { data: etapas }, gastos, detalhamentos] = await Promise.all([
+    buscarCategoriasAtivas(supabase),
     supabase
       .from("etapas")
       .select("*")
       .order("ordem"),
-    supabase
-      .from("gastos")
-      .select("categoria_id, etapa_relacionada_id, valor")
-      .eq("status", "aprovado"),
-    supabase
-      .from("orcamento_detalhado")
-      .select("etapa_id, categoria_id, valor_previsto"),
+    buscarGastosMatriz(supabase),
+    buscarDetalhamentoMatriz(supabase),
   ]);
 
   // Processar dados em estrutura de matriz

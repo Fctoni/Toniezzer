@@ -31,6 +31,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Plus, Loader2 } from 'lucide-react'
+import { criarFornecedorRapido } from '@/lib/services/fornecedores'
 
 const quickFornecedorSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -64,19 +65,13 @@ export function QuickAddFornecedor({ onFornecedorAdded }: QuickAddFornecedorProp
     try {
       const supabase = createClient()
 
-      const { data: newFornecedor, error } = await supabase
-        .from('fornecedores')
-        .insert({
-          nome: data.nome,
-          tipo: data.tipo,
-          cnpj_cpf: data.cnpj_cpf || null,
-          telefone: data.telefone || null,
-          ativo: true,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
+      const newFornecedor = await criarFornecedorRapido(supabase, {
+        nome: data.nome,
+        tipo: data.tipo,
+        cnpj_cpf: data.cnpj_cpf || null,
+        telefone: data.telefone || null,
+        ativo: true,
+      })
 
       toast.success('Fornecedor adicionado!')
       onFornecedorAdded({ id: newFornecedor.id, nome: newFornecedor.nome })

@@ -60,6 +60,26 @@ import {
 } from 'lucide-react'
 import { Tables } from '@/lib/types/database'
 import {
+  buscarCategorias as buscarCategoriasService,
+  atualizarCategoria,
+  criarCategoria,
+  deletarCategoria,
+  reordenarCategorias,
+  toggleAtivoCategoria,
+  verificarDuplicataCategoria,
+  buscarMaxOrdem,
+  verificarUsoCategoria,
+} from '@/lib/services/categorias'
+import {
+  buscarSubcategorias as buscarSubcategoriasService,
+  criarSubcategoria,
+  atualizarSubcategoria as atualizarSubcategoriaService,
+  deletarSubcategoria,
+  toggleAtivoSubcategoria,
+  verificarDuplicataSubcategoria,
+  verificarUsoSubcategoria,
+} from '@/lib/services/subcategorias'
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -388,38 +408,26 @@ export default function CategoriasPage() {
 
   const fetchCategorias = async () => {
     const supabase = createClient()
-    
-    // Buscar categorias
-    const { data: categoriasData, error: categoriasError } = await supabase
-      .from('categorias')
-      .select('*')
-      .order('ordem')
 
-    if (categoriasError) {
-      console.error('Erro ao buscar categorias:', categoriasError)
+    try {
+      const [categoriasData, subcategoriasData] = await Promise.all([
+        buscarCategoriasService(supabase),
+        buscarSubcategoriasService(supabase),
+      ])
+
+      // Associar subcategorias às categorias
+      const categoriasComSubs = categoriasData.map(cat => ({
+        ...cat,
+        subcategorias: subcategoriasData.filter(sub => sub.categoria_id === cat.id)
+      }))
+
+      setCategorias(categoriasComSubs)
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error)
       toast.error('Erro ao carregar categorias')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // Buscar subcategorias
-    const { data: subcategoriasData, error: subcategoriasError } = await supabase
-      .from('subcategorias')
-      .select('*')
-      .order('nome')
-
-    if (subcategoriasError) {
-      console.error('Erro ao buscar subcategorias:', subcategoriasError)
-    }
-
-    // Associar subcategorias às categorias
-    const categoriasComSubs = categoriasData.map(cat => ({
-      ...cat,
-      subcategorias: subcategoriasData?.filter(sub => sub.categoria_id === cat.id) || []
-    }))
-
-    setCategorias(categoriasComSubs)
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -453,13 +461,10 @@ export default function CategoriasPage() {
     // Update all orders in database
     const supabase = createClient()
     try {
-      const updates = reordered.map((cat, index) => 
-        supabase
-          .from('categorias')
-          .update({ ordem: index + 1 })
-          .eq('id', cat.id)
+      await reordenarCategorias(
+        supabase,
+        reordered.map((cat, index) => ({ id: cat.id, ordem: index + 1 }))
       )
-      await Promise.all(updates)
       toast.success('Ordem atualizada!')
     } catch (error) {
       console.error('Erro ao atualizar ordem:', error)
@@ -524,13 +529,13 @@ export default function CategoriasPage() {
 
     try {
       // Validar nome duplicado
-      const { count } = await supabase
-        .from('categorias')
-        .select('id', { count: 'exact', head: true })
-        .ilike('nome', formData.nome.trim())
-        .neq('id', editingCategoria?.id || '00000000-0000-0000-0000-000000000000')
+      const duplicata = await verificarDuplicataCategoria(
+        supabase,
+        formData.nome.trim(),
+        editingCategoria?.id
+      )
 
-      if (count && count > 0) {
+      if (duplicata) {
         toast.error('Ja existe uma categoria com este nome')
         setSubmitting(false)
         return
@@ -538,41 +543,25 @@ export default function CategoriasPage() {
 
       if (editingCategoria) {
         // Atualizar categoria existente
-        const { error } = await supabase
-          .from('categorias')
-          .update({
-            nome: formData.nome.trim(),
-            cor: formData.cor,
-            icone: formData.icone,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', editingCategoria.id)
-
-        if (error) throw error
+        await atualizarCategoria(supabase, editingCategoria.id, {
+          nome: formData.nome.trim(),
+          cor: formData.cor,
+          icone: formData.icone,
+          updated_at: new Date().toISOString(),
+        })
         toast.success('Categoria atualizada com sucesso!')
       } else {
         // Criar nova categoria
-        // Buscar a maior ordem atual
-        const { data: maxOrdemData } = await supabase
-          .from('categorias')
-          .select('ordem')
-          .order('ordem', { ascending: false })
-          .limit(1)
+        const novaOrdem = (await buscarMaxOrdem(supabase)) + 1
 
-        const novaOrdem = (maxOrdemData?.[0]?.ordem || 0) + 1
-
-        const { error } = await supabase
-          .from('categorias')
-          .insert({
-            nome: formData.nome.trim(),
-            cor: formData.cor,
-            icone: formData.icone,
-            ordem: novaOrdem,
-            ativo: true,
-            created_by: currentUser?.id,
-          })
-
-        if (error) throw error
+        await criarCategoria(supabase, {
+          nome: formData.nome.trim(),
+          cor: formData.cor,
+          icone: formData.icone,
+          ordem: novaOrdem,
+          ativo: true,
+          created_by: currentUser?.id,
+        })
         toast.success('Categoria criada com sucesso!')
       }
 
@@ -603,14 +592,14 @@ export default function CategoriasPage() {
 
     try {
       // Validar nome duplicado dentro da mesma categoria
-      const { count } = await supabase
-        .from('subcategorias')
-        .select('id', { count: 'exact', head: true })
-        .eq('categoria_id', parentCategoriaId)
-        .ilike('nome', subcategoriaFormData.nome.trim())
-        .neq('id', editingSubcategoria?.id || '00000000-0000-0000-0000-000000000000')
+      const duplicata = await verificarDuplicataSubcategoria(
+        supabase,
+        parentCategoriaId,
+        subcategoriaFormData.nome.trim(),
+        editingSubcategoria?.id
+      )
 
-      if (count && count > 0) {
+      if (duplicata) {
         toast.error('Ja existe uma subcategoria com este nome nesta categoria')
         setSubmitting(false)
         return
@@ -618,27 +607,18 @@ export default function CategoriasPage() {
 
       if (editingSubcategoria) {
         // Atualizar subcategoria existente
-        const { error } = await supabase
-          .from('subcategorias')
-          .update({
-            nome: subcategoriaFormData.nome.trim(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', editingSubcategoria.id)
-
-        if (error) throw error
+        await atualizarSubcategoriaService(supabase, editingSubcategoria.id, {
+          nome: subcategoriaFormData.nome.trim(),
+          updated_at: new Date().toISOString(),
+        })
         toast.success('Subcategoria atualizada com sucesso!')
       } else {
         // Criar nova subcategoria
-        const { error } = await supabase
-          .from('subcategorias')
-          .insert({
-            nome: subcategoriaFormData.nome.trim(),
-            categoria_id: parentCategoriaId,
-            ativo: true,
-          })
-
-        if (error) throw error
+        await criarSubcategoria(supabase, {
+          nome: subcategoriaFormData.nome.trim(),
+          categoria_id: parentCategoriaId,
+          ativo: true,
+        })
         toast.success('Subcategoria criada com sucesso!')
       }
 
@@ -656,13 +636,7 @@ export default function CategoriasPage() {
   const handleToggleActive = async (categoria: Categoria) => {
     const supabase = createClient()
     try {
-      const { error } = await supabase
-        .from('categorias')
-        .update({ ativo: !categoria.ativo })
-        .eq('id', categoria.id)
-
-      if (error) throw error
-
+      await toggleAtivoCategoria(supabase, categoria.id, !categoria.ativo)
       toast.success(
         categoria.ativo ? 'Categoria desativada com sucesso!' : 'Categoria ativada com sucesso!'
       )
@@ -676,13 +650,7 @@ export default function CategoriasPage() {
   const handleToggleSubcategoriaActive = async (subcategoria: Subcategoria) => {
     const supabase = createClient()
     try {
-      const { error } = await supabase
-        .from('subcategorias')
-        .update({ ativo: !subcategoria.ativo })
-        .eq('id', subcategoria.id)
-
-      if (error) throw error
-
+      await toggleAtivoSubcategoria(supabase, subcategoria.id, !subcategoria.ativo)
       toast.success(
         subcategoria.ativo ? 'Subcategoria desativada!' : 'Subcategoria ativada!'
       )
@@ -695,51 +663,24 @@ export default function CategoriasPage() {
 
   const checkCategoriaUsage = async (categoriaId: string) => {
     const supabase = createClient()
-    
-    const { count: comprasCount } = await supabase
-      .from('compras')
-      .select('id', { count: 'exact', head: true })
-      .eq('categoria_id', categoriaId)
-
-    const { count: gastosCount } = await supabase
-      .from('gastos')
-      .select('id', { count: 'exact', head: true })
-      .eq('categoria_id', categoriaId)
-
-    const { count: orcamentoCount } = await supabase
-      .from('orcamento_detalhado')
-      .select('id', { count: 'exact', head: true })
-      .eq('categoria_id', categoriaId)
-
-    const total = (comprasCount || 0) + (gastosCount || 0) + (orcamentoCount || 0)
-    
+    const usage = await verificarUsoCategoria(supabase, categoriaId)
+    const total = usage.compras + usage.gastos + usage.orcamento
     return {
       total,
-      comprasCount: comprasCount || 0,
-      gastosCount: gastosCount || 0,
-      orcamentoCount: orcamentoCount || 0,
+      comprasCount: usage.compras,
+      gastosCount: usage.gastos,
+      orcamentoCount: usage.orcamento,
     }
   }
 
   const checkSubcategoriaUsage = async (subcategoriaId: string) => {
     const supabase = createClient()
-    
-    const { count: comprasCount } = await supabase
-      .from('compras')
-      .select('id', { count: 'exact', head: true })
-      .eq('subcategoria_id', subcategoriaId)
-
-    const { count: gastosCount } = await supabase
-      .from('gastos')
-      .select('id', { count: 'exact', head: true })
-      .eq('subcategoria_id', subcategoriaId)
-
-    const total = (comprasCount || 0) + (gastosCount || 0)
-    
+    const usage = await verificarUsoSubcategoria(supabase, subcategoriaId)
+    const total = usage.compras + usage.gastos
     return {
       total,
-      comprasCount: comprasCount || 0,
-      gastosCount: gastosCount || 0,
+      comprasCount: usage.compras,
+      gastosCount: usage.gastos,
     }
   }
 
@@ -797,20 +738,10 @@ export default function CategoriasPage() {
 
     try {
       if (deleteDialog.type === 'categoria') {
-        const { error } = await supabase
-          .from('categorias')
-          .delete()
-          .eq('id', deleteDialog.item.id)
-
-        if (error) throw error
+        await deletarCategoria(supabase, deleteDialog.item.id)
         toast.success('Categoria deletada com sucesso!')
       } else {
-        const { error } = await supabase
-          .from('subcategorias')
-          .delete()
-          .eq('id', deleteDialog.item.id)
-
-        if (error) throw error
+        await deletarSubcategoria(supabase, deleteDialog.item.id)
         toast.success('Subcategoria deletada com sucesso!')
       }
 

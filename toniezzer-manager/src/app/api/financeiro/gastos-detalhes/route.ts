@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { buscarGastosDetalhadosPorCategoria } from "@/lib/services/gastos";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,40 +17,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Construir query baseado se tem etapa ou não
-    let query = supabase
-      .from("gastos")
-      .select(`
-        id,
-        descricao,
-        valor,
-        data,
-        forma_pagamento,
-        nota_fiscal_numero,
-        parcela_atual,
-        parcelas,
-        fornecedores:fornecedor_id(nome),
-        criado_por_user:criado_por(nome_completo)
-      `)
-      .eq("categoria_id", categoriaId)
-      .eq("status", "aprovado");
-
-    // Filtrar por etapa
-    if (etapaId === "sem_etapa") {
-      query = query.is("etapa_relacionada_id", null);
-    } else {
-      query = query.eq("etapa_relacionada_id", etapaId);
-    }
-
-    const { data: gastos, error } = await query.order("data", { ascending: false });
-
-    if (error) {
-      console.error("Erro ao buscar gastos detalhados:", error);
-      return NextResponse.json(
-        { error: "Erro ao buscar gastos" },
-        { status: 500 }
-      );
-    }
+    const gastos = await buscarGastosDetalhadosPorCategoria(supabase, categoriaId, etapaId);
 
     // Transformar dados para formato mais amigável
     const gastosDetalhados = gastos?.map((gasto) => ({

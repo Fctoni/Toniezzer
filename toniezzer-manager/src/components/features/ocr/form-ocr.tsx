@@ -29,6 +29,8 @@ import type { DadosExtraidos } from './preview-ocr'
 import { QuickAddFornecedor } from './quick-add-fornecedor'
 import { formatDateToString } from '@/lib/utils'
 import { Check, X } from 'lucide-react'
+import { buscarCategoriasAtivas } from '@/lib/services/categorias'
+import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
 
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -89,14 +91,14 @@ export function FormOcr({
     async function loadData() {
       const supabase = createClient()
       
-      const [categoriasRes, fornecedoresRes, etapasRes] = await Promise.all([
-        supabase.from('categorias').select('*').eq('ativo', true).order('ordem'),
-        supabase.from('fornecedores').select('*').eq('ativo', true).order('nome'),
+      const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+        buscarCategoriasAtivas(supabase),
+        buscarFornecedoresAtivos(supabase),
         supabase.from('etapas').select('*').order('ordem'),
       ])
 
-      if (categoriasRes.data) setCategorias(categoriasRes.data)
-      if (fornecedoresRes.data) setFornecedores(fornecedoresRes.data)
+      setCategorias(categoriasData)
+      setFornecedores(fornecedoresData)
       if (etapasRes.data) setEtapas(etapasRes.data)
       setLoading(false)
     }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
+import { buscarFornecedores } from "@/lib/services/fornecedores";
 import { FornecedorCard } from "@/components/features/fornecedores/fornecedor-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,31 +25,24 @@ export default function FornecedoresPage() {
   const [tipoFilter, setTipoFilter] = useState<string>("all");
 
   const fetchFornecedores = useCallback(async () => {
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
+      const filtros: { tipo?: string; search?: string } = {};
 
-    let query = supabase
-      .from("fornecedores")
-      .select("*")
-      .eq("ativo", true)
-      .order("nome");
+      if (tipoFilter !== "all") {
+        filtros.tipo = tipoFilter;
+      }
+      if (search) {
+        filtros.search = search;
+      }
 
-    if (tipoFilter !== "all") {
-      query = query.eq("tipo", tipoFilter);
-    }
-
-    if (search) {
-      query = query.ilike("nome", `%${search}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
+      const data = await buscarFornecedores(supabase, filtros);
+      setFornecedores(data);
+    } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setFornecedores(data || []);
-    setLoading(false);
   }, [search, tipoFilter]);
 
   useEffect(() => {

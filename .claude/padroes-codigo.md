@@ -161,6 +161,52 @@ export async function deletarEntidade(supabase: TypedSupabaseClient, id: string)
 export function calcularAlgo(entidade: { ... }): number { ... }
 ```
 
+### JOINs nos services
+
+Quando a query precisa de dados relacionados (JOINs do Supabase), criar funcoes nomeadas por "visao":
+
+```typescript
+// Versao simples — para calculos, validacoes, uso interno
+export async function buscarGastos(supabase: TypedSupabaseClient): Promise<Gasto[]> {
+  const { data, error } = await supabase.from('gastos').select('*').eq('status', 'aprovado')
+  if (error) throw error
+  return data
+}
+
+// Versao com JOINs — para exibicao em telas
+export async function buscarGastosComDetalhes(supabase: TypedSupabaseClient): Promise<GastoComDetalhes[]> {
+  const { data, error } = await supabase
+    .from('gastos')
+    .select('*, categorias(nome, cor), fornecedores(nome), etapas(nome)')
+    .order('data', { ascending: false })
+  if (error) throw error
+  return data
+}
+```
+
+**Regras:**
+- JOINs sao logica de acesso a dados — pertencem ao service, NAO ao componente
+- Nomear com sufixo descritivo: `ComDetalhes`, `ComCategoria`, `Resumidas`, etc.
+- Tipar o retorno corretamente (pode precisar de tipo custom para dados com JOIN)
+
+### Storage (buckets) em services dedicados
+
+Operacoes de Storage do Supabase ficam em arquivos de service proprios:
+
+```typescript
+// recibos.ts — operacoes do bucket 'recibos'
+export async function uploadComprovante(supabase: TypedSupabaseClient, fileName: string, file: File): Promise<string> {
+  const { error } = await supabase.storage.from('recibos').upload(fileName, file)
+  if (error) throw error
+  const { data } = supabase.storage.from('recibos').getPublicUrl(fileName)
+  return data.publicUrl
+}
+```
+
+**Regras:**
+- 1 arquivo por bucket de Storage
+- NAO misturar operacoes de Storage dentro de services de tabelas do banco
+
 ### Organizacao: 1 arquivo por entidade
 
 ```
@@ -175,6 +221,7 @@ src/lib/services/
 ├── fornecedores.ts
 ├── compras.ts
 ├── gastos.ts
+├── recibos.ts          # Storage bucket
 └── ...
 ```
 
@@ -320,3 +367,5 @@ form-lancamento.tsx
 | 8 | 1 arquivo por entidade | Organizacao e rastreabilidade |
 | 9 | Logica de negocio nos services | Centralizacao, evita duplicacao |
 | 10 | Confiar no CASCADE do banco | Simplicidade, evita bugs de delete manual |
+| 11 | JOINs nos services com funcoes nomeadas | `buscarX()` vs `buscarXComDetalhes()` — JOINs sao logica de dados |
+| 12 | Storage em service dedicado (1 por bucket) | Separacao clara entre tabelas e buckets |

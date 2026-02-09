@@ -3,17 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FluxoCaixaChart } from "@/components/features/financeiro/fluxo-caixa-chart";
 import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { buscarGastosAprovadosResumidos } from "@/lib/services/gastos";
+import { buscarCategoriasAtivas } from "@/lib/services/categorias";
 
 export default async function FluxoCaixaPage() {
   const supabase = await createClient();
 
-  const [{ data: gastos }, { data: categorias }] = await Promise.all([
-    supabase
-      .from("gastos")
-      .select("valor, data, parcelas, parcela_atual")
-      .eq("status", "aprovado")
-      .order("data"),
-    supabase.from("categorias").select("orcamento").eq("ativo", true),
+  const [gastos, categorias] = await Promise.all([
+    buscarGastosAprovadosResumidos(supabase),
+    buscarCategoriasAtivas(supabase),
   ]);
 
   const orcamentoTotal =

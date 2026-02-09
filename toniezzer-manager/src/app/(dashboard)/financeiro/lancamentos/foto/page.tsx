@@ -10,6 +10,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { formatDateToString } from '@/lib/utils'
+import { criarCompra } from '@/lib/services/compras'
+import { criarGastos } from '@/lib/services/gastos'
 
 type Step = 'capture' | 'processing' | 'review'
 
@@ -157,7 +159,7 @@ export default function FotoReciboPage() {
       const numParcelas = parseInt(data.parcelas || '1')
       
       // 1. Criar a compra
-      const { data: compra, error: compraError } = await supabase.from('compras').insert({
+      const compra = await criarCompra(supabase, {
         descricao: data.descricao,
         valor_total: valorTotal,
         data_compra: data.data,
@@ -175,9 +177,7 @@ export default function FotoReciboPage() {
         status: 'ativa',
         valor_pago: 0,
         parcelas_pagas: 0,
-      }).select().single()
-
-      if (compraError) throw compraError
+      })
 
       // 2. Criar as parcelas (lançamentos na tabela gastos)
       const valorParcela = valorTotal / numParcelas
@@ -213,11 +213,9 @@ export default function FotoReciboPage() {
         })
       }
 
-      const { error: lancamentosError } = await supabase
-        .from('gastos')
-        .insert(lancamentos)
-
-      if (lancamentosError) {
+      try {
+        await criarGastos(supabase, lancamentos)
+      } catch (lancamentosError) {
         console.error('Erro ao criar parcelas:', lancamentosError)
         // Não lança erro para não impedir o fluxo, mas loga
       }

@@ -270,15 +270,128 @@ Com 73 operacoes e ~29 arquivos, podemos:
 
 ---
 
+#### usuario: Respostas as questoes de decisao
+
+**1. API Routes:** Concordo, migrar para services (ja coberto por padroes-codigo.md)
+
+**2. JOINs:** Concordo com Opcao A — services com JOINs, funcoes nomeadas por "visao" (`buscarGastos` vs `buscarGastosComDetalhes`)
+
+**3. `recibos` Storage:** Criar `recibos.ts` separado (arquivo dedicado para operacoes de storage)
+
+**4. Validacoes de uso:** Concordo, incluir no service como funcoes dedicadas (ja coberto por padroes-codigo.md)
+
+**5. Sub-fases:** Concordo com Opcao B — dividir em sub-fases (4a = services, 4b = refatorar componentes)
+
+---
+
+#### IA: Todas as 5 questoes respondidas, decisoes registradas
+
+Decisoes registradas na secao 4. Agora tenho todas as informacoes para preencher a Proposta (secao 3).
+
+---
+
 #### usuario:
 
 ---
 
 ## 3. Proposta de Implementacao
 
-*(Preenchida pelo Planejador quando tiver informacoes suficientes da conversa. Sera copiada para a spec apos aprovacao.)*
+**Status:** 🟡 Aguardando aprovacao
 
-**Status:** 🟡 Aguardando respostas do usuario
+### 3.1 Antes vs Depois
+
+**Antes (comportamento atual):**
+- 73 operacoes Supabase inline espalhadas por ~29 arquivos
+- Mesma query duplicada em multiplos arquivos (ex: `categorias.select('*').eq('ativo', true).order('ordem')` em 7+ arquivos)
+- Logica de negocio misturada nos componentes (ex: validacao de duplicatas, verificacao de uso antes de deletar)
+- 3 API Routes acessando banco diretamente
+- Operacoes de Storage acopladas a componentes UI
+
+**Depois (comportamento proposto):**
+- 7 services de banco + 1 service de storage centralizados em `src/lib/services/`
+- Componentes consomem dados via service calls
+- API Routes funcionam como Controllers consumindo services
+- Logica de negocio (validacoes, calculos, regras) centralizada nos services
+- Reutilizacao total: cada query existe em 1 lugar
+
+### 3.2 UI Proposta
+
+N/A — refatoracao interna sem impacto visual. O comportamento para o usuario final permanece identico.
+
+### 3.3 Arquivos Afetados
+
+#### Sub-fase 4a — Criar Services
+
+| Acao | Arquivo | Funcoes principais |
+|------|---------|--------------------|
+| CRIAR | `src/lib/services/categorias.ts` | buscarCategorias, buscarCategoriasAtivas, buscarCategoriasParaDropdown, criarCategoria, atualizarCategoria, deletarCategoria, reordenarCategorias, toggleAtivoCategoria, verificarDuplicataCategoria, verificarUsoCategoria, atualizarOrcamentoCategoria |
+| CRIAR | `src/lib/services/subcategorias.ts` | buscarSubcategorias, buscarSubcategoriasAtivas, criarSubcategoria, atualizarSubcategoria, deletarSubcategoria, toggleAtivoSubcategoria, verificarDuplicataSubcategoria |
+| CRIAR | `src/lib/services/compras.ts` | buscarCompras, buscarComprasComDetalhes, buscarCompraPorId, buscarCompraPorIdComDetalhes, criarCompra, atualizarCompra, cancelarCompra |
+| CRIAR | `src/lib/services/fornecedores.ts` | buscarFornecedores, buscarFornecedoresAtivos, buscarFornecedoresParaDropdown, buscarFornecedorPorId, criarFornecedor, criarFornecedorRapido, atualizarFornecedor, atualizarAvaliacao, desativarFornecedor |
+| CRIAR | `src/lib/services/gastos.ts` | buscarGastos, buscarGastosComDetalhes, buscarGastosPorCompra, buscarGastosAprovados, buscarGastosResumidos, criarGastos (batch), criarGastoAvulso, atualizarGastos (batch), marcarPago, atualizarComprovante, contarGastosPorCategoria, contarGastosPorSubcategoria |
+| CRIAR | `src/lib/services/orcamento-detalhado.ts` | buscarDetalhamentoPorEtapa, buscarDetalhamentoComCategoria, salvarDetalhamento (delete+insert), deletarDetalhamentoPorEtapa, contarDetalhamentoPorCategoria |
+| CRIAR | `src/lib/services/recibos.ts` | uploadComprovante |
+
+**Total: 7 novos arquivos, ~60 funcoes**
+
+#### Sub-fase 4b — Refatorar Componentes
+
+| Acao | Arquivo | Entidades refatoradas |
+|------|---------|----------------------|
+| MODIFICAR | `configuracoes/categorias/page.tsx` | categorias, subcategorias (16 ops → service calls) |
+| MODIFICAR | `compras/page.tsx` | compras, fornecedores, categorias |
+| MODIFICAR | `compras/nova/page.tsx` | categorias, fornecedores |
+| MODIFICAR | `compras/[id]/page.tsx` | compras, gastos |
+| MODIFICAR | `compras/[id]/editar/page.tsx` | compras, categorias, fornecedores |
+| MODIFICAR | `compras/compra-form.tsx` | compras, gastos, subcategorias |
+| MODIFICAR | `compras/compra-edit-form.tsx` | compras, gastos, subcategorias |
+| MODIFICAR | `compras/parcelas-table.tsx` | gastos, recibos |
+| MODIFICAR | `fornecedores/page.tsx` | fornecedores |
+| MODIFICAR | `fornecedores/[id]/page.tsx` | fornecedores, gastos |
+| MODIFICAR | `fornecedores/fornecedor-form.tsx` | fornecedores |
+| MODIFICAR | `financeiro/page.tsx` | categorias, gastos |
+| MODIFICAR | `financeiro/orcamento/page.tsx` | categorias, gastos, orcamento_detalhado |
+| MODIFICAR | `financeiro/fluxo-caixa/page.tsx` | categorias, gastos |
+| MODIFICAR | `financeiro/matriz-gastos/page.tsx` | categorias, gastos, orcamento_detalhado |
+| MODIFICAR | `financeiro/lancamentos/page.tsx` | categorias, fornecedores, gastos |
+| MODIFICAR | `financeiro/lancamentos/novo/page.tsx` | categorias, fornecedores |
+| MODIFICAR | `financeiro/lancamentos/foto/page.tsx` | compras, gastos |
+| MODIFICAR | `financeiro/form-lancamento.tsx` | gastos |
+| MODIFICAR | `financeiro/orcamento-editor.tsx` | categorias |
+| MODIFICAR | `emails/[id]/page.tsx` | compras, gastos |
+| MODIFICAR | `emails/form-aprovacao.tsx` | categorias, fornecedores |
+| MODIFICAR | `ocr/form-ocr.tsx` | categorias, fornecedores |
+| MODIFICAR | `ocr/quick-add-fornecedor.tsx` | fornecedores |
+| MODIFICAR | `dashboard/page.tsx` | categorias, gastos |
+| MODIFICAR | `cronograma/page.tsx` | gastos |
+| MODIFICAR | `api/financeiro/gastos-detalhes/route.ts` | gastos |
+| MODIFICAR | `api/orcamento/detalhamento/route.ts` | orcamento_detalhado |
+| MODIFICAR | `api/plaud/route.ts` | categorias |
+
+**Total: 29 arquivos modificados**
+
+### 3.4 Fluxo de Dados
+
+O fluxo segue o padrao ja estabelecido na Fase 1:
+
+**Server Components:**
+1. `const supabase = await createClient()` (server)
+2. `const dados = await buscarEntidade(supabase)` (service call)
+3. Renderiza com os dados
+
+**Client Components:**
+1. Handler (`onSubmit`, `onClick`) cria `const supabase = createClient()` (browser)
+2. `await criarEntidade(supabase, data)` (service call)
+3. try/catch com toast de sucesso/erro
+
+**API Routes:**
+1. `const supabase = await createClient()` (server)
+2. `const dados = await buscarEntidade(supabase)` (service call)
+3. `return Response.json(dados)`
+
+### 3.5 Banco de Dados
+
+N/A — sem alteracoes no banco. Apenas refatoracao de codigo (queries inline → service calls).
 
 ---
 
@@ -293,12 +406,16 @@ Com 73 operacoes e ~29 arquivos, podemos:
 | 3 | **Assinatura padronizada** | `nomeOperacao(supabase, ...params)` |
 | 4 | **throw error** | Services lancam excecoes, componente faz try/catch |
 | 5 | **Tipos do Supabase** | `Tables<>`, `TablesInsert<>`, `TablesUpdate<>` |
+| 6 | **JOINs nos services** | Funcoes nomeadas por "visao": `buscarX()` (simples) vs `buscarXComDetalhes()` (com JOINs) |
+| 7 | **Storage em arquivo dedicado** | Operacoes de Storage bucket ficam em service proprio (`recibos.ts`), nao dentro de outra entidade |
+| 8 | **Validacoes de uso nos services** | Verificar dependencias antes de deletar e logica de negocio, vai no service |
+| 9 | **Sub-fases** | Dividir em 4a (criar services) e 4b (refatorar componentes) |
 
 ---
 
 ## 5. Checkpoints
 
-#### Checkpoint 08/02/2026
+#### Checkpoint 08/02/2026 - Analise
 **Status atual:** 🟡 Analise profunda concluida, aguardando respostas
 **Levantamento:**
 - 73 operacoes inline mapeadas
@@ -307,3 +424,15 @@ Com 73 operacoes e ~29 arquivos, podemos:
 - 3 API Routes envolvidas
 
 **Proximo passo:** Responder 5 questoes de decisao, preencher secao 3
+
+#### Checkpoint 09/02/2026 - Proposta
+**Status atual:** 🟡 Proposta elaborada, aguardando aprovacao
+**Decisoes tomadas:**
+- 5 questoes respondidas e documentadas
+- padroes-codigo.md atualizado com JOINs e Storage
+**Proposta inclui:**
+- 7 services + 1 storage service (~60 funcoes)
+- 29 arquivos a refatorar
+- Dividido em sub-fases: 4a (services) e 4b (componentes)
+
+**Proximo passo:** Aprovacao do usuario → criar spec-alteracao04.md

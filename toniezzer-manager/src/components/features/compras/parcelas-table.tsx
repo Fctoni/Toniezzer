@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { uploadComprovante } from "@/lib/services/recibos";
+import { marcarPago, atualizarComprovante } from "@/lib/services/gastos";
 import {
   Table,
   TableBody,
@@ -128,37 +130,23 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         const fileExt = arquivoComprovante.name.split(".").pop();
         const fileName = `comprovantes/${Date.now()}-${selectedParcela.id}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("recibos")
-          .upload(fileName, arquivoComprovante);
-
-        if (uploadError) {
+        try {
+          comprovanteUrl = await uploadComprovante(supabase, fileName, arquivoComprovante);
+        } catch (uploadError) {
           console.error("Erro no upload:", uploadError);
           toast.error("Erro ao fazer upload do comprovante");
           setUploading(false);
           setLoadingId(null);
           return;
         }
-
-        // Obter URL pública
-        const { data: urlData } = supabase.storage
-          .from("recibos")
-          .getPublicUrl(fileName);
-
-        comprovanteUrl = urlData.publicUrl;
       }
 
       // Atualizar parcela
-      const { error } = await supabase
-        .from("gastos")
-        .update({
-          pago: true,
-          pago_em: formatDateToString(dataPagamento),
-          comprovante_pagamento_url: comprovanteUrl,
-        })
-        .eq("id", selectedParcela.id);
-
-      if (error) throw error;
+      await marcarPago(supabase, selectedParcela.id, {
+        pago: true,
+        pago_em: formatDateToString(dataPagamento),
+        comprovante_pagamento_url: comprovanteUrl,
+      });
 
       toast.success("Parcela marcada como paga!");
       setDialogOpen(false);
@@ -186,11 +174,10 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
       const fileExt = arquivoComprovante.name.split(".").pop();
       const fileName = `comprovantes/${Date.now()}-${selectedParcela.id}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("recibos")
-        .upload(fileName, arquivoComprovante);
-
-      if (uploadError) {
+      let comprovanteUrl: string;
+      try {
+        comprovanteUrl = await uploadComprovante(supabase, fileName, arquivoComprovante);
+      } catch (uploadError) {
         console.error("Erro no upload:", uploadError);
         toast.error("Erro ao fazer upload do comprovante");
         setUploading(false);
@@ -198,20 +185,8 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         return;
       }
 
-      // Obter URL pública
-      const { data: urlData } = supabase.storage
-        .from("recibos")
-        .getPublicUrl(fileName);
-
       // Atualizar parcela apenas com o comprovante
-      const { error } = await supabase
-        .from("gastos")
-        .update({
-          comprovante_pagamento_url: urlData.publicUrl,
-        })
-        .eq("id", selectedParcela.id);
-
-      if (error) throw error;
+      await atualizarComprovante(supabase, selectedParcela.id, comprovanteUrl);
 
       toast.success("Comprovante anexado com sucesso!");
       setComprovanteDialogOpen(false);

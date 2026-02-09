@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
+import { atualizarCompra } from "@/lib/services/compras";
+import { atualizarGastosPorCompra } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,15 +137,12 @@ export function CompraEditForm({
   // Buscar subcategorias
   useEffect(() => {
     const fetchSubcategorias = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("subcategorias")
-        .select("id, nome, categoria_id")
-        .eq("ativo", true)
-        .order("nome");
-
-      if (!error && data) {
+      try {
+        const supabase = createClient();
+        const data = await buscarSubcategoriasAtivas(supabase);
         setSubcategorias(data);
+      } catch (error) {
+        console.error("Erro ao buscar subcategorias:", error);
       }
     };
 
@@ -245,39 +245,31 @@ export function CompraEditForm({
       const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
 
       // Atualizar a compra
-      const { error: compraError } = await supabase
-        .from("compras")
-        .update({
-          descricao: data.descricao,
-          data_compra: formatDateToString(data.data_compra),
-          fornecedor_id: data.fornecedor_id,
-          categoria_id: data.categoria_id,
-          subcategoria_id: subcategoriaId,
-          etapa_relacionada_id: etapaId,
-          forma_pagamento: data.forma_pagamento,
-          nota_fiscal_numero: data.nota_fiscal_numero || null,
-          nota_fiscal_url: notaFiscalUrl,
-          observacoes: data.observacoes || null,
-        })
-        .eq("id", compra.id);
-
-      if (compraError) throw compraError;
+      await atualizarCompra(supabase, compra.id, {
+        descricao: data.descricao,
+        data_compra: formatDateToString(data.data_compra),
+        fornecedor_id: data.fornecedor_id,
+        categoria_id: data.categoria_id,
+        subcategoria_id: subcategoriaId,
+        etapa_relacionada_id: etapaId,
+        forma_pagamento: data.forma_pagamento,
+        nota_fiscal_numero: data.nota_fiscal_numero || null,
+        nota_fiscal_url: notaFiscalUrl,
+        observacoes: data.observacoes || null,
+      });
 
       // Atualizar os gastos (parcelas) com os novos dados
       // Apenas atualiza campos básicos, não altera valores ou datas das parcelas
-      const { error: gastosError } = await supabase
-        .from("gastos")
-        .update({
+      try {
+        await atualizarGastosPorCompra(supabase, compra.id, {
           descricao: data.descricao,
           categoria_id: data.categoria_id,
           subcategoria_id: subcategoriaId,
           fornecedor_id: data.fornecedor_id,
           forma_pagamento: data.forma_pagamento,
           etapa_relacionada_id: etapaId,
-        })
-        .eq("compra_id", compra.id);
-
-      if (gastosError) {
+        });
+      } catch (gastosError) {
         console.error("Erro ao atualizar parcelas:", gastosError);
         // Não falha a operação, apenas loga o erro
       }

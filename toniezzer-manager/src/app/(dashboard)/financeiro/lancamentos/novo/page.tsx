@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormLancamento } from "@/components/features/financeiro/form-lancamento";
+import { buscarCategoriasAtivas } from "@/lib/services/categorias";
+import { buscarFornecedoresAtivos } from "@/lib/services/fornecedores";
 
 export default async function NovoLancamentoPage() {
   const supabase = await createClient();
 
-  const [{ data: categorias }, { data: fornecedores }, { data: etapas }] =
+  const [categorias, fornecedores, { data: etapas }] =
     await Promise.all([
-      supabase.from("categorias").select("*").eq("ativo", true).order("ordem"),
-      supabase.from("fornecedores").select("*").eq("ativo", true).order("nome"),
+      buscarCategoriasAtivas(supabase),
+      buscarFornecedoresAtivos(supabase),
       supabase.from("etapas").select("*").order("ordem"),
     ]);
 

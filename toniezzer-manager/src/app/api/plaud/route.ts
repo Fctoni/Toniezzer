@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { buscarCategoriasAtivas } from '@/lib/services/categorias'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -154,10 +155,7 @@ Regras:
       .eq('ativo', true)
 
     // Buscar categorias para matching
-    const { data: categorias } = await supabase
-      .from('categorias')
-      .select('id, nome')
-      .eq('ativo', true)
+    const categorias = await buscarCategoriasAtivas(supabase)
 
     // Função para encontrar usuário por nome (matching aproximado)
     const findUsuario = (nome: string | undefined | null) => {

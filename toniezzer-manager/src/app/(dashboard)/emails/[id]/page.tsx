@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
+import { criarCompra } from '@/lib/services/compras'
+import { criarGastos } from '@/lib/services/gastos'
 
 export default function EmailDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -125,31 +127,25 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       }
       
       // 2. Criar a compra
-      const { data: compra, error: compraError } = await supabase
-        .from('compras')
-        .insert({
-          descricao: data.descricao,
-          valor_total: parseFloat(data.valor),
-          data_compra: data.data,
-          data_primeira_parcela: data.data,
-          categoria_id: data.categoria_id,
-          fornecedor_id: data.fornecedor_id,
-          forma_pagamento: data.forma_pagamento,
-          parcelas: numParcelas,
-          nota_fiscal_numero: data.nota_fiscal_numero || null,
-          nota_fiscal_url: notaFiscalUrl,
-          etapa_relacionada_id: data.etapa_relacionada_id || null,
-          observacoes: data.observacoes || null,
-          criado_por: currentUser.id,
-          criado_via: 'email',
-          status: 'ativa',
-          valor_pago: 0,
-          parcelas_pagas: 0,
-        })
-        .select()
-        .single()
-
-      if (compraError) throw compraError
+      const compra = await criarCompra(supabase, {
+        descricao: data.descricao,
+        valor_total: parseFloat(data.valor),
+        data_compra: data.data,
+        data_primeira_parcela: data.data,
+        categoria_id: data.categoria_id,
+        fornecedor_id: data.fornecedor_id,
+        forma_pagamento: data.forma_pagamento,
+        parcelas: numParcelas,
+        nota_fiscal_numero: data.nota_fiscal_numero || null,
+        nota_fiscal_url: notaFiscalUrl,
+        etapa_relacionada_id: data.etapa_relacionada_id || null,
+        observacoes: data.observacoes || null,
+        criado_por: currentUser.id,
+        criado_via: 'email',
+        status: 'ativa',
+        valor_pago: 0,
+        parcelas_pagas: 0,
+      })
 
       // 3. Criar as parcelas (lançamentos na tabela gastos)
       const valorTotal = parseFloat(data.valor)
@@ -186,11 +182,9 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         })
       }
 
-      const { error: lancamentosError } = await supabase
-        .from('gastos')
-        .insert(lancamentos)
-
-      if (lancamentosError) {
+      try {
+        await criarGastos(supabase, lancamentos)
+      } catch (lancamentosError) {
         console.error('Erro ao criar parcelas:', lancamentosError)
         // Não lança erro para não impedir o fluxo, mas loga
       }

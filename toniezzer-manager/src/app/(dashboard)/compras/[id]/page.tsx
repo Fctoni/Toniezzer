@@ -8,6 +8,8 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { parseDateString } from "@/lib/utils";
+import { buscarCompraPorIdComDetalhes, cancelarCompra } from "@/lib/services/compras";
+import { buscarGastosPorCompra } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,21 +90,10 @@ export default function CompraDetalhesPage() {
     const supabase = createClient();
 
     // Buscar compra
-    const { data: compraData, error: compraError } = await supabase
-      .from("compras")
-      .select(
-        `
-        *,
-        fornecedor:fornecedores(nome, cnpj_cpf),
-        categoria:categorias(nome, cor),
-        subcategoria:subcategorias(nome),
-        etapa:etapas(nome)
-      `
-      )
-      .eq("id", id)
-      .single();
-
-    if (compraError) {
+    let compraData;
+    try {
+      compraData = await buscarCompraPorIdComDetalhes(supabase, id);
+    } catch (compraError) {
       console.error("Erro ao buscar compra:", compraError);
       toast.error("Erro ao carregar compra");
       return;
@@ -132,15 +123,8 @@ export default function CompraDetalhesPage() {
     });
 
     // Buscar parcelas (gastos vinculados)
-    const { data: parcelasData, error: parcelasError } = await supabase
-      .from("gastos")
-      .select("id, valor, data, parcela_atual, parcelas, pago, pago_em, comprovante_pagamento_url")
-      .eq("compra_id", id)
-      .order("parcela_atual");
-
-    if (parcelasError) {
-      console.error("Erro ao buscar parcelas:", parcelasError);
-    } else {
+    try {
+      const parcelasData = await buscarGastosPorCompra(supabase, id);
       setParcelas(
         parcelasData.map((p) => ({
           id: p.id,
@@ -153,6 +137,8 @@ export default function CompraDetalhesPage() {
           comprovante_pagamento_url: p.comprovante_pagamento_url,
         }))
       );
+    } catch (parcelasError) {
+      console.error("Erro ao buscar parcelas:", parcelasError);
     }
 
     setLoading(false);
@@ -169,12 +155,7 @@ export default function CompraDetalhesPage() {
       const supabase = createClient();
 
       // Atualizar status da compra
-      const { error } = await supabase
-        .from("compras")
-        .update({ status: "cancelada" })
-        .eq("id", id);
-
-      if (error) throw error;
+      await cancelarCompra(supabase, id);
 
       toast.success("Compra cancelada com sucesso");
       router.push("/compras");

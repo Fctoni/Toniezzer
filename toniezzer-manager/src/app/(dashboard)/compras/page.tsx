@@ -3,6 +3,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ComprasList } from "@/components/features/compras/compras-list";
 import { Package, Plus } from "lucide-react";
+import { buscarComprasComDetalhes } from "@/lib/services/compras";
+import { buscarTodosFornecedoresParaDropdown } from "@/lib/services/fornecedores";
+import { buscarTodasCategoriasParaDropdown } from "@/lib/services/categorias";
 
 type CompraComRelacoes = {
   id: string;
@@ -30,42 +33,25 @@ export default async function ComprasPage() {
   const supabase = await createClient();
 
   // Buscar compras
-  const { data: comprasRaw, error } = await supabase
-    .from("compras")
-    .select(
-      `
-      *,
-      fornecedor:fornecedores(nome),
-      categoria:categorias(nome, cor),
-      subcategoria:subcategorias(nome),
-      etapa:etapas(nome)
-    `
-    )
-    .order("created_at", { ascending: false });
-  
-  const compras = comprasRaw as CompraComRelacoes[] | null;
+  let compras: CompraComRelacoes[] | null = null;
+  try {
+    const comprasRaw = await buscarComprasComDetalhes(supabase);
+    compras = comprasRaw as CompraComRelacoes[];
+  } catch (error) {
+    console.error("Erro ao buscar compras:", error);
+  }
 
   // Buscar fornecedores para o filtro
-  const { data: fornecedores } = await supabase
-    .from("fornecedores")
-    .select("id, nome")
-    .order("nome");
+  const fornecedores = await buscarTodosFornecedoresParaDropdown(supabase);
 
   // Buscar categorias para o filtro
-  const { data: categorias } = await supabase
-    .from("categorias")
-    .select("id, nome, cor")
-    .order("nome");
+  const categorias = await buscarTodasCategoriasParaDropdown(supabase);
 
   // Buscar etapas para o filtro
   const { data: etapas } = await supabase
     .from("etapas")
     .select("id, nome")
     .order("ordem");
-
-  if (error) {
-    console.error("Erro ao buscar compras:", error);
-  }
 
   const comprasFormatadas =
     compras?.map((compra) => ({

@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { buscarCompraPorId } from "@/lib/services/compras";
+import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
+import { buscarFornecedoresParaDropdown } from "@/lib/services/fornecedores";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package } from "lucide-react";
@@ -63,13 +66,10 @@ export default function EditarCompraPage() {
     const supabase = createClient();
 
     // Buscar compra
-    const { data: compraData, error: compraError } = await supabase
-      .from("compras")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (compraError) {
+    let compraData;
+    try {
+      compraData = await buscarCompraPorId(supabase, id);
+    } catch (compraError) {
       console.error("Erro ao buscar compra:", compraError);
       toast.error("Erro ao carregar compra");
       router.push("/compras");
@@ -103,14 +103,14 @@ export default function EditarCompraPage() {
     });
 
     // Buscar categorias, fornecedores e etapas
-    const [categoriasRes, fornecedoresRes, etapasRes] = await Promise.all([
-      supabase.from("categorias").select("id, nome, cor").eq("ativo", true).order("nome"),
-      supabase.from("fornecedores").select("id, nome").eq("ativo", true).order("nome"),
+    const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+      buscarCategoriasParaDropdown(supabase),
+      buscarFornecedoresParaDropdown(supabase),
       supabase.from("etapas").select("id, nome").order("ordem"),
     ]);
 
-    if (categoriasRes.data) setCategorias(categoriasRes.data);
-    if (fornecedoresRes.data) setFornecedores(fornecedoresRes.data);
+    setCategorias(categoriasData);
+    setFornecedores(fornecedoresData);
     if (etapasRes.data) setEtapas(etapasRes.data);
 
     setLoading(false);

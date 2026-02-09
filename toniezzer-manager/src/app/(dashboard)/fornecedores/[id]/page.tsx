@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
+import { buscarFornecedorPorId, atualizarAvaliacao, desativarFornecedor } from "@/lib/services/fornecedores";
+import { buscarGastosPorFornecedor } from "@/lib/services/gastos";
 import { parseDateString } from "@/lib/utils";
 import { AvaliacaoStars } from "@/components/features/fornecedores/avaliacao-stars";
 import { FornecedorForm } from "@/components/features/fornecedores/fornecedor-form";
@@ -68,33 +70,23 @@ export default function FornecedorDetalhesPage({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    const [fornecedorResult, gastosResult] = await Promise.all([
-      supabase.from("fornecedores").select("*").eq("id", id).single(),
-      supabase
-        .from("gastos")
-        .select(
-          `
-          *,
-          categoria:categorias(*)
-        `
-        )
-        .eq("fornecedor_id", id)
-        .order("data", { ascending: false }),
-    ]);
+      const [fornecedorData, gastosData] = await Promise.all([
+        buscarFornecedorPorId(supabase, id),
+        buscarGastosPorFornecedor(supabase, id),
+      ]);
 
-    if (fornecedorResult.data) {
-      setFornecedor(fornecedorResult.data);
-      setAvaliacao(fornecedorResult.data.avaliacao);
-      setComentario(fornecedorResult.data.comentario_avaliacao || "");
+      setFornecedor(fornecedorData);
+      setAvaliacao(fornecedorData.avaliacao);
+      setComentario(fornecedorData.comentario_avaliacao || "");
+      setGastos(gastosData);
+    } catch (error) {
+      console.error("Erro ao buscar dados do fornecedor:", error);
+    } finally {
+      setLoading(false);
     }
-
-    if (gastosResult.data) {
-      setGastos(gastosResult.data);
-    }
-
-    setLoading(false);
   }, [id]);
 
   useEffect(() => {
@@ -111,16 +103,7 @@ export default function FornecedorDetalhesPage({
 
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("fornecedores")
-        .update({
-          avaliacao,
-          comentario_avaliacao: comentario || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      await atualizarAvaliacao(supabase, id, avaliacao, comentario || null);
 
       toast.success("Avaliação salva!");
       fetchData();
@@ -134,12 +117,7 @@ export default function FornecedorDetalhesPage({
   const handleDelete = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("fornecedores")
-        .update({ ativo: false })
-        .eq("id", id);
-
-      if (error) throw error;
+      await desativarFornecedor(supabase, id);
 
       toast.success("Fornecedor excluído!");
       router.push("/fornecedores");

@@ -29,6 +29,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
 import { QuickAddFornecedor } from '@/components/features/ocr/quick-add-fornecedor'
+import { buscarCategoriasAtivas } from '@/lib/services/categorias'
+import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
 
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -97,38 +99,36 @@ export function FormAprovacao({
     async function loadData() {
       const supabase = createClient()
       
-      const [categoriasRes, fornecedoresRes, etapasRes] = await Promise.all([
-        supabase.from('categorias').select('*').eq('ativo', true).order('ordem'),
-        supabase.from('fornecedores').select('*').eq('ativo', true).order('nome'),
+      const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+        buscarCategoriasAtivas(supabase),
+        buscarFornecedoresAtivos(supabase),
         supabase.from('etapas').select('*').order('ordem'),
       ])
 
-      if (categoriasRes.data) {
-        setCategorias(categoriasRes.data)
-        // Tentar encontrar categoria sugerida
-        if (dadosExtraidos?.categoria_sugerida) {
-          const match = categoriasRes.data.find(c => 
-            c.nome.toLowerCase().includes(dadosExtraidos.categoria_sugerida!.toLowerCase())
-          )
-          if (match) form.setValue('categoria_id', match.id)
-        }
+      setCategorias(categoriasData)
+      // Tentar encontrar categoria sugerida
+      if (dadosExtraidos?.categoria_sugerida) {
+        const match = categoriasData.find(c =>
+          c.nome.toLowerCase().includes(dadosExtraidos.categoria_sugerida!.toLowerCase())
+        )
+        if (match) form.setValue('categoria_id', match.id)
       }
-      if (fornecedoresRes.data) {
-        setFornecedores(fornecedoresRes.data)
-        // Tentar encontrar fornecedor
-        if (dadosExtraidos?.fornecedor || dadosExtraidos?.cnpj) {
-          const match = fornecedoresRes.data.find(f => {
-            if (dadosExtraidos.cnpj && f.cnpj_cpf) {
-              return f.cnpj_cpf.replace(/\D/g, '') === dadosExtraidos.cnpj.replace(/\D/g, '')
-            }
-            if (dadosExtraidos.fornecedor && f.nome) {
-              return f.nome.toLowerCase().includes(dadosExtraidos.fornecedor.toLowerCase())
-            }
-            return false
-          })
-          if (match) form.setValue('fornecedor_id', match.id)
-        }
+
+      setFornecedores(fornecedoresData)
+      // Tentar encontrar fornecedor
+      if (dadosExtraidos?.fornecedor || dadosExtraidos?.cnpj) {
+        const match = fornecedoresData.find(f => {
+          if (dadosExtraidos.cnpj && f.cnpj_cpf) {
+            return f.cnpj_cpf.replace(/\D/g, '') === dadosExtraidos.cnpj.replace(/\D/g, '')
+          }
+          if (dadosExtraidos.fornecedor && f.nome) {
+            return f.nome.toLowerCase().includes(dadosExtraidos.fornecedor.toLowerCase())
+          }
+          return false
+        })
+        if (match) form.setValue('fornecedor_id', match.id)
       }
+
       if (etapasRes.data) setEtapas(etapasRes.data)
       
       setLoading(false)

@@ -18,7 +18,8 @@
       "Bash(Select-Object -First 50)",
       "Bash(powershell -Command \"cd ''c:\\\\Users\\\\tonietto.felipe\\\\My Drive\\\\cursor\\\\Controle de estoque\\\\controle-estoque''; npx tsc --noEmit 2>&1 | Select-Object -First 50\")",
       "mcp__supabase__get_advisors",
-      "Bash(del \"c:\\\\Users\\\\felip\\\\VSCode\\\\Toniezzer\\\\toniezzer-manager\\\\src\\\\components\\\\features\\\\cronograma\\\\nova-tarefa-dialog.tsx\")"
+      "Bash(del \"c:\\\\Users\\\\felip\\\\VSCode\\\\Toniezzer\\\\toniezzer-manager\\\\src\\\\components\\\\features\\\\cronograma\\\\nova-tarefa-dialog.tsx\")",
+      "mcp__supabase__search_docs"
     ]
   },
   "enabledMcpjsonServers": [

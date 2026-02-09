@@ -8,6 +8,9 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { addMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
+import { criarCompra } from "@/lib/services/compras";
+import { criarGastos } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,15 +111,12 @@ export function CompraForm({
   // Buscar subcategorias
   useEffect(() => {
     const fetchSubcategorias = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("subcategorias")
-        .select("id, nome, categoria_id")
-        .eq("ativo", true)
-        .order("nome");
-
-      if (!error && data) {
+      try {
+        const supabase = createClient();
+        const data = await buscarSubcategoriasAtivas(supabase);
         setSubcategorias(data);
+      } catch (error) {
+        console.error("Erro ao buscar subcategorias:", error);
       }
     };
 
@@ -206,30 +206,24 @@ export function CompraForm({
 
       // 1. Criar a compra
       const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
-      
-      const { data: compra, error: compraError } = await supabase
-        .from("compras")
-        .insert({
-          descricao: data.descricao,
-          valor_total: valorNumerico,
-          data_compra: formatDateToString(data.data_compra),
-          fornecedor_id: data.fornecedor_id,
-          categoria_id: data.categoria_id,
-          subcategoria_id: subcategoriaId,
-          etapa_relacionada_id: data.etapa_relacionada_id || null,
-          forma_pagamento: data.forma_pagamento,
-          parcelas: numParcelas,
-          data_primeira_parcela: formatDateToString(data.data_primeira_parcela),
-          nota_fiscal_numero: data.nota_fiscal_numero || null,
-          nota_fiscal_url: notaFiscalUrl,
-          observacoes: data.observacoes || null,
-          criado_por: userId,
-          criado_via: "manual",
-        })
-        .select()
-        .single();
 
-      if (compraError) throw compraError;
+      const compra = await criarCompra(supabase, {
+        descricao: data.descricao,
+        valor_total: valorNumerico,
+        data_compra: formatDateToString(data.data_compra),
+        fornecedor_id: data.fornecedor_id,
+        categoria_id: data.categoria_id,
+        subcategoria_id: subcategoriaId,
+        etapa_relacionada_id: data.etapa_relacionada_id || null,
+        forma_pagamento: data.forma_pagamento,
+        parcelas: numParcelas,
+        data_primeira_parcela: formatDateToString(data.data_primeira_parcela),
+        nota_fiscal_numero: data.nota_fiscal_numero || null,
+        nota_fiscal_url: notaFiscalUrl,
+        observacoes: data.observacoes || null,
+        criado_por: userId,
+        criado_via: "manual",
+      });
 
       // 2. Criar os lançamentos (parcelas)
       const valorParcela = valorNumerico / numParcelas;
@@ -265,11 +259,7 @@ export function CompraForm({
         });
       }
 
-      const { error: lancamentosError } = await supabase
-        .from("gastos")
-        .insert(lancamentos);
-
-      if (lancamentosError) throw lancamentosError;
+      await criarGastos(supabase, lancamentos);
 
       toast.success(
         `Compra criada com ${numParcelas} parcela${numParcelas > 1 ? "s" : ""}!`

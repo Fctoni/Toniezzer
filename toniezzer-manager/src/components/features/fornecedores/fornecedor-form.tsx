@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { criarFornecedor, atualizarFornecedor } from "@/lib/services/fornecedores";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Tables } from "@/lib/types/database";
@@ -65,24 +66,17 @@ export function FornecedorForm({ fornecedor, onSuccess }: FornecedorFormProps) {
       const supabase = createClient();
 
       if (isEditing) {
-        const { error } = await supabase
-          .from("fornecedores")
-          .update({
-            ...data,
-            email: data.email || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", fornecedor.id);
-
-        if (error) throw error;
+        await atualizarFornecedor(supabase, fornecedor.id, {
+          ...data,
+          email: data.email || null,
+          updated_at: new Date().toISOString(),
+        });
         toast.success("Fornecedor atualizado!");
       } else {
-        const { error } = await supabase.from("fornecedores").insert({
+        await criarFornecedor(supabase, {
           ...data,
           email: data.email || null,
         });
-
-        if (error) throw error;
         toast.success("Fornecedor cadastrado!");
       }
 
