@@ -34,6 +34,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 03 | [spec-alteracao03.md](./spec-alteracao03.md) | Centralizar CRUD em services (Fase 1: Cronograma) | 🟠 Aguardando testes | ⏳ pendente |
 | 04 | [spec-alteracao04.md](./spec-alteracao04.md) | Centralizar CRUD em services (Fase 2: Financeiro) | 🟠 Aguardando testes | ⏳ pendente |
 | 05 | [spec-alteracao05.md](./spec-alteracao05.md) | Centralizar CRUD em services (Fase 3: Restante) | 🔵 Pronto para executar | ⏳ pendente |
+| 06 | [spec-alteracao06.md](./spec-alteracao06.md) | Refatoração de padrões de código (pós-auditoria) | 🔵 Pronto para executar | ⏳ pendente |
 | 10 | [alteracao10.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
 
 ## PRD / Commit Pendente

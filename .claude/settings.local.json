@@ -19,7 +19,12 @@
       "Bash(powershell -Command \"cd ''c:\\\\Users\\\\tonietto.felipe\\\\My Drive\\\\cursor\\\\Controle de estoque\\\\controle-estoque''; npx tsc --noEmit 2>&1 | Select-Object -First 50\")",
       "mcp__supabase__get_advisors",
       "Bash(del \"c:\\\\Users\\\\felip\\\\VSCode\\\\Toniezzer\\\\toniezzer-manager\\\\src\\\\components\\\\features\\\\cronograma\\\\nova-tarefa-dialog.tsx\")",
-      "mcp__supabase__search_docs"
+      "mcp__supabase__search_docs",
+      "Bash(xargs:*)",
+      "Bash(while read f)",
+      "Bash(do wc -l \"$f\")",
+      "Bash(done)",
+      "Bash(grep:*)"
     ]
   },
   "enabledMcpjsonServers": [
