@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | Auditoria de conformidade (conversa direta no chat) |
 | Data criacao | 10/02/2026 |
 | Complexidade | 🟢 Baixa |
@@ -175,25 +175,32 @@ N/A.
 
 ### 5.1 Progresso
 
-- [ ] tarefas-anexos.ts error handling corrigido
-- [ ] compras.ts return types adicionados
-- [ ] gastos.ts return types adicionados
-- [ ] orcamento-detalhado.ts return type adicionado
-- [ ] TypeScript sem erros
+- [x] tarefas-anexos.ts error handling corrigido
+- [x] compras.ts return types adicionados
+- [x] gastos.ts return types adicionados
+- [x] orcamento-detalhado.ts return type adicionado
+- [x] TypeScript sem erros
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
+- **gastos.ts — hint de FK corrigido:** A query de `buscarGastosDetalhadosPorCategoria` usava `criado_por_user:criado_por(nome_completo)`, mas como existem multiplas FKs de `gastos` para `users`, o TypeScript nao conseguia resolver a relacao. Corrigido para `criado_por_user:users!criado_por(nome_completo)` (hint explicito). Sem impacto no runtime.
+- **gastos.ts — tipos separados por funcao:** A spec sugeria um unico type alias `GastoComDetalhes` para as 4 funcoes, mas cada funcao usa um `.select()` diferente. Criados 4 tipos distintos: `GastoComDetalhes`, `GastoAprovado`, `GastoPorFornecedor`, `GastoDetalhadoPorCategoria`.
+- **compras.ts — 2 type aliases:** `buscarComprasComDetalhes` e `buscarCompraPorIdComDetalhes` diferem no select do fornecedor (a segunda inclui `cnpj_cpf`). Criados `CompraComDetalhes` e `CompraComDetalhesFornecedor`.
 
 ### 5.3 Conversa de Execucao
 
-#### IA:
-[mensagem]
+#### IA: Execucao concluida — 4 arquivos modificados, 0 erros tsc
+
+Implementados todos os itens da spec:
+- `tarefas-anexos.ts`: error handling no `storage.remove()` antes do delete no banco
+- `compras.ts`: 2 type aliases + return types em `buscarComprasComDetalhes` e `buscarCompraPorIdComDetalhes`
+- `gastos.ts`: 4 type aliases + return types em 4 funcoes + correcao de FK hint em `buscarGastosDetalhadosPorCategoria`
+- `orcamento-detalhado.ts`: 1 type alias + return type em `buscarDetalhamentoComCategoria`
 
 ---
 
 ## 6. Validacao Final
 
-- [ ] `npx tsc --noEmit` sem erros
+- [x] `npx tsc --noEmit` sem erros
 - [ ] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)

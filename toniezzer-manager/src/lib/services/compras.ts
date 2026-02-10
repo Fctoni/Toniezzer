@@ -2,9 +2,25 @@ import { TypedSupabaseClient } from '@/lib/types/supabase'
 import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
 type Compra = Tables<'compras'>
 
+type CompraComDetalhes = Compra & {
+  fornecedor: Pick<Tables<'fornecedores'>, 'nome'> | null
+  categoria: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
+  subcategoria: Pick<Tables<'subcategorias'>, 'nome'> | null
+  etapa: Pick<Tables<'etapas'>, 'nome'> | null
+}
+
+type CompraComDetalhesFornecedor = Compra & {
+  fornecedor: Pick<Tables<'fornecedores'>, 'nome' | 'cnpj_cpf'> | null
+  categoria: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
+  subcategoria: Pick<Tables<'subcategorias'>, 'nome'> | null
+  etapa: Pick<Tables<'etapas'>, 'nome'> | null
+}
+
 // ===== SELECT =====
 
-export async function buscarComprasComDetalhes(supabase: TypedSupabaseClient) {
+export async function buscarComprasComDetalhes(
+  supabase: TypedSupabaseClient
+): Promise<CompraComDetalhes[]> {
   const { data, error } = await supabase
     .from('compras')
     .select(`
@@ -19,7 +35,10 @@ export async function buscarComprasComDetalhes(supabase: TypedSupabaseClient) {
   return data
 }
 
-export async function buscarCompraPorIdComDetalhes(supabase: TypedSupabaseClient, id: string) {
+export async function buscarCompraPorIdComDetalhes(
+  supabase: TypedSupabaseClient,
+  id: string
+): Promise<CompraComDetalhesFornecedor> {
   const { data, error } = await supabase
     .from('compras')
     .select(`

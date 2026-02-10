@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 import { buscarCategoriasAtivas } from '@/lib/services/categorias'
 import { buscarUsuariosParaDropdown } from '@/lib/services/users'
 import { criarAcoes } from '@/lib/services/reunioes-acoes'
 import { criarPostDecisao } from '@/lib/services/feed-comunicacao'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// ===== Zod Schema =====
+
+const processarPlaudSchema = z.object({
+  markdown: z.string().min(1, 'Markdown nao fornecido'),
+  reuniao_id: z.string().uuid('ID da reuniao invalido'),
+  autor_id: z.string().uuid().optional(),
+})
 
 // Tipo para as ações extraídas
 interface AcaoExtraida {
@@ -30,31 +37,31 @@ interface DadosExtraidos {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { markdown, reuniao_id, autor_id } = body
+
+    const resultado = processarPlaudSchema.safeParse(body)
+    if (!resultado.success) {
+      return NextResponse.json(
+        { error: resultado.error.issues[0].message },
+        { status: 400 }
+      )
+    }
+
+    const { markdown, reuniao_id, autor_id } = resultado.data
 
     console.log('[PLAUD] Recebida requisição para processar reunião:', reuniao_id)
-
-    if (!markdown) {
-      return NextResponse.json({ error: 'Markdown não fornecido' }, { status: 400 })
-    }
-
-    if (!reuniao_id) {
-      return NextResponse.json({ error: 'ID da reunião não fornecido' }, { status: 400 })
-    }
 
     if (!GEMINI_API_KEY) {
       console.error('[PLAUD] GEMINI_API_KEY não encontrada!')
       return NextResponse.json({ error: 'GEMINI_API_KEY não configurada' }, { status: 500 })
     }
 
-    // Criar cliente Supabase (RLS desabilitado no MVP)
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    const supabase = await createClient()
 
     // Chamar Gemini para extrair ações do markdown
     console.log('[PLAUD] Chamando Gemini para extrair ações...')
-    
+
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
-    
+
     const geminiBody = {
       contents: [{
         parts: [{
@@ -114,7 +121,7 @@ Regras:
     if (!response.ok) {
       const errorText = await response.text()
       console.error('[PLAUD] Erro Gemini:', response.status, errorText)
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
         error: 'Erro ao processar com Gemini',
         details: errorText
@@ -125,9 +132,9 @@ Regras:
     const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!textResponse) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        error: 'Resposta vazia do Gemini' 
+        error: 'Resposta vazia do Gemini'
       }, { status: 500 })
     }
 
@@ -142,10 +149,10 @@ Regras:
       dados = JSON.parse(cleanJson)
     } catch (parseError) {
       console.error('[PLAUD] Erro ao fazer parse:', cleanJson)
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
         error: 'Resposta do Gemini não é JSON válido',
-        raw: textResponse 
+        raw: textResponse
       }, { status: 500 })
     }
 
@@ -161,7 +168,7 @@ Regras:
     const findUsuario = (nome: string | undefined | null) => {
       if (!nome || !usuarios) return null
       const nomeNorm = nome.toLowerCase().trim()
-      const usuario = usuarios.find(u => 
+      const usuario = usuarios.find(u =>
         u.nome_completo.toLowerCase().includes(nomeNorm) ||
         nomeNorm.includes(u.nome_completo.toLowerCase().split(' ')[0])
       )
@@ -172,7 +179,7 @@ Regras:
     const findCategoria = (nome: string | undefined | null) => {
       if (!nome || !categorias) return null
       const nomeNorm = nome.toLowerCase().trim()
-      const categoria = categorias.find(c => 
+      const categoria = categorias.find(c =>
         c.nome.toLowerCase().includes(nomeNorm) ||
         nomeNorm.includes(c.nome.toLowerCase())
       )
@@ -270,12 +277,11 @@ Regras:
         console.log('[PLAUD] Ações criadas:', acoesCriadas)
       } catch (insertError) {
         console.error('[PLAUD] Erro ao inserir ações:', insertError)
-        // Não falhar completamente, apenas logar
       }
     }
 
     // Criar post no feed de comunicação para decisões importantes
-    if ((dados.decisoes?.length || 0) > 0) {
+    if ((dados.decisoes?.length || 0) > 0 && autor_id) {
       const decisoesTexto = dados.decisoes
         .map((d, i) => `${i + 1}. ${d.descricao}`)
         .join('\n')
@@ -283,7 +289,7 @@ Regras:
       await criarPostDecisao(supabase, {
         tipo: 'decisao',
         conteudo: `📋 **Decisões da Reunião**\n\n${decisoesTexto}`,
-        autor_id: autor_id,
+        autor_id,
         reuniao_relacionada_id: reuniao_id
       })
     }
@@ -303,12 +309,11 @@ Regras:
   } catch (error) {
     console.error('[PLAUD] Erro no processamento:', error)
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       },
       { status: 500 }
     )
   }
 }
-

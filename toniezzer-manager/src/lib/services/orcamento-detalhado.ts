@@ -2,12 +2,16 @@ import { TypedSupabaseClient } from '@/lib/types/supabase'
 import { Tables } from '@/lib/types/database'
 type OrcamentoDetalhado = Tables<'orcamento_detalhado'>
 
+type DetalhamentoComCategoria = Pick<OrcamentoDetalhado, 'id' | 'etapa_id' | 'categoria_id' | 'valor_previsto' | 'observacoes'> & {
+  categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
+}
+
 // ===== SELECT =====
 
 export async function buscarDetalhamentoComCategoria(
   supabase: TypedSupabaseClient,
   etapaId: string
-) {
+): Promise<DetalhamentoComCategoria[]> {
   const { data, error } = await supabase
     .from('orcamento_detalhado')
     .select(`

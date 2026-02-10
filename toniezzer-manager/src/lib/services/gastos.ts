@@ -2,9 +2,31 @@ import { TypedSupabaseClient } from '@/lib/types/supabase'
 import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
 type Gasto = Tables<'gastos'>
 
+type GastoComDetalhes = Gasto & {
+  categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
+  fornecedores: Pick<Tables<'fornecedores'>, 'nome'> | null
+  etapas: Pick<Tables<'etapas'>, 'nome'> | null
+  compras: Pick<Tables<'compras'>, 'id' | 'descricao'> | null
+}
+
+type GastoAprovado = Gasto & {
+  categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
+}
+
+type GastoPorFornecedor = Gasto & {
+  categoria: Tables<'categorias'> | null
+}
+
+type GastoDetalhadoPorCategoria = Pick<Gasto, 'id' | 'descricao' | 'valor' | 'data' | 'forma_pagamento' | 'nota_fiscal_numero' | 'parcela_atual' | 'parcelas'> & {
+  fornecedores: Pick<Tables<'fornecedores'>, 'nome'> | null
+  criado_por_user: Pick<Tables<'users'>, 'nome_completo'> | null
+}
+
 // ===== SELECT =====
 
-export async function buscarGastosComDetalhes(supabase: TypedSupabaseClient) {
+export async function buscarGastosComDetalhes(
+  supabase: TypedSupabaseClient
+): Promise<GastoComDetalhes[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select(`
@@ -19,7 +41,9 @@ export async function buscarGastosComDetalhes(supabase: TypedSupabaseClient) {
   return data
 }
 
-export async function buscarGastosAprovados(supabase: TypedSupabaseClient) {
+export async function buscarGastosAprovados(
+  supabase: TypedSupabaseClient
+): Promise<GastoAprovado[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('*, categorias(nome, cor)')
@@ -75,7 +99,10 @@ export async function buscarGastosPorCompra(
   return data
 }
 
-export async function buscarGastosPorFornecedor(supabase: TypedSupabaseClient, fornecedorId: string) {
+export async function buscarGastosPorFornecedor(
+  supabase: TypedSupabaseClient,
+  fornecedorId: string
+): Promise<GastoPorFornecedor[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('*, categoria:categorias(*)')
@@ -89,7 +116,7 @@ export async function buscarGastosDetalhadosPorCategoria(
   supabase: TypedSupabaseClient,
   categoriaId: string,
   etapaId: string
-) {
+): Promise<GastoDetalhadoPorCategoria[]> {
   let query = supabase
     .from('gastos')
     .select(`
@@ -102,7 +129,7 @@ export async function buscarGastosDetalhadosPorCategoria(
       parcela_atual,
       parcelas,
       fornecedores:fornecedor_id(nome),
-      criado_por_user:criado_por(nome_completo)
+      criado_por_user:users!criado_por(nome_completo)
     `)
     .eq('categoria_id', categoriaId)
     .eq('status', 'aprovado')

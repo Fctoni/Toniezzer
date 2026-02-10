@@ -1,40 +1,44 @@
-import { createClient } from '@supabase/supabase-js'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
-import { Database, TablesUpdate } from '@/lib/types/database'
+import { z } from 'zod'
+import { TablesUpdate } from '@/lib/types/database'
 import { isAdmin as verificarAdmin, criarUsuario, atualizarUsuario, desativarUsuario } from '@/lib/services/users'
 
-// Cliente admin com service_role key para operacoes privilegiadas
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY nao configurada')
-  }
-  
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
+// ===== Zod Schemas =====
+
+const criarUsuarioSchema = z.object({
+  email: z.string().email('Email invalido'),
+  password: z.string().min(6, 'Senha deve ter no minimo 6 caracteres'),
+  nome_completo: z.string().min(2, 'Nome deve ter no minimo 2 caracteres'),
+  role: z.enum(['admin', 'editor', 'viewer'], { message: 'Role deve ser admin, editor ou viewer' }),
+  especialidade: z.string().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+})
+
+const atualizarUsuarioSchema = z.object({
+  id: z.string().uuid('ID invalido'),
+  nome_completo: z.string().min(2).optional(),
+  role: z.enum(['admin', 'editor', 'viewer']).optional(),
+  especialidade: z.string().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  ativo: z.boolean().optional(),
+  nova_senha: z.string().min(6).optional(),
+})
 
 // Verificar se usuario atual e admin
 async function isCurrentUserAdmin() {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (!user || !user.email) return false
-  
+
   return await verificarAdmin(supabase, user.email)
 }
 
 // POST - Criar novo usuario
 export async function POST(request: Request) {
   try {
-    // Verificar se e admin
     const isAdmin = await isCurrentUserAdmin()
     if (!isAdmin) {
       return NextResponse.json(
@@ -44,22 +48,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, password, nome_completo, role, especialidade, telefone } = body
 
-    // Validacoes
-    if (!email || !password || !nome_completo || !role) {
+    const resultado = criarUsuarioSchema.safeParse(body)
+    if (!resultado.success) {
       return NextResponse.json(
-        { error: 'Email, senha, nome e role sao obrigatorios' },
+        { error: resultado.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    if (!['admin', 'editor', 'viewer'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Role invalido. Use: admin, editor ou viewer' },
-        { status: 400 }
-      )
-    }
+    const { email, password, nome_completo, role, especialidade, telefone } = resultado.data
 
     const adminClient = createAdminClient()
 
@@ -67,7 +65,7 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirmar email
+      email_confirm: true,
       user_metadata: {
         nome: nome_completo
       }
@@ -128,14 +126,16 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json()
-    const { id, nome_completo, role, especialidade, telefone, ativo, nova_senha } = body
 
-    if (!id) {
+    const resultado = atualizarUsuarioSchema.safeParse(body)
+    if (!resultado.success) {
       return NextResponse.json(
-        { error: 'ID do usuario e obrigatorio' },
+        { error: resultado.error.issues[0].message },
         { status: 400 }
       )
     }
+
+    const { id, nome_completo, role, especialidade, telefone, ativo, nova_senha } = resultado.data
 
     const adminClient = createAdminClient()
 

@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | Auditoria de conformidade (conversa direta no chat) |
 | Data criacao | 10/02/2026 |
 | Complexidade | 🟡 Media |
@@ -329,31 +329,50 @@ Depois:
 
 ### 5.1 Progresso
 
-- [ ] users/route.ts — import corrigido
-- [ ] users/route.ts — admin client centralizado
-- [ ] users/route.ts — Zod schemas (POST + PATCH)
-- [ ] plaud/route.ts — import corrigido
-- [ ] plaud/route.ts — Zod schema
-- [ ] ocr/route.ts — Zod schema
-- [ ] emails/page.tsx — convertido para Server Component
-- [ ] emails-page-client.tsx — criado
-- [ ] fornecedores/page.tsx — convertido para Server Component
-- [ ] fornecedores-page-client.tsx — criado
-- [ ] TypeScript sem erros
+- [x] users/route.ts — import corrigido
+- [x] users/route.ts — admin client centralizado
+- [x] users/route.ts — Zod schemas (POST + PATCH)
+- [x] plaud/route.ts — import corrigido
+- [x] plaud/route.ts — Zod schema
+- [x] ocr/route.ts — Zod schema
+- [x] emails/page.tsx — convertido para Server Component
+- [x] emails-page-client.tsx — criado
+- [x] fornecedores/page.tsx — convertido para Server Component
+- [x] fornecedores-page-client.tsx — criado
+- [x] TypeScript sem erros
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
+1. **Admin client centralizado** — Criado `src/lib/supabase/admin.ts` com `createAdminClient()`. Usa `@supabase/supabase-js` (sem SSR/cookies) com `SUPABASE_SERVICE_ROLE_KEY`. Funcao sincrona (nao precisa de cookies).
+
+2. **plaud/route.ts — autor_id opcional** — O Zod schema define `autor_id` como `z.string().uuid().optional()`, mas `criarPostDecisao` exige `autor_id: string`. Solucao: condicionou a criacao do post de decisao a existencia de `autor_id` (`if (... && autor_id)`). Comportamento anterior passava `undefined` sem validacao.
+
+3. **Fornecedores — refetch no client** — O Client Component mantem `useEffect + useCallback` para refetch quando filtros mudam. O Server Component fornece dados iniciais (sem filtros). Na montagem, o useEffect refetcha os mesmos dados (overhead minimo, sem flash de loading pois state ja tem dados do server).
+
+4. **Emails — loading removido** — Como o Server Component ja fornece os dados, o estado `loading` e o skeleton foram removidos do client. A funcao `loadEmails` permanece para refresh apos sincronizacao.
 
 ### 5.3 Conversa de Execucao
 
-#### IA:
-[mensagem]
+#### IA: Execucao completa da alteracao 08
+
+Implementados todos os itens da spec:
+- PARTE A: Fix client imports em 2 API routes + admin client centralizado
+- PARTE B: Zod validation em 3 API routes (users POST/PATCH, plaud POST, ocr POST)
+- PARTE C: Conversao de 2 pages para Server Components com Client Components extraidos
+
+Arquivos criados: `admin.ts`, `emails-page-client.tsx`, `fornecedores-page-client.tsx`
+Arquivos modificados: `users/route.ts`, `plaud/route.ts`, `ocr/route.ts`, `emails/page.tsx`, `fornecedores/page.tsx`
+
+TypeScript: sem erros (`npx tsc --noEmit`)
+
+---
+
+#### usuario:
 
 ---
 
 ## 6. Validacao Final
 
-- [ ] `npx tsc --noEmit` sem erros
+- [x] `npx tsc --noEmit` sem erros
 - [ ] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)

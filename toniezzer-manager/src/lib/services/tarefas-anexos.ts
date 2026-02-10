@@ -69,7 +69,8 @@ export async function deletarAnexo(
   id: string,
   storagePath: string
 ): Promise<void> {
-  await supabase.storage.from('tarefas-anexos').remove([storagePath])
+  const { error: storageError } = await supabase.storage.from('tarefas-anexos').remove([storagePath])
+  if (storageError) throw storageError
   const { error } = await supabase.from('tarefas_anexos').delete().eq('id', id)
   if (error) throw error
 }

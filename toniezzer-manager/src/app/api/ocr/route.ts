@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+
+// ===== Zod Schema =====
+
+const ocrSchema = z.object({
+  image_base64: z.string().min(100, 'Imagem nao fornecida'),
+})
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { image_base64 } = body
 
-    console.log('[OCR] Recebida requisição, tamanho base64:', image_base64?.length || 0)
-
-    if (!image_base64) {
-      return NextResponse.json({ error: 'Imagem não fornecida' }, { status: 400 })
+    const resultado = ocrSchema.safeParse(body)
+    if (!resultado.success) {
+      return NextResponse.json(
+        { error: resultado.error.issues[0].message },
+        { status: 400 }
+      )
     }
+
+    const { image_base64 } = resultado.data
+
+    console.log('[OCR] Recebida requisição, tamanho base64:', image_base64.length)
 
     if (!GEMINI_API_KEY) {
       console.error('[OCR] GEMINI_API_KEY não encontrada!')
@@ -20,10 +32,8 @@ export async function POST(request: NextRequest) {
 
     console.log('[OCR] API Key encontrada, chamando Gemini...')
 
-    // Chamar Gemini Vision diretamente
-    // Usando Gemini 2.5 Flash (rápido, inteligente e estável)
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
-    
+
     const geminiBody = {
       contents: [{
         parts: [
@@ -74,7 +84,7 @@ Regras:
     if (!response.ok) {
       const errorText = await response.text()
       console.error('[OCR] Erro Gemini:', response.status, errorText)
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Erro ao processar imagem com Gemini',
         details: errorText,
         status: response.status
@@ -100,9 +110,9 @@ Regras:
       dados = JSON.parse(cleanJson)
     } catch (parseError) {
       console.error('Erro ao fazer parse:', cleanJson)
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Resposta do Gemini não é JSON válido',
-        raw: textResponse 
+        raw: textResponse
       }, { status: 500 })
     }
 
@@ -119,4 +129,3 @@ Regras:
     )
   }
 }
-
