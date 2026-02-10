@@ -1,10 +1,10 @@
 # INTERAÇÕES COM O USUÁRIO
 
-- Na primeira interação (seção nova), NUNCA EXECUTE CÓDIGOS NA PRIMEIRA INTERAÇÃO.
+- Seção nova: NUNCA EXECUTE CÓDIGOS NA PRIMEIRA INTERAÇÃO.
 
 Retorne com perguntas para ter 100% de certeza que entendeu as intenções do usuário. Nunca parta para a edição de códigos na primeira interação.
 
-- Sempre use o planejador de alterações quando o usuário pedir alguma mudança
+- Sempre use o agent [Planejador](agents/Planejador-Alteracoes.md) quando o usuário pedir alguma mudança.
 
 # PADROES DE CODIGO
 
