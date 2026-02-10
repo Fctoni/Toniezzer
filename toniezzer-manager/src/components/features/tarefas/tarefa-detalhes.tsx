@@ -12,14 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,28 +24,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
-  Flag,
-  Calendar,
-  User,
-  Layers,
   FileText,
   Tag,
-  Paperclip,
-  MessageSquare,
   Trash2,
-  Upload,
-  Download,
   X,
-  Send,
   Loader2,
-  Check,
-  Circle,
-  Play,
-  Pause,
-  AlertTriangle,
 } from "lucide-react";
-import { cn, formatDateToString } from "@/lib/utils";
 import Link from "next/link";
+import { TarefaInfoCard } from "@/components/features/tarefas/tarefa-info-card";
+import { TarefaDependenciasCard } from "@/components/features/tarefas/tarefa-dependencias-card";
+import { TarefaAnexosCard } from "@/components/features/tarefas/tarefa-anexos-card";
+import { TarefaComentariosCard } from "@/components/features/tarefas/tarefa-comentarios-card";
 
 interface TarefaFull {
   id: string;
@@ -111,21 +92,6 @@ interface TarefaDetalhesProps {
   currentUserId: string | null;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: typeof Circle }> = {
-  pendente: { label: "Pendente", color: "text-muted-foreground", icon: Circle },
-  em_andamento: { label: "Em Andamento", color: "text-blue-500", icon: Play },
-  concluida: { label: "Concluída", color: "text-green-500", icon: Check },
-  bloqueada: { label: "Bloqueada", color: "text-orange-500", icon: Pause },
-  cancelada: { label: "Cancelada", color: "text-red-500", icon: AlertTriangle },
-};
-
-const prioridadeConfig: Record<string, { label: string; color: string }> = {
-  baixa: { label: "Baixa", color: "text-blue-400" },
-  media: { label: "Média", color: "text-yellow-500" },
-  alta: { label: "Alta", color: "text-orange-500" },
-  critica: { label: "Crítica", color: "text-red-500" },
-};
-
 export function TarefaDetalhes({
   tarefa: initialTarefa,
   etapaNome,
@@ -140,16 +106,12 @@ export function TarefaDetalhes({
   const [tarefa, setTarefa] = useState(initialTarefa);
   const [anexos, setAnexos] = useState(initialAnexos);
   const [comentarios, setComentarios] = useState(initialComentarios);
-  const [novoComentario, setNovoComentario] = useState("");
   const [newTag, setNewTag] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const sConfig = statusConfig[tarefa.status] || statusConfig.pendente;
-  const pConfig = tarefa.prioridade ? prioridadeConfig[tarefa.prioridade] : null;
 
   const updateField = async (field: string, value: unknown) => {
     setSaving(true);
@@ -212,7 +174,7 @@ export function TarefaDetalhes({
     }
   };
 
-  const deleteAnexo = async (anexoId: string, storagePath: string) => {
+  const handleDeleteAnexo = async (anexoId: string, storagePath: string) => {
     try {
       const supabase = createClient();
       await deletarAnexo(supabase, anexoId, storagePath);
@@ -224,15 +186,14 @@ export function TarefaDetalhes({
     }
   };
 
-  const submitComentario = async () => {
-    if (!novoComentario.trim() || !currentUserId) return;
+  const handleSubmitComentario = async (conteudo: string) => {
+    if (!currentUserId) return;
 
     setSubmittingComment(true);
     try {
       const supabase = createClient();
-      await criarComentario(supabase, tarefa.id, novoComentario.trim(), currentUserId);
+      await criarComentario(supabase, tarefa.id, conteudo, currentUserId);
 
-      setNovoComentario("");
       toast.success("Comentário adicionado!");
       router.refresh();
     } catch {
@@ -256,25 +217,6 @@ export function TarefaDetalhes({
       setDeleting(false);
     }
   };
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return "—";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const getInitials = (nome: string) =>
-    nome
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-
-  const depsPendentes = dependencias.filter(
-    (d) => d.tarefa_status !== "concluida"
-  );
 
   return (
     <div className="space-y-4">
@@ -302,178 +244,14 @@ export function TarefaDetalhes({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Info Básica + Status */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              Informações
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Status */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Select
-                value={tarefa.status}
-                onValueChange={(v) => updateField("status", v)}
-                disabled={saving}
-              >
-                <SelectTrigger className="w-[160px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluida">Concluída</SelectItem>
-                  <SelectItem value="bloqueada">Bloqueada</SelectItem>
-                  <SelectItem value="cancelada">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <TarefaInfoCard
+          tarefa={tarefa}
+          users={users}
+          saving={saving}
+          updateField={updateField}
+        />
 
-            {/* Prioridade */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Prioridade</span>
-              <Select
-                value={tarefa.prioridade || "media"}
-                onValueChange={(v) => updateField("prioridade", v)}
-                disabled={saving}
-              >
-                <SelectTrigger className="w-[160px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="critica">Crítica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Responsável */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Responsável</span>
-              <Select
-                value={tarefa.responsavel_id || "nenhum"}
-                onValueChange={(v) =>
-                  updateField("responsavel_id", v === "nenhum" ? null : v)
-                }
-                disabled={saving}
-              >
-                <SelectTrigger className="w-[160px] h-8">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhum">Nenhum</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Data */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Prazo</span>
-              <span className="text-sm font-medium">
-                {tarefa.data_prevista
-                  ? new Date(
-                      tarefa.data_prevista + "T12:00:00"
-                    ).toLocaleDateString("pt-BR")
-                  : "Não definido"}
-              </span>
-            </div>
-
-            {/* Data Início Real */}
-            {tarefa.data_inicio_real && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Início Real
-                </span>
-                <span className="text-sm">
-                  {new Date(tarefa.data_inicio_real).toLocaleDateString(
-                    "pt-BR"
-                  )}
-                </span>
-              </div>
-            )}
-
-            {/* Data Conclusão Real */}
-            {tarefa.data_conclusao_real && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Concluída em
-                </span>
-                <span className="text-sm text-green-500">
-                  {new Date(tarefa.data_conclusao_real).toLocaleDateString(
-                    "pt-BR"
-                  )}
-                </span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Dependências */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Dependências ({dependencias.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {dependencias.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma dependência cadastrada
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {depsPendentes.length > 0 && (
-                  <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 mb-3">
-                    <p className="text-xs text-orange-500 font-medium">
-                      Tarefa bloqueada - aguardando {depsPendentes.length}{" "}
-                      tarefa{depsPendentes.length > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                )}
-                {dependencias.map((dep) => {
-                  const depConfig =
-                    statusConfig[dep.tarefa_status] || statusConfig.pendente;
-                  const DepIcon = depConfig.icon;
-                  return (
-                    <div
-                      key={dep.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <DepIcon
-                        className={cn("h-4 w-4", depConfig.color)}
-                      />
-                      <span
-                        className={cn(
-                          dep.tarefa_status === "concluida" &&
-                            "line-through text-muted-foreground"
-                        )}
-                      >
-                        {dep.tarefa_nome}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px] ml-auto", depConfig.color)}
-                      >
-                        {depConfig.label}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TarefaDependenciasCard dependencias={dependencias} />
       </div>
 
       {/* Descrição */}
@@ -534,143 +312,19 @@ export function TarefaDetalhes({
         </CardContent>
       </Card>
 
-      {/* Anexos */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Paperclip className="h-4 w-4" />
-            Anexos ({anexos.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {anexos.length > 0 && (
-            <div className="space-y-2 mb-3">
-              {anexos.map((anexo) => (
-                <div
-                  key={anexo.id}
-                  className="flex items-center gap-3 p-2 rounded-lg border"
-                >
-                  <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {anexo.nome_original}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {formatFileSize(anexo.tamanho_bytes)}
-                      {anexo.created_by_nome && ` • ${anexo.created_by_nome}`}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleDownloadAnexo(anexo)}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => deleteAnexo(anexo.id, anexo.storage_path)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+      <TarefaAnexosCard
+        anexos={anexos}
+        uploading={uploading}
+        onUpload={handleUpload}
+        onDownload={handleDownloadAnexo}
+        onDelete={handleDeleteAnexo}
+      />
 
-          <label className="inline-flex">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={uploading}
-              asChild
-            >
-              <span>
-                {uploading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                {uploading ? "Enviando..." : "Upload"}
-              </span>
-            </Button>
-            <input
-              type="file"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
-          </label>
-        </CardContent>
-      </Card>
-
-      {/* Comentários */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Comentários ({comentarios.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {comentarios.length > 0 && (
-            <div className="space-y-3 mb-4">
-              {comentarios.map((c) => (
-                <div key={c.id} className="flex gap-3">
-                  <Avatar className="h-7 w-7 shrink-0">
-                    <AvatarFallback className="text-[10px]">
-                      {c.created_by_nome
-                        ? getInitials(c.created_by_nome)
-                        : "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {c.created_by_nome || "Usuário"}
-                      </span>
-                      {c.created_at && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(c.created_at).toLocaleDateString("pt-BR")}{" "}
-                          {new Date(c.created_at).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm mt-0.5">{c.conteudo}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Textarea
-              value={novoComentario}
-              onChange={(e) => setNovoComentario(e.target.value)}
-              placeholder="Adicionar comentário..."
-              className="resize-none h-20"
-            />
-            <Button
-              size="icon"
-              className="shrink-0 self-end"
-              onClick={submitComentario}
-              disabled={submittingComment || !novoComentario.trim()}
-            >
-              {submittingComment ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <TarefaComentariosCard
+        comentarios={comentarios}
+        submittingComment={submittingComment}
+        onSubmitComentario={handleSubmitComentario}
+      />
 
       {/* Delete Alert */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>

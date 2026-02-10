@@ -53,9 +53,10 @@ export function EmailsTable({ emails }: EmailsTableProps) {
     handleHeaderClick(column, e.shiftKey)
   }
 
-  const formatValor = (dadosExtraidos: any) => {
-    const valor = dadosExtraidos?.valor
-    if (!valor) return '-'
+  const formatValor = (dadosExtraidos: Record<string, unknown> | null) => {
+    if (!dadosExtraidos) return '-'
+    const valor = dadosExtraidos.valor
+    if (!valor || typeof valor !== 'number') return '-'
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -134,7 +135,7 @@ export function EmailsTable({ emails }: EmailsTableProps) {
                       {email.assunto}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatValor(email.dados_extraidos)}
+                      {formatValor(email.dados_extraidos as Record<string, unknown> | null)}
                     </TableCell>
                   </TableRow>
                 )

@@ -14,47 +14,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Circle,
-  Play,
-  Check,
-  AlertTriangle,
-  Pause,
-  Flag,
-  ArrowUpDown,
-  Eye,
-  CheckSquare,
-  Clock,
-  AlertCircle,
-  ListTodo,
-} from "lucide-react";
+import { Flag, ArrowUpDown, Eye, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   TarefasFilters,
   TarefasFiltersState,
-} from "./tarefas-filters";
-import { NovaTarefaDialog } from "./nova-tarefa-dialog";
-import { EditarTarefaDialog } from "./editar-tarefa-dialog";
-
-interface TarefaComContexto {
-  id: string;
-  subetapa_id: string;
-  nome: string;
-  descricao: string | null;
-  status: string;
-  data_prevista: string | null;
-  data_inicio_real: string | null;
-  data_conclusao_real: string | null;
-  prioridade: string | null;
-  responsavel_id: string | null;
-  tags: string[] | null;
-  notas: string | null;
-  ordem: number;
-  subetapa_nome: string;
-  etapa_id: string;
-  etapa_nome: string;
-  responsavel_nome: string | null;
-}
+} from "@/components/features/tarefas/tarefas-filters";
+import { EditarTarefaDialog } from "@/components/features/tarefas/editar-tarefa-dialog";
+import { TarefasMetricas } from "@/components/features/tarefas/tarefas-metricas";
+import {
+  statusConfig,
+  prioridadeConfig,
+  prioridadeOrder,
+  getInitials,
+  type TarefaComContexto,
+} from "@/components/features/tarefas/tarefas-config";
 
 interface EtapaOption {
   id: string;
@@ -80,56 +54,8 @@ interface TarefasTableProps {
   users: User[];
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; color: string; icon: typeof Circle }
-> = {
-  pendente: { label: "Pendente", color: "text-muted-foreground", icon: Circle },
-  em_andamento: { label: "Em Andamento", color: "text-blue-500", icon: Play },
-  concluida: { label: "Concluída", color: "text-green-500", icon: Check },
-  bloqueada: { label: "Bloqueada", color: "text-orange-500", icon: Pause },
-  cancelada: {
-    label: "Cancelada",
-    color: "text-red-500",
-    icon: AlertTriangle,
-  },
-};
-
-const prioridadeConfig: Record<
-  string,
-  { label: string; color: string; bgColor: string }
-> = {
-  baixa: {
-    label: "Baixa",
-    color: "text-blue-400",
-    bgColor: "bg-blue-400/10",
-  },
-  media: {
-    label: "Média",
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-500/10",
-  },
-  alta: {
-    label: "Alta",
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-  },
-  critica: {
-    label: "Crítica",
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-  },
-};
-
 type SortKey = "nome" | "data_prevista" | "prioridade" | "status" | "etapa_nome";
 type SortDir = "asc" | "desc";
-
-const prioridadeOrder: Record<string, number> = {
-  critica: 0,
-  alta: 1,
-  media: 2,
-  baixa: 3,
-};
 
 export function TarefasTable({
   tarefas,
@@ -196,7 +122,7 @@ export function TarefasTable({
       result = result.filter((t) => t.prioridade === filters.prioridade);
     }
 
-    // Ordenação
+    // Ordenacao
     result.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -227,35 +153,6 @@ export function TarefasTable({
     return result;
   }, [tarefas, filters, sortKey, sortDir]);
 
-  // Métricas
-  const metricas = useMemo(() => {
-    const total = tarefas.length;
-    const pendentes = tarefas.filter((t) => t.status === "pendente").length;
-    const emAndamento = tarefas.filter(
-      (t) => t.status === "em_andamento"
-    ).length;
-    const concluidas = tarefas.filter((t) => t.status === "concluida").length;
-    const bloqueadas = tarefas.filter((t) => t.status === "bloqueada").length;
-    const hoje = new Date().toISOString().split("T")[0];
-    const atrasadas = tarefas.filter(
-      (t) =>
-        t.data_prevista &&
-        t.data_prevista < hoje &&
-        t.status !== "concluida" &&
-        t.status !== "cancelada"
-    ).length;
-
-    return { total, pendentes, emAndamento, concluidas, bloqueadas, atrasadas };
-  }, [tarefas]);
-
-  const getInitials = (nome: string) =>
-    nome
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-
   const SortHeader = ({
     label,
     sortKeyValue,
@@ -276,77 +173,8 @@ export function TarefasTable({
 
   return (
     <div className="space-y-4">
-      {/* Métricas */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <ListTodo className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Total
-              </p>
-              <p className="text-lg font-bold">{metricas.total}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <Circle className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Pendentes
-              </p>
-              <p className="text-lg font-bold">{metricas.pendentes}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <Play className="h-4 w-4 text-blue-500" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Em And.
-              </p>
-              <p className="text-lg font-bold">{metricas.emAndamento}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="h-4 w-4 text-green-500" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Concluídas
-              </p>
-              <p className="text-lg font-bold">{metricas.concluidas}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <Pause className="h-4 w-4 text-orange-500" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Bloqueadas
-              </p>
-              <p className="text-lg font-bold">{metricas.bloqueadas}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-500" />
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase">
-                Atrasadas
-              </p>
-              <p className="text-lg font-bold text-red-500">
-                {metricas.atrasadas}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Metricas */}
+      <TarefasMetricas tarefas={tarefas} />
 
       {/* Filtros */}
       <TarefasFilters
@@ -376,7 +204,7 @@ export function TarefasTable({
                 <TableHead>
                   <SortHeader label="Etapa / Subetapa" sortKeyValue="etapa_nome" />
                 </TableHead>
-                <TableHead>Responsável</TableHead>
+                <TableHead>Responsavel</TableHead>
                 <TableHead>
                   <SortHeader label="Prazo" sortKeyValue="data_prevista" />
                 </TableHead>
@@ -386,7 +214,7 @@ export function TarefasTable({
                 <TableHead>
                   <SortHeader label="Prioridade" sortKeyValue="prioridade" />
                 </TableHead>
-                <TableHead className="w-[60px]">Ações</TableHead>
+                <TableHead className="w-[60px]">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -542,7 +370,7 @@ export function TarefasTable({
         </CardContent>
       </Card>
 
-      {/* Dialog de edição */}
+      {/* Dialog de edicao */}
       {editingTarefa && (
         <EditarTarefaDialog
           tarefa={editingTarefa}

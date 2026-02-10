@@ -1,7 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/lib/types/database'
-
-type TypedSupabaseClient = SupabaseClient<Database>
+import { TypedSupabaseClient } from '@/lib/types/supabase'
 
 // ===== STORAGE =====
 

@@ -11,16 +11,13 @@ import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
 import { atualizarCompra } from "@/lib/services/compras";
 import { atualizarGastosPorCompra } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -29,24 +26,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Loader2, Upload, FileText, X, AlertTriangle } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn, formatDateToString } from "@/lib/utils";
-import { QuickAddFornecedor } from "../ocr/quick-add-fornecedor";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { formatDateToString } from "@/lib/utils";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import { CompraInfoSection } from "@/components/features/compras/compra-info-section";
+import { CompraNotaFiscalSection } from "@/components/features/compras/compra-notafiscal-section";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
@@ -231,7 +221,7 @@ export function CompraEditForm({
           return;
         }
 
-        // Obter URL pública
+        // Obter URL publica
         const { data: urlData } = supabase.storage
           .from("notas-compras")
           .getPublicUrl(filePath);
@@ -259,7 +249,7 @@ export function CompraEditForm({
       });
 
       // Atualizar os gastos (parcelas) com os novos dados
-      // Apenas atualiza campos básicos, não altera valores ou datas das parcelas
+      // Apenas atualiza campos basicos, nao altera valores ou datas das parcelas
       try {
         await atualizarGastosPorCompra(supabase, compra.id, {
           descricao: data.descricao,
@@ -271,7 +261,7 @@ export function CompraEditForm({
         });
       } catch (gastosError) {
         console.error("Erro ao atualizar parcelas:", gastosError);
-        // Não falha a operação, apenas loga o erro
+        // Nao falha a operacao, apenas loga o erro
       }
 
       toast.success("Compra atualizada com sucesso!");
@@ -306,198 +296,21 @@ export function CompraEditForm({
           </AlertDescription>
         </Alert>
 
-        {/* Informações da Compra */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Informações da Compra</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Descrição */}
-            <FormField
-              control={form.control}
-              name="descricao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ex: Porcelanato Portinari 60x60 (50 caixas)"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* Informações da Compra (sub-componente reutilizado) */}
+        <CompraInfoSection
+          form={form}
+          fornecedores={fornecedores}
+          categorias={categorias}
+          subcategoriasDisponiveis={subcategoriasDisponiveis}
+          etapas={etapas}
+          categoriaSelecionada={categoriaSelecionada}
+          onFornecedorAdded={(novoFornecedor) => {
+            setFornecedores(prev => [...prev, novoFornecedor]);
+          }}
+          hideValorTotal
+        />
 
-            {/* Data da Compra */}
-            <FormField
-              control={form.control}
-              name="data_compra"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data da Compra *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                          ) : (
-                            <span>Selecione a data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date > new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Fornecedor e Categoria */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="fornecedor_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fornecedor *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o fornecedor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <QuickAddFornecedor
-                          onFornecedorAdded={(novoFornecedor) => {
-                            setFornecedores((prev) => [...prev, novoFornecedor]);
-                            field.onChange(novoFornecedor.id);
-                          }}
-                        />
-                        {fornecedores.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>
-                            {f.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: cat.cor }}
-                              />
-                              {cat.nome}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Subcategoria (condicional) */}
-            {categoriaSelecionada && subcategoriasDisponiveis.length > 0 && (
-              <FormField
-                control={form.control}
-                name="subcategoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategoria (opcional)</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a subcategoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {subcategoriasDisponiveis.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            {sub.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Etapa Relacionada */}
-            <FormField
-              control={form.control}
-              name="etapa_relacionada_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Etapa Relacionada (opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a etapa" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      {etapas.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Forma de Pagamento */}
+        {/* Forma de Pagamento (inline - layout diferente do create) */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Pagamento</CardTitle>
@@ -508,7 +321,6 @@ export function CompraEditForm({
               name="forma_pagamento"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Forma de Pagamento *</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -560,129 +372,16 @@ export function CompraEditForm({
           </CardContent>
         </Card>
 
-        {/* Nota Fiscal */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Nota Fiscal (opcional)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Upload de Arquivo */}
-            <div className="space-y-2">
-              <FormLabel>Arquivo da NF</FormLabel>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                className="hidden"
-              />
-
-              {/* Arquivo existente */}
-              {notaFiscalUrlAtual && !arquivoNF && (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                  <FileText className="h-8 w-8 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Arquivo anexado</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {notaFiscalUrlAtual.split("/").pop()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <a
-                        href={notaFiscalUrlAtual}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Ver
-                      </a>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRemoveExistingFile}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Upload de novo arquivo */}
-              {!notaFiscalUrlAtual && !arquivoNF && (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
-                >
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Clique para selecionar ou arraste o arquivo
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PDF, JPG, PNG ou WebP (máx. 10MB)
-                  </p>
-                </div>
-              )}
-
-              {/* Novo arquivo selecionado */}
-              {arquivoNF && (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                  <FileText className="h-8 w-8 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {arquivoNF.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {(arquivoNF.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleRemoveFile}
-                    className="shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Botão para substituir arquivo existente */}
-              {notaFiscalUrlAtual && !arquivoNF && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Substituir arquivo
-                </Button>
-              )}
-            </div>
-
-            <FormField
-              control={form.control}
-              name="nota_fiscal_numero"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número da NF</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: 12345" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+        {/* Nota Fiscal (sub-componente reutilizado com suporte a arquivo existente) */}
+        <CompraNotaFiscalSection
+          form={form}
+          arquivoNF={arquivoNF}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          handleRemoveFile={handleRemoveFile}
+          notaFiscalUrlAtual={notaFiscalUrlAtual}
+          handleRemoveExistingFile={handleRemoveExistingFile}
+        />
 
         {/* Observações */}
         <Card>
@@ -734,4 +433,3 @@ export function CompraEditForm({
     </Form>
   );
 }
-

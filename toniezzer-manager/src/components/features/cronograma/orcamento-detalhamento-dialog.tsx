@@ -82,7 +82,7 @@ export function OrcamentoDetalhamentoDialog({
 
       // Preencher valores existentes
       const valoresIniciais: Record<string, number> = {};
-      detalhamento.forEach((item: any) => {
+      detalhamento.forEach((item: DetalhamentoItem) => {
         valoresIniciais[item.categoria_id] = item.valor_previsto;
       });
       setValores(valoresIniciais);

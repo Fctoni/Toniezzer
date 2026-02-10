@@ -97,8 +97,10 @@ export function useEmailSort(emails: Email[]): UseEmailSortReturn {
             break
           }
           case 'valor': {
-            const valorA = (a.dados_extraidos as any)?.valor || 0
-            const valorB = (b.dados_extraidos as any)?.valor || 0
+            const dadosA = a.dados_extraidos as Record<string, unknown> | null
+            const dadosB = b.dados_extraidos as Record<string, unknown> | null
+            const valorA = (typeof dadosA?.valor === 'number' ? dadosA.valor : 0)
+            const valorB = (typeof dadosB?.valor === 'number' ? dadosB.valor : 0)
             comparison = valorA - valorB
             break
           }

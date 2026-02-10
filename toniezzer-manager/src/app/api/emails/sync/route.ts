@@ -73,8 +73,19 @@ export async function POST(request: NextRequest) {
           uid: number
         }> = []
 
+        // Estrutura de body do IMAP
+        interface BodyStructure {
+          disposition?: string
+          type?: string
+          subtype?: string
+          size?: number
+          dispositionParameters?: { filename?: string }
+          parameters?: { name?: string }
+          childNodes?: BodyStructure[]
+        }
+
         // Função recursiva para encontrar anexos na estrutura
-        function findAttachments(structure: any, partPath: string = '') {
+        function findAttachments(structure: BodyStructure, partPath: string = '') {
           if (!structure) return
           
           // Verificar se é um anexo processável
@@ -85,7 +96,7 @@ export async function POST(request: NextRequest) {
             structure.type.includes('xml')
           )
           
-          if ((isAttachment || isProcessableType) && structure.size > 0) {
+          if ((isAttachment || isProcessableType) && (structure.size ?? 0) > 0) {
             const filename = structure.dispositionParameters?.filename || 
                            structure.parameters?.name ||
                            `anexo-${anexos.length + 1}.${structure.subtype || 'bin'}`
@@ -100,14 +111,16 @@ export async function POST(request: NextRequest) {
           }
           
           if (structure.childNodes) {
-            structure.childNodes.forEach((child: any, index: number) => {
+            structure.childNodes.forEach((child: BodyStructure, index: number) => {
               const newPath = partPath ? `${partPath}.${index + 1}` : `${index + 1}`
               findAttachments(child, newPath)
             })
           }
         }
 
-        findAttachments(message.bodyStructure)
+        if (message.bodyStructure) {
+          findAttachments(message.bodyStructure as BodyStructure)
+        }
         console.log('[EMAIL SYNC] Anexos encontrados:', anexos.length)
 
         // Determinar status inicial baseado nos anexos

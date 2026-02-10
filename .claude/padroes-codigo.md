@@ -508,37 +508,34 @@ function useTasksRealtime(initialTasks: Task[]) {
 
 ### Idioma do codigo
 
-O projeto usa **ingles** para todo o codigo: funcoes, variaveis, arquivos, tipos e componentes. Portugues e usado apenas para textos visiveis ao usuario (labels, mensagens, tooltips, placeholders).
+O projeto usa **portugues** para codigo (funcoes, variaveis, tipos) e **kebab-case em portugues** para nomes de arquivos. Tabelas do banco tambem usam portugues. Textos visiveis ao usuario sao em portugues.
 
 ```typescript
-// CORRETO — codigo em ingles, texto visivel em portugues
-export async function updateTask(supabase: TypedSupabaseClient, id: string, updates: TablesUpdate<'tasks'>)
-toast.success('Tarefa atualizada com sucesso')
-
-// ERRADO — codigo em portugues
+// CORRETO — codigo e nomes em portugues
 export async function atualizarTarefa(supabase: TypedSupabaseClient, id: string, updates: TablesUpdate<'tarefas'>)
+toast.success('Tarefa atualizada com sucesso')
 ```
 
-### Services (ingles)
+### Services (portugues)
 
 | Operacao | Prefixo | Exemplo |
 |----------|---------|---------|
-| Buscar todos | `fetch` | `fetchStages()` |
-| Buscar por ID | `fetchById` | `fetchTaskById()` |
-| Buscar resumido | `fetchSummary` | `fetchSubstagesSummary()` |
-| Criar | `create` | `createTask()` |
-| Atualizar | `update` | `updateStage()` |
-| Deletar | `delete` | `deleteSubstage()` |
-| Reordenar | `reorder` | `reorderStages()` |
-| Calcular | `calculate` | `calculateStageProgress()` |
+| Buscar todos | `buscar` | `buscarEtapas()` |
+| Buscar por ID | `buscarPorId` | `buscarTarefaPorId()` |
+| Buscar resumido | `buscarResumo` | `buscarResumoSubetapas()` |
+| Criar | `criar` | `criarTarefa()` |
+| Atualizar | `atualizar` | `atualizarEtapa()` |
+| Deletar | `deletar` | `deletarSubetapa()` |
+| Reordenar | `reordenar` | `reordenarEtapas()` |
+| Calcular | `calcular` | `calcularProgressoEtapa()` |
 
-### Arquivos (kebab-case, ingles)
+### Arquivos (kebab-case, portugues)
 
 ```
-new-stage-dialog.tsx
-edit-task-dialog.tsx
-task-details.tsx
-expense-form.tsx
+nova-etapa-dialog.tsx
+editar-tarefa-dialog.tsx
+tarefa-detalhes.tsx
+compra-form.tsx
 ```
 
 ---
@@ -648,4 +645,4 @@ const tasks = await fetchTasksByCreatedAt(supabase)
 | 13 | Server Components para data fetching, Client para interatividade | Evita fetching desnecessario no client, aproveita o server |
 | 14 | TypedSupabaseClient centralizado em um unico arquivo | Evita redefinicao e inconsistencia entre services |
 | 15 | Validacao na fronteira (API Routes e forms) | Services confiam nos dados, nao revalidam |
-| 16 | Codigo em ingles, textos visiveis em portugues | Consistencia com ecossistema, legibilidade para agentes |
+| 16 | Codigo em portugues, consistente com nomes de tabelas e dominio | Pragmatismo: migrar 13+ services e consumidores tem alto risco sem ganho funcional |

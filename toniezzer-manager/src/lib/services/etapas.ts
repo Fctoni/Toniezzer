@@ -1,7 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database, Tables, TablesUpdate } from '@/lib/types/database'
-
-type TypedSupabaseClient = SupabaseClient<Database>
+import { TypedSupabaseClient } from '@/lib/types/supabase'
+import { Tables, TablesUpdate } from '@/lib/types/database'
 type Etapa = Tables<'etapas'>
 
 // ===== SELECT =====

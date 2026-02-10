@@ -1,7 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database, Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-
-type TypedSupabaseClient = SupabaseClient<Database>
+import { TypedSupabaseClient } from '@/lib/types/supabase'
+import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
 type Fornecedor = Tables<'fornecedores'>
 
 // ===== SELECT =====

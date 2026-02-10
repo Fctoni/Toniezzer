@@ -93,8 +93,9 @@ export default function EmailsPage() {
   const categorias = useMemo(() => {
     const cats = new Set<string>()
     emails.forEach(email => {
-      const categoria = (email.dados_extraidos as any)?.categoria_sugerida
-      if (categoria) cats.add(categoria)
+      const dados = email.dados_extraidos as Record<string, unknown> | null
+      const categoria = dados?.categoria_sugerida
+      if (typeof categoria === 'string') cats.add(categoria)
     })
     return Array.from(cats).sort()
   }, [emails])
@@ -121,7 +122,8 @@ export default function EmailsPage() {
 
       // Filtro de categoria
       if (filters.categoria !== 'all') {
-        const emailCategoria = (email.dados_extraidos as any)?.categoria_sugerida
+        const dadosEmail = email.dados_extraidos as Record<string, unknown> | null
+        const emailCategoria = dadosEmail?.categoria_sugerida
         if (emailCategoria !== filters.categoria) return false
       }
 

@@ -1,7 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js'
-import { Database, Tables } from '@/lib/types/database'
-
-type TypedSupabaseClient = SupabaseClient<Database>
+import { TypedSupabaseClient } from '@/lib/types/supabase'
+import { Tables } from '@/lib/types/database'
 type TarefaAnexo = Tables<'tarefas_anexos'>
 
 // ===== SELECT =====

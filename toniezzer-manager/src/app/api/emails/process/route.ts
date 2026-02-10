@@ -272,10 +272,12 @@ async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
       const total = nfe.total?.ICMSTot || {}
       const valor = parseFloat(total.vNF) || parseFloat(total.vProd) || null
       
+      interface NFeDetalhe { prod?: { xProd?: string } }
+
       const det = nfe.det
       let descricao = ''
       if (Array.isArray(det)) {
-        descricao = det.map((d: any) => d.prod?.xProd).filter(Boolean).join(', ')
+        descricao = det.map((d: NFeDetalhe) => d.prod?.xProd).filter(Boolean).join(', ')
       } else if (det?.prod?.xProd) {
         descricao = det.prod.xProd
       }

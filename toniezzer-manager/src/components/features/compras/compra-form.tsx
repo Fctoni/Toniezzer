@@ -12,37 +12,20 @@ import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
 import { criarCompra } from "@/lib/services/compras";
 import { criarGastos } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Loader2, Upload, FileText, X } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { ParcelasPreview } from "./parcelas-preview";
-import { QuickAddFornecedor } from "../ocr/quick-add-fornecedor";
+import { Loader2 } from "lucide-react";
 import { formatDateToString } from "@/lib/utils";
+import { CompraInfoSection } from "@/components/features/compras/compra-info-section";
+import { CompraPagamentoSection } from "@/components/features/compras/compra-pagamento-section";
+import { CompraNotaFiscalSection } from "@/components/features/compras/compra-notafiscal-section";
 
 const formSchema = z.object({
   descricao: z.string().min(3, "Mínimo 3 caracteres"),
@@ -94,7 +77,6 @@ export function CompraForm({
     },
   });
 
-  // Watch para atualizar o preview
   const valorTotal = useWatch({ control: form.control, name: "valor_total" });
   const parcelas = useWatch({ control: form.control, name: "parcelas" });
   const dataPrimeiraParcela = useWatch({
@@ -108,7 +90,6 @@ export function CompraForm({
     : 0;
   const numeroParcelas = parseInt(parcelas) || 1;
 
-  // Buscar subcategorias
   useEffect(() => {
     const fetchSubcategorias = async () => {
       try {
@@ -123,12 +104,10 @@ export function CompraForm({
     fetchSubcategorias();
   }, []);
 
-  // Limpar subcategoria quando categoria mudar
   useEffect(() => {
     form.setValue("subcategoria_id", undefined);
   }, [categoriaSelecionada, form]);
 
-  // Filtrar subcategorias pela categoria selecionada
   const subcategoriasDisponiveis = subcategorias.filter(
     sub => sub.categoria_id === categoriaSelecionada
   );
@@ -136,12 +115,10 @@ export function CompraForm({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validar tamanho (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast.error("Arquivo muito grande. Máximo 10MB.");
         return;
       }
-      // Validar tipo
       const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
       if (!allowedTypes.includes(file.type)) {
         toast.error("Tipo de arquivo não permitido. Use PDF, JPG, PNG ou WebP.");
@@ -158,6 +135,15 @@ export function CompraForm({
     }
   };
 
+  const formatCurrencyInput = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    const formatted = (parseInt(numbers || "0") / 100).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return formatted;
+  };
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
 
@@ -168,14 +154,12 @@ export function CompraForm({
       );
       const numParcelas = parseInt(data.parcelas);
 
-      // Buscar usuário padrão
       const { data: users } = await supabase
         .from("users")
         .select("id")
         .limit(1);
       const userId = users?.[0]?.id;
 
-      // Upload do arquivo da NF (se houver)
       let notaFiscalUrl: string | null = null;
       if (arquivoNF) {
         setUploadingNF(true);
@@ -195,7 +179,6 @@ export function CompraForm({
           return;
         }
 
-        // Obter URL pública
         const { data: urlData } = supabase.storage
           .from("notas-compras")
           .getPublicUrl(filePath);
@@ -204,7 +187,6 @@ export function CompraForm({
         setUploadingNF(false);
       }
 
-      // 1. Criar a compra
       const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
 
       const compra = await criarCompra(supabase, {
@@ -225,7 +207,6 @@ export function CompraForm({
         criado_via: "manual",
       });
 
-      // 2. Criar os lançamentos (parcelas)
       const valorParcela = valorNumerico / numParcelas;
       const valorArredondado = Math.floor(valorParcela * 100) / 100;
       const diferencaArredondamento =
@@ -275,421 +256,36 @@ export function CompraForm({
     }
   };
 
-  const formatCurrencyInput = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    const formatted = (parseInt(numbers || "0") / 100).toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return formatted;
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Informações da Compra */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Informações da Compra</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Descrição */}
-            <FormField
-              control={form.control}
-              name="descricao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ex: Porcelanato Portinari 60x60 (50 caixas)"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <CompraInfoSection
+          form={form}
+          fornecedores={fornecedores}
+          categorias={categorias}
+          subcategoriasDisponiveis={subcategoriasDisponiveis}
+          etapas={etapas}
+          categoriaSelecionada={categoriaSelecionada}
+          onFornecedorAdded={(novoFornecedor) => {
+            setFornecedores(prev => [...prev, novoFornecedor]);
+          }}
+          formatCurrencyInput={formatCurrencyInput}
+        />
 
-            {/* Valor e Data da Compra */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="valor_total"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Valor Total (R$) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="0,00"
-                        {...field}
-                        onChange={(e) => {
-                          const formatted = formatCurrencyInput(e.target.value);
-                          field.onChange(formatted);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <CompraPagamentoSection
+          form={form}
+          valorNumerico={valorNumerico}
+          numeroParcelas={numeroParcelas}
+          dataPrimeiraParcela={dataPrimeiraParcela}
+        />
 
-              <FormField
-                control={form.control}
-                name="data_compra"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data da Compra *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                            ) : (
-                              <span>Selecione a data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date > new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Fornecedor e Categoria */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="fornecedor_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fornecedor *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o fornecedor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <QuickAddFornecedor
-                          onFornecedorAdded={(novoFornecedor) => {
-                            setFornecedores(prev => [...prev, novoFornecedor])
-                            field.onChange(novoFornecedor.id)
-                          }}
-                        />
-                        {fornecedores.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>
-                            {f.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: cat.cor }}
-                              />
-                              {cat.nome}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Subcategoria (condicional) */}
-            {categoriaSelecionada && subcategoriasDisponiveis.length > 0 && (
-              <FormField
-                control={form.control}
-                name="subcategoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategoria (opcional)</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a subcategoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {subcategoriasDisponiveis.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            {sub.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Etapa Relacionada */}
-            <FormField
-              control={form.control}
-              name="etapa_relacionada_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Etapa Relacionada (opcional)</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a etapa" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {etapas.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Pagamento */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pagamento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="forma_pagamento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Forma de Pagamento *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pix">PIX</SelectItem>
-                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="cartao">Cartão</SelectItem>
-                        <SelectItem value="boleto">Boleto</SelectItem>
-                        <SelectItem value="cheque">Cheque</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="parcelas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Parcelas *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                          <SelectItem key={n} value={n.toString()}>
-                            {n}x {n > 1 ? "(sem juros)" : "(à vista)"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="data_primeira_parcela"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data da 1ª Parcela *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                          ) : (
-                            <span>Selecione a data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Preview das Parcelas */}
-        {valorNumerico > 0 && numeroParcelas > 0 && dataPrimeiraParcela && (
-          <ParcelasPreview
-            valorTotal={valorNumerico}
-            numeroParcelas={numeroParcelas}
-            dataPrimeiraParcela={dataPrimeiraParcela}
-          />
-        )}
-
-        {/* Nota Fiscal */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Nota Fiscal (opcional)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Upload de Arquivo */}
-            <div className="space-y-2">
-              <FormLabel>Arquivo da NF</FormLabel>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                className="hidden"
-              />
-              
-              {!arquivoNF ? (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
-                >
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Clique para selecionar ou arraste o arquivo
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PDF, JPG, PNG ou WebP (máx. 10MB)
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                  <FileText className="h-8 w-8 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{arquivoNF.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(arquivoNF.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleRemoveFile}
-                    className="shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <FormField
-              control={form.control}
-              name="nota_fiscal_numero"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número da NF</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: 12345" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+        <CompraNotaFiscalSection
+          form={form}
+          arquivoNF={arquivoNF}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          handleRemoveFile={handleRemoveFile}
+        />
 
         {/* Observações */}
         <Card>
@@ -735,4 +331,3 @@ export function CompraForm({
     </Form>
   );
 }
-
