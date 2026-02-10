@@ -8,6 +8,7 @@ import { EmailFilters, type EmailFiltersState } from '@/components/features/emai
 import { Mail, Search, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { buscarEmails } from '@/lib/services/emails-monitorados'
 import type { Tables, EmailStatus } from '@/lib/types/database'
 
 export default function EmailsPage() {
@@ -21,21 +22,16 @@ export default function EmailsPage() {
   })
 
   const loadEmails = async () => {
-    const supabase = createClient()
-    
-    const { data, error } = await supabase
-      .from('emails_monitorados')
-      .select('*')
-      .order('data_recebimento', { ascending: false })
-
-    if (error) {
+    try {
+      const supabase = createClient()
+      const data = await buscarEmails(supabase)
+      setEmails(data)
+    } catch (error) {
       console.error('Erro ao carregar emails:', error)
       toast.error('Erro ao carregar emails')
-      return
+    } finally {
+      setLoading(false)
     }
-
-    setEmails(data || [])
-    setLoading(false)
   }
 
   useEffect(() => {

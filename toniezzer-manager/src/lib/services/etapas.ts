@@ -97,6 +97,16 @@ export async function deletarEtapa(
   if (error) throw error
 }
 
+// ===== DEPENDÊNCIAS =====
+
+export async function criarDependenciaEtapa(
+  supabase: TypedSupabaseClient,
+  data: { etapa_id: string; depende_de_etapa_id: string; tipo: string }
+): Promise<void> {
+  const { error } = await supabase.from('etapas_dependencias').insert(data)
+  if (error) throw error
+}
+
 // ===== CÁLCULOS =====
 
 export function calcularProgressoEtapa(

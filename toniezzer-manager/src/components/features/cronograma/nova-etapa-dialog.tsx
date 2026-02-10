@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { criarEtapa } from "@/lib/services/etapas";
+import { criarEtapa, criarDependenciaEtapa } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,7 +94,7 @@ export function NovaEtapaDialog({
 
       // Criar dependência se especificada
       if (data.depende_de && etapa) {
-        await supabase.from("etapas_dependencias").insert({
+        await criarDependenciaEtapa(supabase, {
           etapa_id: etapa.id,
           depende_de_etapa_id: data.depende_de,
           tipo: "obrigatoria",

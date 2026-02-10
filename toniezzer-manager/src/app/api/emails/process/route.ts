@@ -4,6 +4,7 @@ import { parseString } from 'xml2js'
 import { promisify } from 'util'
 import { ImapFlow } from 'imapflow'
 import type { Json } from '@/lib/types/database'
+import { buscarEmailsParaProcessar, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
 import { formatDateToString } from '@/lib/utils'
 
 const parseXml = promisify(parseString)
@@ -340,15 +341,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Buscar emails pendentes
-    const { data: emails, error: fetchError } = await supabase
-      .from('emails_monitorados')
-      .select('*')
-      .in('status', ['nao_processado', 'erro'])
-      .limit(5)
-
-    if (fetchError) {
-      throw new Error(fetchError.message)
-    }
+    const emails = await buscarEmailsParaProcessar(supabase, 5)
 
     if (!emails || emails.length === 0) {
       return NextResponse.json({ 
@@ -366,10 +359,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log('[EMAIL PROCESS] Processando:', email.id, email.assunto)
 
-        await supabase
-          .from('emails_monitorados')
-          .update({ status: 'processando' })
-          .eq('id', email.id)
+        await atualizarStatusEmail(supabase, email.id, { status: 'processando' })
 
         const anexos = email.anexos as Array<{
           nome: string
@@ -381,15 +371,12 @@ export async function POST(request: NextRequest) {
 
         if (!anexos || anexos.length === 0) {
           console.log('[EMAIL PROCESS] Sem anexos')
-          await supabase
-            .from('emails_monitorados')
-            .update({
-              status: 'aguardando_revisao',
-              dados_extraidos: { confianca: 0 },
-              erro_mensagem: 'Email sem anexos processáveis',
-              processado_em: new Date().toISOString(),
-            })
-            .eq('id', email.id)
+          await atualizarStatusEmail(supabase, email.id, {
+            status: 'aguardando_revisao',
+            dados_extraidos: { confianca: 0 },
+            erro_mensagem: 'Email sem anexos processáveis',
+            processado_em: new Date().toISOString(),
+          })
           processed++
           continue
         }
@@ -460,30 +447,24 @@ export async function POST(request: NextRequest) {
 
         // Salvar resultados
         if (dadosExtraidos && dadosExtraidos.confianca > 0) {
-          await supabase
-            .from('emails_monitorados')
-            .update({
-              status: 'aguardando_revisao',
-              dados_extraidos: dadosExtraidos as unknown as Json,
-              erro_mensagem: erroDetalhado || null,
-              processado_em: new Date().toISOString(),
-            })
-            .eq('id', email.id)
+          await atualizarStatusEmail(supabase, email.id, {
+            status: 'aguardando_revisao',
+            dados_extraidos: dadosExtraidos as unknown as Json,
+            erro_mensagem: erroDetalhado || null,
+            processado_em: new Date().toISOString(),
+          })
           
           console.log('[EMAIL PROCESS] Email processado com sucesso!')
         } else {
           const mensagemFinal = erroDetalhado || 
             'Não foi possível extrair dados dos anexos (nenhum dado com confiança suficiente)'
           
-          await supabase
-            .from('emails_monitorados')
-            .update({
-              status: 'aguardando_revisao',
-              dados_extraidos: (dadosExtraidos || { confianca: 0 }) as unknown as Json,
-              erro_mensagem: mensagemFinal,
-              processado_em: new Date().toISOString(),
-            })
-            .eq('id', email.id)
+          await atualizarStatusEmail(supabase, email.id, {
+            status: 'aguardando_revisao',
+            dados_extraidos: (dadosExtraidos || { confianca: 0 }) as unknown as Json,
+            erro_mensagem: mensagemFinal,
+            processado_em: new Date().toISOString(),
+          })
           
           console.log('[EMAIL PROCESS] Falha ao extrair dados:', mensagemFinal)
         }
@@ -493,13 +474,10 @@ export async function POST(request: NextRequest) {
       } catch (emailError) {
         console.error('[EMAIL PROCESS] Erro:', email.id, emailError)
         
-        await supabase
-          .from('emails_monitorados')
-          .update({
-            status: 'erro',
-            erro_mensagem: emailError instanceof Error ? emailError.message : 'Erro desconhecido',
-          })
-          .eq('id', email.id)
+        await atualizarStatusEmail(supabase, email.id, {
+          status: 'erro',
+          erro_mensagem: emailError instanceof Error ? emailError.message : 'Erro desconhecido',
+        })
       }
     }
 

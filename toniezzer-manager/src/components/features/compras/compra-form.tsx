@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
 import { criarCompra } from "@/lib/services/compras";
 import { criarGastos } from "@/lib/services/gastos";
+import { buscarPrimeiroUsuario } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -154,11 +155,13 @@ export function CompraForm({
       );
       const numParcelas = parseInt(data.parcelas);
 
-      const { data: users } = await supabase
-        .from("users")
-        .select("id")
-        .limit(1);
-      const userId = users?.[0]?.id;
+      let userId: string | undefined;
+      try {
+        const user = await buscarPrimeiroUsuario(supabase);
+        userId = user.id;
+      } catch {
+        // ignora erro se não encontrar usuário
+      }
 
       let notaFiscalUrl: string | null = null;
       if (arquivoNF) {

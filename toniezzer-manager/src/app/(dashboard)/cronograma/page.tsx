@@ -6,6 +6,7 @@ import { buscarEtapas } from "@/lib/services/etapas";
 import { buscarSubetapas } from "@/lib/services/subetapas";
 import { buscarTarefas } from "@/lib/services/tarefas";
 import { buscarGastosPorEtapa } from "@/lib/services/gastos";
+import { buscarUsuariosAtivos } from "@/lib/services/users";
 
 interface User {
   id: string;
@@ -75,19 +76,19 @@ export default async function CronogramaPage() {
 
   const [
     etapasRaw,
-    { data: usersData },
+    usersData,
     subetapasRaw,
     tarefasRaw,
     gastos,
   ] = await Promise.all([
     buscarEtapas(supabase),
-    supabase.from("users").select("*").eq("ativo", true),
+    buscarUsuariosAtivos(supabase),
     buscarSubetapas(supabase),
     buscarTarefas(supabase),
     buscarGastosPorEtapa(supabase),
   ]);
 
-  const users = (usersData || []) as User[];
+  const users = usersData as User[];
 
   // Aninhar tarefas dentro de subetapas
   const subetapasComTarefas: Subetapa[] = subetapasRaw.map((s) => ({

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Tables, TopicoStatus } from "@/lib/types/database";
+import { buscarTopicos } from "@/lib/services/topicos-comunicacao";
+import { contarMensagensPorTopico } from "@/lib/services/feed-comunicacao";
 import { TopicoLinha } from "@/components/features/comunicacao/topico-linha";
 import { NovoTopicoDialog } from "@/components/features/comunicacao/novo-topico-dialog";
 import { Input } from "@/components/ui/input";
@@ -59,52 +61,29 @@ export default function ComunicacaoPage() {
   const fetchTopicos = useCallback(async () => {
     const supabase = createClient();
 
-    let query = supabase
-      .from("topicos_comunicacao")
-      .select(
-        `
-        *,
-        autor:users(*),
-        etapa:etapas(*)
-      `
-      )
-      .order("fixado", { ascending: false })
-      .order("updated_at", { ascending: false });
+    try {
+      const filtros: { status?: string; search?: string } = {};
+      if (statusFilter !== "todos") filtros.status = statusFilter;
+      if (search) filtros.search = search;
 
-    if (statusFilter !== "todos") {
-      query = query.eq("status", statusFilter);
-    }
+      const topicosData = await buscarTopicos(supabase, filtros);
 
-    if (search) {
-      query = query.ilike("titulo", `%${search}%`);
-    }
-
-    const { data: topicosData, error } = await query;
-
-    if (error) {
-      console.error("Erro ao buscar tópicos:", error);
-      return;
-    }
-
-    if (topicosData) {
       const topicosWithCount = await Promise.all(
         topicosData.map(async (topico) => {
-          const { count } = await supabase
-            .from("feed_comunicacao")
-            .select("*", { count: "exact", head: true })
-            .eq("topico_id", topico.id);
-
+          const count = await contarMensagensPorTopico(supabase, topico.id);
           return {
             ...topico,
-            _count: { mensagens: count || 0 },
+            _count: { mensagens: count },
           };
         })
       );
 
       setTopicos(topicosWithCount);
+    } catch (error) {
+      console.error("Erro ao buscar tópicos:", error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [statusFilter, search]);
 
   useEffect(() => {

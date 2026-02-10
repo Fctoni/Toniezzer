@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
+import { buscarEmailPorId, aprovarEmail, rejeitarEmail, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
 import { criarCompra } from '@/lib/services/compras'
 import { criarGastos } from '@/lib/services/gastos'
 
@@ -24,23 +25,16 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     async function loadEmail() {
-      const supabase = createClient()
-      
-      const { data, error } = await supabase
-        .from('emails_monitorados')
-        .select('*')
-        .eq('id', resolvedParams.id)
-        .single()
-
-      if (error || !data) {
+      try {
+        const supabase = createClient()
+        const data = await buscarEmailPorId(supabase, resolvedParams.id)
+        setEmail(data)
+        setLoading(false)
+      } catch (error) {
         console.error('Erro ao carregar email:', error)
         toast.error('Email não encontrado')
         router.push('/emails')
-        return
       }
-
-      setEmail(data)
-      setLoading(false)
     }
     loadEmail()
   }, [resolvedParams.id, router])
@@ -190,17 +184,12 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       }
 
       // 4. Atualizar o email
-      const { error: emailError } = await supabase
-        .from('emails_monitorados')
-        .update({
-          status: 'processado',
-          compra_sugerida_id: compra.id,
-          processado_em: new Date().toISOString(),
-          processado_por: currentUser.id,
-        })
-        .eq('id', email.id)
-
-      if (emailError) throw emailError
+      await aprovarEmail(supabase, email.id, {
+        status: 'processado',
+        compra_sugerida_id: compra.id,
+        processado_em: new Date().toISOString(),
+        processado_por: currentUser.id,
+      })
 
       toast.success('Email aprovado! Compra criada.')
       router.push('/emails')
@@ -222,16 +211,11 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     try {
       const supabase = createClient()
       
-      const { error } = await supabase
-        .from('emails_monitorados')
-        .update({
-          status: 'ignorado',
-          processado_em: new Date().toISOString(),
-          processado_por: currentUser.id,
-        })
-        .eq('id', email.id)
-
-      if (error) throw error
+      await rejeitarEmail(supabase, email.id, {
+        status: 'ignorado',
+        processado_em: new Date().toISOString(),
+        processado_por: currentUser.id,
+      })
 
       toast.success('Email rejeitado')
       router.push('/emails')
@@ -252,10 +236,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       const supabase = createClient()
       
       // Atualizar status para reprocessamento
-      await supabase
-        .from('emails_monitorados')
-        .update({ status: 'nao_processado' })
-        .eq('id', email.id)
+      await atualizarStatusEmail(supabase, email.id, { status: 'nao_processado' })
 
       // Chamar API Route de processamento
       const response = await fetch('/api/emails/process', { method: 'POST' })
@@ -265,19 +246,12 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         toast.warning('Reprocessamento falhou', {
           description: result.error || 'Edite os campos manualmente.'
         })
-        await supabase
-          .from('emails_monitorados')
-          .update({ status: 'aguardando_revisao' })
-          .eq('id', email.id)
+        await atualizarStatusEmail(supabase, email.id, { status: 'aguardando_revisao' })
       } else {
         toast.success('Email reprocessado!')
         // Recarregar dados
-        const { data } = await supabase
-          .from('emails_monitorados')
-          .select('*')
-          .eq('id', email.id)
-          .single()
-        if (data) setEmail(data)
+        const data = await buscarEmailPorId(supabase, email.id)
+        setEmail(data)
       }
       
     } catch (error) {

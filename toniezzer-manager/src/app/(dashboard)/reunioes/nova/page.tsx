@@ -11,6 +11,7 @@ import { UploadPlaud } from '@/components/features/reunioes'
 import { ArrowLeft, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
+import { criarReuniao } from '@/lib/services/reunioes'
 import { toast } from 'sonner'
 
 export default function NovaReuniaoPage() {
@@ -63,19 +64,13 @@ export default function NovaReuniaoPage() {
       const supabase = createClient()
       
       // 1. Criar a reunião
-      const { data: reuniao, error: reuniaoError } = await supabase
-        .from('reunioes')
-        .insert({
-          titulo: tituloFinal,
-          data_reuniao: dataFinal,
-          participantes: participantes.length > 0 ? participantes : null,
-          resumo_markdown: content,
-          created_by: currentUser.id,
-        })
-        .select()
-        .single()
-
-      if (reuniaoError) throw reuniaoError
+      const reuniao = await criarReuniao(supabase, {
+        titulo: tituloFinal,
+        data_reuniao: dataFinal,
+        participantes: participantes.length > 0 ? participantes : null,
+        resumo_markdown: content,
+        created_by: currentUser.id,
+      })
 
       // 2. Processar com IA via API Route local
       try {

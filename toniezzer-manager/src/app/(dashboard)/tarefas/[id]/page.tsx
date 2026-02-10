@@ -7,6 +7,7 @@ import { buscarEtapaNome } from "@/lib/services/etapas";
 import { buscarAnexosDaTarefa } from "@/lib/services/tarefas-anexos";
 import { buscarComentariosDaTarefa } from "@/lib/services/tarefas-comentarios";
 import { buscarDependenciasDaTarefa } from "@/lib/services/tarefas-dependencias";
+import { buscarUsuariosParaDropdown, buscarUsuarioPorEmail } from "@/lib/services/users";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -42,7 +43,7 @@ export default async function TarefaPage({ params }: PageProps) {
     depsData,
     anexosData,
     comentariosData,
-    { data: usersData },
+    usersData,
     {
       data: { user: authUser },
     },
@@ -50,11 +51,11 @@ export default async function TarefaPage({ params }: PageProps) {
     buscarDependenciasDaTarefa(supabase, id),
     buscarAnexosDaTarefa(supabase, id),
     buscarComentariosDaTarefa(supabase, id),
-    supabase.from("users").select("id, nome_completo").eq("ativo", true),
+    buscarUsuariosParaDropdown(supabase),
     supabase.auth.getUser(),
   ]);
 
-  const users = (usersData || []) as { id: string; nome_completo: string }[];
+  const users = usersData;
   const userMap = new Map(users.map((u) => [u.id, u.nome_completo]));
 
   // Enriquecer dependências com nome da tarefa
@@ -92,12 +93,12 @@ export default async function TarefaPage({ params }: PageProps) {
   // Buscar current user ID na tabela users (mapeado por email)
   let currentUserId: string | null = null;
   if (authUser?.email) {
-    const { data: currentUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", authUser.email)
-      .single();
-    currentUserId = currentUser?.id || null;
+    try {
+      const currentUser = await buscarUsuarioPorEmail(supabase, authUser.email);
+      currentUserId = currentUser.id;
+    } catch {
+      currentUserId = null;
+    }
   }
 
   return (

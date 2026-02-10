@@ -8,6 +8,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { criarGastos, criarGastoAvulso } from "@/lib/services/gastos";
+import { buscarPrimeiroUsuario } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,11 +88,13 @@ export function FormLancamento({
       const parcelas = parseInt(data.parcelas);
 
       // Buscar usuário padrão
-      const { data: users } = await supabase
-        .from("users")
-        .select("id")
-        .limit(1);
-      const userId = users?.[0]?.id;
+      let userId: string | undefined;
+      try {
+        const user = await buscarPrimeiroUsuario(supabase);
+        userId = user.id;
+      } catch {
+        // ignora erro se não encontrar usuário
+      }
 
       if (parcelas > 1) {
         // Criar múltiplos lançamentos para parcelas

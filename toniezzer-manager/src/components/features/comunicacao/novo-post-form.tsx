@@ -13,6 +13,7 @@ import {
 import { MencoesInput } from "./mencoes-input";
 import { Tables, FeedTipo } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
+import { criarPost } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";
 import { Send, MessageSquare, Megaphone, AlertCircle } from "lucide-react";
 
@@ -57,15 +58,13 @@ export function NovoPostForm({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("feed_comunicacao").insert({
+      await criarPost(supabase, {
         tipo,
         conteudo,
         autor_id: currentUserId,
         mencoes: mencoes.length > 0 ? mencoes : null,
         etapa_relacionada_id: etapaId || null,
       });
-
-      if (error) throw error;
 
       toast.success("Post publicado!");
       setConteudo("");

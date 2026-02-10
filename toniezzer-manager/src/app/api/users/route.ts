@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { Database, TablesUpdate } from '@/lib/types/database'
+import { isAdmin as verificarAdmin, criarUsuario, atualizarUsuario, desativarUsuario } from '@/lib/services/users'
 
 // Cliente admin com service_role key para operacoes privilegiadas
 function createAdminClient() {
@@ -11,7 +13,7 @@ function createAdminClient() {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY nao configurada')
   }
   
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -26,13 +28,7 @@ async function isCurrentUserAdmin() {
   
   if (!user || !user.email) return false
   
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('email', user.email)
-    .single()
-  
-  return profile?.role === 'admin'
+  return await verificarAdmin(supabase, user.email)
 }
 
 // POST - Criar novo usuario
@@ -86,10 +82,9 @@ export async function POST(request: Request) {
     }
 
     // 2. Criar perfil na tabela public.users
-    const { data: profileData, error: profileError } = await adminClient
-      .from('users')
-      .insert({
-        id: authData.user.id, // Usar mesmo ID do auth
+    try {
+      const profileData = await criarUsuario(adminClient, {
+        id: authData.user.id,
         email,
         nome_completo,
         role,
@@ -97,10 +92,12 @@ export async function POST(request: Request) {
         telefone: telefone || null,
         ativo: true
       })
-      .select()
-      .single()
 
-    if (profileError) {
+      return NextResponse.json({
+        success: true,
+        user: profileData
+      })
+    } catch (profileError) {
       console.error('Erro ao criar perfil:', profileError)
       // Se falhou ao criar perfil, deletar usuario do Auth
       await adminClient.auth.admin.deleteUser(authData.user.id)
@@ -109,11 +106,6 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
-
-    return NextResponse.json({
-      success: true,
-      user: profileData
-    })
 
   } catch (error) {
     console.error('Erro ao criar usuario:', error)
@@ -148,7 +140,7 @@ export async function PATCH(request: Request) {
     const adminClient = createAdminClient()
 
     // Atualizar perfil na tabela public.users
-    const updateData: Record<string, unknown> = {}
+    const updateData: TablesUpdate<'users'> = {}
     if (nome_completo !== undefined) updateData.nome_completo = nome_completo
     if (role !== undefined) updateData.role = role
     if (especialidade !== undefined) updateData.especialidade = especialidade
@@ -156,12 +148,9 @@ export async function PATCH(request: Request) {
     if (ativo !== undefined) updateData.ativo = ativo
 
     if (Object.keys(updateData).length > 0) {
-      const { error: profileError } = await adminClient
-        .from('users')
-        .update(updateData)
-        .eq('id', id)
-
-      if (profileError) {
+      try {
+        await atualizarUsuario(adminClient, id, updateData)
+      } catch (profileError) {
         console.error('Erro ao atualizar perfil:', profileError)
         return NextResponse.json(
           { error: 'Erro ao atualizar perfil' },
@@ -221,18 +210,7 @@ export async function DELETE(request: Request) {
     const adminClient = createAdminClient()
 
     // Soft delete - apenas desativar
-    const { error } = await adminClient
-      .from('users')
-      .update({ ativo: false })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Erro ao desativar usuario:', error)
-      return NextResponse.json(
-        { error: 'Erro ao desativar usuario' },
-        { status: 500 }
-      )
-    }
+    await desativarUsuario(adminClient, id)
 
     return NextResponse.json({ success: true })
 

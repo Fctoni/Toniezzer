@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tables, FeedTipo } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
+import { deletarPost, criarComentario } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";
 
 interface FeedItemProps {
@@ -125,22 +126,11 @@ export function FeedItem({
 
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("feed_comentarios")
-        .insert({
-          feed_id: post.id,
-          conteudo: newComment,
-          autor_id: currentUserId || users[0]?.id,
-        })
-        .select(
-          `
-          *,
-          autor:users(*)
-        `
-        )
-        .single();
-
-      if (error) throw error;
+      const data = await criarComentario(supabase, {
+        feed_id: post.id,
+        conteudo: newComment,
+        autor_id: currentUserId || users[0]?.id,
+      });
 
       setComments([...comments, data]);
       setNewComment("");
@@ -155,12 +145,8 @@ export function FeedItem({
   const handleDelete = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("feed_comunicacao")
-        .delete()
-        .eq("id", post.id);
+      await deletarPost(supabase, post.id);
 
-      if (error) throw error;
       toast.success("Post excluído!");
       onDelete?.();
     } catch {

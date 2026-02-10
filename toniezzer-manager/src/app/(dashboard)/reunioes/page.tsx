@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ReuniaoCard } from '@/components/features/reunioes'
 import { Plus, Search, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { buscarReunioesComDetalhes } from '@/lib/services/reunioes'
 import type { Tables } from '@/lib/types/database'
 
 type ReuniaoComContagem = Tables<'reunioes'> & {
@@ -22,36 +23,26 @@ export default function ReunioesPage() {
 
   useEffect(() => {
     async function loadReunioes() {
-      const supabase = createClient()
-      
-      // Buscar reuniões com contagem de ações
-      const { data, error } = await supabase
-        .from('reunioes')
-        .select(`
-          *,
-          created_by_user:users!reunioes_created_by_fkey(nome_completo),
-          reunioes_acoes(id, status)
-        `)
-        .order('data_reuniao', { ascending: false })
+      try {
+        const supabase = createClient()
+        const data = await buscarReunioesComDetalhes(supabase)
 
-      if (error) {
+        // Processar dados para adicionar contagens
+        const reunioesProcessadas = data.map(r => ({
+          ...r,
+          acoes_count: r.reunioes_acoes?.length || 0,
+          acoes_pendentes: r.reunioes_acoes?.filter((a: { status: string }) =>
+            a.status === 'pendente' || a.status === 'em_andamento'
+          ).length || 0,
+          created_by_user: r.created_by_user,
+        }))
+
+        setReunioes(reunioesProcessadas)
+      } catch (error) {
         console.error('Erro ao carregar reuniões:', error)
+      } finally {
         setLoading(false)
-        return
       }
-
-      // Processar dados para adicionar contagens
-      const reunioesProcessadas = (data || []).map(r => ({
-        ...r,
-        acoes_count: r.reunioes_acoes?.length || 0,
-        acoes_pendentes: r.reunioes_acoes?.filter((a: { status: string }) => 
-          a.status === 'pendente' || a.status === 'em_andamento'
-        ).length || 0,
-        created_by_user: r.created_by_user,
-      }))
-
-      setReunioes(reunioesProcessadas)
-      setLoading(false)
     }
     loadReunioes()
   }, [])

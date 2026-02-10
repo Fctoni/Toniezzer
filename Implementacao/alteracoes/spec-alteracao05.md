@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | [alteracao05.md](./alteracao/alteracao05.md) |
 | Data criacao | 09/02/2026 |
 | Complexidade | 🟡 Media |
@@ -344,62 +344,67 @@ N/A.
 ### 5.1 Progresso
 
 #### Sub-fase 5a
-- [ ] users.ts criado
-- [ ] emails-monitorados.ts criado
-- [ ] documentos.ts criado
-- [ ] reunioes.ts criado
-- [ ] reunioes-acoes.ts criado
-- [ ] topicos-comunicacao.ts criado
-- [ ] feed-comunicacao.ts criado
-- [ ] notificacoes.ts criado
-- [ ] etapas.ts modificado (+criarDependenciaEtapa)
-- [ ] TypeScript sem erros (pos 5a)
+- [x] users.ts criado
+- [x] emails-monitorados.ts criado
+- [x] documentos.ts criado
+- [x] reunioes.ts criado
+- [x] reunioes-acoes.ts criado
+- [x] topicos-comunicacao.ts criado
+- [x] feed-comunicacao.ts criado
+- [x] notificacoes.ts criado
+- [x] etapas.ts modificado (+criarDependenciaEtapa)
+- [x] TypeScript sem erros (pos 5a)
 
 #### Sub-fase 5b
-- [ ] api/users/route.ts refatorado
-- [ ] api/emails/sync/route.ts refatorado
-- [ ] api/emails/process/route.ts refatorado
-- [ ] api/plaud/route.ts refatorado
-- [ ] lib/hooks/use-current-user.tsx refatorado
-- [ ] tarefas/[id]/page.tsx refatorado
-- [ ] tarefas/page.tsx refatorado
-- [ ] dashboard/page.tsx refatorado
-- [ ] cronograma/page.tsx refatorado
-- [ ] configuracoes/usuarios/page.tsx refatorado
-- [ ] documentos/page.tsx refatorado
-- [ ] documentos/upload-form.tsx refatorado
-- [ ] documentos/galeria-fotos.tsx refatorado
-- [ ] emails/page.tsx refatorado
-- [ ] emails/[id]/page.tsx refatorado
-- [ ] reunioes/page.tsx refatorado
-- [ ] reunioes/[id]/page.tsx refatorado
-- [ ] reunioes/nova/page.tsx refatorado
-- [ ] notificacoes/page.tsx refatorado
-- [ ] components/layout/header.tsx refatorado
-- [ ] comunicacao/page.tsx refatorado
-- [ ] comunicacao/[id]/page.tsx refatorado
-- [ ] comunicacao/feed-item.tsx refatorado
-- [ ] comunicacao/novo-post-form.tsx refatorado
-- [ ] comunicacao/mensagem-topico.tsx refatorado
-- [ ] comunicacao/novo-topico-dialog.tsx refatorado
-- [ ] cronograma/nova-etapa-dialog.tsx refatorado
-- [ ] compras/compra-form.tsx refatorado
-- [ ] financeiro/form-lancamento.tsx refatorado
-- [ ] TypeScript sem erros (final)
+- [x] api/users/route.ts refatorado
+- [x] api/emails/sync/route.ts refatorado
+- [x] api/emails/process/route.ts refatorado
+- [x] api/plaud/route.ts refatorado
+- [x] lib/hooks/use-current-user.tsx refatorado
+- [x] tarefas/[id]/page.tsx refatorado
+- [x] tarefas/page.tsx refatorado
+- [x] dashboard/page.tsx refatorado
+- [x] cronograma/page.tsx refatorado
+- [x] configuracoes/usuarios/page.tsx refatorado
+- [x] documentos/page.tsx refatorado
+- [x] documentos/upload-form.tsx refatorado
+- [x] documentos/galeria-fotos.tsx refatorado
+- [x] emails/page.tsx refatorado
+- [x] emails/[id]/page.tsx refatorado
+- [x] reunioes/page.tsx refatorado
+- [x] reunioes/[id]/page.tsx refatorado
+- [x] reunioes/nova/page.tsx refatorado
+- [x] notificacoes/page.tsx refatorado
+- [x] components/layout/header.tsx refatorado
+- [x] comunicacao/page.tsx refatorado
+- [x] comunicacao/[id]/page.tsx refatorado
+- [x] comunicacao/feed-item.tsx refatorado
+- [x] comunicacao/novo-post-form.tsx refatorado
+- [x] comunicacao/mensagem-topico.tsx refatorado
+- [x] comunicacao/novo-topico-dialog.tsx refatorado
+- [x] cronograma/nova-etapa-dialog.tsx refatorado
+- [x] compras/compra-form.tsx refatorado
+- [x] financeiro/form-lancamento.tsx refatorado
+- [x] TypeScript sem erros (final)
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
+- `isAdmin` no service users.ts nao lanca excecao — retorna false se usuario nao encontrado (mantendo comportamento original)
+- `buscarUsuariosAtivos` inclui `.order('nome_completo')` pois todos os consumidores esperavam ordenacao
+- api/users/route.ts: `createAdminClient` tipado com `<Database>` para compatibilidade com TypedSupabaseClient
+- `buscarEmailPorIdExterno` usa array result (sem `.single()`) para evitar erro quando email nao existe
+- Dashboard: notificacoesRes removido, service retorna array diretamente
 
 ### 5.3 Conversa de Execucao
 
-#### IA:
-[mensagem]
+#### IA: Execucao completa da alteracao 05
+
+8 services criados, 1 modificado, 29 arquivos refatorados. TypeScript sem erros.
 
 ---
 
 ## 6. Validacao Final
 
-- [ ] `npx tsc --noEmit` sem erros
+- [x] `npx tsc --noEmit` sem erros
 - [ ] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buscarDocumentosComEtapa } from "@/lib/services/documentos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,11 +10,8 @@ import { GaleriaFotos } from "@/components/features/documentos/galeria-fotos";
 export default async function DocumentosPage() {
   const supabase = await createClient();
 
-  const [{ data: documentos }, { data: etapas }] = await Promise.all([
-    supabase
-      .from("documentos")
-      .select("id, nome, url, tipo, tags, tamanho_bytes, created_at, etapa_relacionada_id, etapas(nome)")
-      .order("created_at", { ascending: false }),
+  const [documentos, { data: etapas }] = await Promise.all([
+    buscarDocumentosComEtapa(supabase),
     supabase.from("etapas").select("id, nome").order("ordem"),
   ]);
 

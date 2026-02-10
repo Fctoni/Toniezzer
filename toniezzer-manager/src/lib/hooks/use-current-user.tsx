@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
 import { User } from "@supabase/supabase-js";
+import { buscarUsuariosAtivos } from "@/lib/services/users";
 
 interface CurrentUserContextType {
   // Usuario autenticado do Supabase Auth
@@ -78,14 +79,11 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         
         console.log("[Auth] Buscando usuarios...");
         
-        const { data: usersData, error: usersError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("ativo", true)
-          .order("nome_completo");
-
-        if (usersError) {
-          console.error("[Auth] Erro buscar usuarios:", usersError.message, usersError);
+        let usersData: Tables<"users">[] = [];
+        try {
+          usersData = await buscarUsuariosAtivos(supabase);
+        } catch (usersError) {
+          console.error("[Auth] Erro buscar usuarios:", usersError);
           if (mounted) {
             setLoading(false);
           }

@@ -4,6 +4,8 @@ import { buscarSubetapasDoResponsavel, buscarSubetapasPorIds } from "@/lib/servi
 import { buscarTarefasDoResponsavel, buscarTarefasPorSubetapas } from "@/lib/services/tarefas";
 import { buscarCategoriasAtivas } from "@/lib/services/categorias";
 import { buscarGastosAprovados } from "@/lib/services/gastos";
+import { buscarUsuarioPorEmail } from "@/lib/services/users";
+import { buscarNotificacoesNaoLidas } from "@/lib/services/notificacoes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -34,12 +36,12 @@ export default async function DashboardPage() {
   // Buscar user id na tabela users (mapeado por email)
   let currentUserId: string | null = null;
   if (user?.email) {
-    const { data: currentUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", user.email)
-      .single();
-    currentUserId = currentUser?.id || null;
+    try {
+      const currentUser = await buscarUsuarioPorEmail(supabase, user.email);
+      currentUserId = currentUser.id;
+    } catch {
+      currentUserId = null;
+    }
   }
 
   // Buscar dados
@@ -47,19 +49,14 @@ export default async function DashboardPage() {
     categorias,
     gastos,
     etapas,
-    notificacoesRes,
+    notificacoes,
     minhasTarefasRaw,
     minhasSubetapasRaw,
   ] = await Promise.all([
     buscarCategoriasAtivas(supabase),
     buscarGastosAprovados(supabase),
     buscarEtapas(supabase),
-    supabase
-      .from("notificacoes")
-      .select("*")
-      .eq("lida", false)
-      .order("created_at", { ascending: false })
-      .limit(5),
+    buscarNotificacoesNaoLidas(supabase),
     currentUserId
       ? buscarTarefasDoResponsavel(supabase, currentUserId)
       : Promise.resolve([]),
@@ -67,8 +64,6 @@ export default async function DashboardPage() {
       ? buscarSubetapasDoResponsavel(supabase, currentUserId)
       : Promise.resolve([]),
   ]);
-
-  const notificacoes = notificacoesRes.data;
 
   // Cálculos financeiros - AGORA POR ETAPA
   const orcamentoTotal =

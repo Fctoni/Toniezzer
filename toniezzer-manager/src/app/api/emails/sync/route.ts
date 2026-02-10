@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
 import { createClient } from '@/lib/supabase/server'
+import { buscarEmailPorIdExterno, criarEmail } from '@/lib/services/emails-monitorados'
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,11 +54,7 @@ export async function POST(request: NextRequest) {
         console.log('[EMAIL SYNC] Processando:', emailId, message.envelope.subject)
 
         // Verificar se já existe
-        const { data: existing } = await supabase
-          .from('emails_monitorados')
-          .select('id')
-          .eq('email_id_externo', emailId)
-          .single()
+        const existing = await buscarEmailPorIdExterno(supabase, emailId)
 
         if (existing) {
           console.log('[EMAIL SYNC] Email já existe, pulando...')
@@ -131,9 +128,8 @@ export async function POST(request: NextRequest) {
         )
 
         // Inserir no banco (NÃO baixamos os anexos aqui, apenas metadados)
-        const { error } = await supabase
-          .from('emails_monitorados')
-          .insert({
+        try {
+          await criarEmail(supabase, {
             email_id_externo: emailId,
             remetente: message.envelope.from?.[0]?.address || '',
             remetente_nome: message.envelope.from?.[0]?.name || null,
@@ -143,9 +139,8 @@ export async function POST(request: NextRequest) {
             status: temAnexoProcessavel ? 'nao_processado' : 'aguardando_revisao',
             anexos: anexos.length > 0 ? anexos : null,
           })
-
-        if (error) {
-          console.error('[EMAIL SYNC] Erro ao inserir:', error)
+        } catch (insertError) {
+          console.error('[EMAIL SYNC] Erro ao inserir:', insertError)
           continue
         }
 

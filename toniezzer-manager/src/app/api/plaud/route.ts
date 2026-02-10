@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { buscarCategoriasAtivas } from '@/lib/services/categorias'
+import { buscarUsuariosParaDropdown } from '@/lib/services/users'
+import { criarAcoes } from '@/lib/services/reunioes-acoes'
+import { criarPostDecisao } from '@/lib/services/feed-comunicacao'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -149,10 +152,7 @@ Regras:
     console.log('[PLAUD] Dados extraídos:', JSON.stringify(dados, null, 2))
 
     // Buscar usuários para matching de responsáveis
-    const { data: usuarios } = await supabase
-      .from('users')
-      .select('id, nome_completo')
-      .eq('ativo', true)
+    const usuarios = await buscarUsuariosParaDropdown(supabase)
 
     // Buscar categorias para matching
     const categorias = await buscarCategoriasAtivas(supabase)
@@ -264,17 +264,13 @@ Regras:
     // Inserir todas as ações no banco
     let acoesCriadas = 0
     if (acoesParaInserir.length > 0) {
-      const { data: acoesInseridas, error: insertError } = await supabase
-        .from('reunioes_acoes')
-        .insert(acoesParaInserir)
-        .select()
-
-      if (insertError) {
+      try {
+        const acoesInseridas = await criarAcoes(supabase, acoesParaInserir)
+        acoesCriadas = acoesInseridas.length
+        console.log('[PLAUD] Ações criadas:', acoesCriadas)
+      } catch (insertError) {
         console.error('[PLAUD] Erro ao inserir ações:', insertError)
         // Não falhar completamente, apenas logar
-      } else {
-        acoesCriadas = acoesInseridas?.length || 0
-        console.log('[PLAUD] Ações criadas:', acoesCriadas)
       }
     }
 
@@ -284,7 +280,7 @@ Regras:
         .map((d, i) => `${i + 1}. ${d.descricao}`)
         .join('\n')
 
-      await supabase.from('feed_comunicacao').insert({
+      await criarPostDecisao(supabase, {
         tipo: 'decisao',
         conteudo: `📋 **Decisões da Reunião**\n\n${decisoesTexto}`,
         autor_id: autor_id,

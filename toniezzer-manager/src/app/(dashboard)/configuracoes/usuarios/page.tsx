@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
+import { buscarUsuarios } from '@/lib/services/users'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -98,19 +99,16 @@ export default function UsuariosPage() {
   const isAdmin = currentUser?.role === 'admin'
 
   const fetchUsers = async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('nome_completo')
-
-    if (error) {
+    try {
+      const supabase = createClient()
+      const data = await buscarUsuarios(supabase)
+      setUsers(data)
+    } catch (error) {
       console.error('Erro ao buscar usuarios:', error)
       toast.error('Erro ao carregar usuarios')
-    } else {
-      setUsers(data || [])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {

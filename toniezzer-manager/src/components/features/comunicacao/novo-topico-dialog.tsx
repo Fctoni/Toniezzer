@@ -22,6 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tables, TopicoPrioridade } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
+import { criarTopico } from "@/lib/services/topicos-comunicacao";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -57,25 +58,19 @@ export function NovoTopicoDialog({
     try {
       const supabase = createClient();
 
-      const { data, error } = await supabase
-        .from("topicos_comunicacao")
-        .insert({
-          titulo: titulo.trim(),
-          descricao: descricao.trim() || null,
-          prioridade,
-          etapa_relacionada_id: etapaId || null,
-          autor_id: currentUserId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await criarTopico(supabase, {
+        titulo: titulo.trim(),
+        descricao: descricao.trim() || null,
+        prioridade,
+        etapa_relacionada_id: etapaId || null,
+        autor_id: currentUserId,
+      });
 
       toast.success("Tópico criado!");
       setOpen(false);
       resetForm();
       onSuccess?.();
-      
+
       // Redirecionar para o novo tópico
       router.push(`/comunicacao/${data.id}`);
     } catch {

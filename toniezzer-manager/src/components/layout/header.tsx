@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { buscarNotificacoesRecentes, marcarComoLida as marcarComoLidaService } from "@/lib/services/notificacoes";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
@@ -50,16 +51,11 @@ export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
 
   const fetchNotificacoes = useCallback(async () => {
     if (!currentUser) return;
-    
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("notificacoes")
-      .select("*")
-      .eq("usuario_id", currentUser.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
 
-    if (data) {
+    try {
+      const supabase = createClient();
+      const data = await buscarNotificacoesRecentes(supabase, currentUser.id, 10);
+
       const notificacoesFormatadas = data.map(n => ({
         ...n,
         lida: n.lida ?? false,
@@ -67,6 +63,8 @@ export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
       }));
       setNotificacoes(notificacoesFormatadas);
       setNaoLidas(notificacoesFormatadas.filter((n) => !n.lida).length);
+    } catch (error) {
+      console.error("Erro ao buscar notificações:", error);
     }
   }, [currentUser]);
 
@@ -101,11 +99,12 @@ export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
   }, [currentUser, fetchNotificacoes]);
 
   const marcarComoLida = async (id: string) => {
-    const supabase = createClient();
-    await supabase
-      .from("notificacoes")
-      .update({ lida: true, lida_em: new Date().toISOString() })
-      .eq("id", id);
+    try {
+      const supabase = createClient();
+      await marcarComoLidaService(supabase, id);
+    } catch (error) {
+      console.error("Erro ao marcar como lida:", error);
+    }
   };
 
   const getTipoColor = (tipo: string) => {

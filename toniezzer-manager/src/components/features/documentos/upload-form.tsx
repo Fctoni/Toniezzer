@@ -4,6 +4,8 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { criarDocumento } from "@/lib/services/documentos";
+import { buscarPrimeiroUsuario } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -122,8 +124,13 @@ export function UploadForm({ etapas }: UploadFormProps) {
     const supabase = createClient();
 
     // Buscar usuário padrão
-    const { data: users } = await supabase.from("users").select("id").limit(1);
-    const userId = users?.[0]?.id;
+    let userId: string | undefined;
+    try {
+      const user = await buscarPrimeiroUsuario(supabase);
+      userId = user.id;
+    } catch {
+      // ignora erro se não encontrar usuário
+    }
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -145,7 +152,7 @@ export function UploadForm({ etapas }: UploadFormProps) {
           .getPublicUrl(fileName);
 
         // Salvar no banco
-        const { error: dbError } = await supabase.from("documentos").insert({
+        await criarDocumento(supabase, {
           nome: file.name,
           tipo: tipo,
           url: urlData.publicUrl,
@@ -155,8 +162,6 @@ export function UploadForm({ etapas }: UploadFormProps) {
           created_by: userId,
           tags: tags.length > 0 ? tags : null,
         });
-
-        if (dbError) throw dbError;
 
         setFiles((prev) => {
           const newFiles = [...prev];

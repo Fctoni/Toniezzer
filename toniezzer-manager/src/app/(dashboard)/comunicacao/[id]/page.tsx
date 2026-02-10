@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Tables, TopicoStatus } from "@/lib/types/database";
+import { buscarTopicoPorId, atualizarStatusTopico, toggleFixadoTopico, deletarTopico } from "@/lib/services/topicos-comunicacao";
+import { buscarMensagensPorTopico, criarMensagem } from "@/lib/services/feed-comunicacao";
 import { MensagemTopico } from "@/components/features/comunicacao/mensagem-topico";
 import { MencoesInput } from "@/components/features/comunicacao/mencoes-input";
 import { Button } from "@/components/ui/button";
@@ -72,34 +74,19 @@ export default function TopicoPage({
   const fetchData = useCallback(async () => {
     const supabase = createClient();
 
-    const [topicoResult, mensagensResult] = await Promise.all([
-      supabase
-        .from("topicos_comunicacao")
-        .select(
-          `
-          *,
-          autor:users(*),
-          etapa:etapas(*)
-        `
-        )
-        .eq("id", id)
-        .single(),
-      supabase
-        .from("feed_comunicacao")
-        .select(
-          `
-          *,
-          autor:users(*)
-        `
-        )
-        .eq("topico_id", id)
-        .order("created_at", { ascending: true }),
-    ]);
+    try {
+      const [topicoData, mensagensData] = await Promise.all([
+        buscarTopicoPorId(supabase, id),
+        buscarMensagensPorTopico(supabase, id),
+      ]);
 
-    if (topicoResult.data) setTopico(topicoResult.data as TopicoWithRelations);
-    if (mensagensResult.data) setMensagens(mensagensResult.data as MensagemWithAutor[]);
-
-    setLoading(false);
+      setTopico(topicoData as TopicoWithRelations);
+      setMensagens(mensagensData as MensagemWithAutor[]);
+    } catch (error) {
+      console.error("Erro ao buscar dados do tópico:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -141,15 +128,13 @@ export default function TopicoPage({
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.from("feed_comunicacao").insert({
+      await criarMensagem(supabase, {
         tipo: "post",
         conteudo: novaMensagem,
         autor_id: currentUser.id,
         topico_id: id,
         mencoes: mencoes.length > 0 ? mencoes : null,
       });
-
-      if (error) throw error;
 
       setNovaMensagem("");
       setMencoes([]);
@@ -164,12 +149,7 @@ export default function TopicoPage({
   const handleUpdateStatus = async (status: TopicoStatus) => {
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("topicos_comunicacao")
-        .update({ status })
-        .eq("id", id);
-
-      if (error) throw error;
+      await atualizarStatusTopico(supabase, id, status);
 
       toast.success(
         status === "resolvido"
@@ -187,12 +167,7 @@ export default function TopicoPage({
   const handleToggleFixado = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("topicos_comunicacao")
-        .update({ fixado: !topico?.fixado })
-        .eq("id", id);
-
-      if (error) throw error;
+      await toggleFixadoTopico(supabase, id, !topico?.fixado);
 
       toast.success(topico?.fixado ? "Tópico desafixado!" : "Tópico fixado!");
       fetchData();
@@ -204,12 +179,7 @@ export default function TopicoPage({
   const handleDelete = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase
-        .from("topicos_comunicacao")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      await deletarTopico(supabase, id);
 
       toast.success("Tópico excluído!");
       router.push("/comunicacao");

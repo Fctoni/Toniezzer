@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { buscarNotificacoes, marcarComoLida as marcarComoLidaService, marcarTodasComoLidas as marcarTodasComoLidasService, excluirNotificacao as excluirNotificacaoService } from "@/lib/services/notificacoes";
 import { Tables, NotificacaoTipo } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -105,34 +106,27 @@ export default function NotificacoesPage() {
 
   const fetchNotificacoes = useCallback(async () => {
     if (!currentUser) return;
-    
-    const supabase = createClient();
 
-    let query = supabase
-      .from("notificacoes")
-      .select("*")
-      .eq("usuario_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    try {
+      const supabase = createClient();
+      const filtros: { tipo?: string; lida?: boolean } = {};
 
-    if (tipoFilter !== "todas") {
-      query = query.eq("tipo", tipoFilter);
-    }
+      if (tipoFilter !== "todas") {
+        filtros.tipo = tipoFilter;
+      }
+      if (lidaFilter === "nao_lidas") {
+        filtros.lida = false;
+      } else if (lidaFilter === "lidas") {
+        filtros.lida = true;
+      }
 
-    if (lidaFilter === "nao_lidas") {
-      query = query.eq("lida", false);
-    } else if (lidaFilter === "lidas") {
-      query = query.eq("lida", true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
+      const data = await buscarNotificacoes(supabase, currentUser.id, filtros);
+      setNotificacoes(data);
+    } catch (error) {
       console.error("Erro ao buscar notificações:", error);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setNotificacoes(data || []);
-    setLoading(false);
   }, [tipoFilter, lidaFilter, currentUser]);
 
   useEffect(() => {
@@ -157,53 +151,37 @@ export default function NotificacoesPage() {
   }, [fetchNotificacoes]);
 
   const marcarComoLida = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("notificacoes")
-      .update({ lida: true, lida_em: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
+    try {
+      const supabase = createClient();
+      await marcarComoLidaService(supabase, id);
+      fetchNotificacoes();
+    } catch (error) {
       toast.error("Erro ao marcar como lida");
-      return;
     }
-
-    fetchNotificacoes();
   };
 
   const marcarTodasComoLidas = async () => {
     if (!currentUser) return;
-    
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("notificacoes")
-      .update({ lida: true, lida_em: new Date().toISOString() })
-      .eq("lida", false)
-      .eq("usuario_id", currentUser.id);
 
-    if (error) {
+    try {
+      const supabase = createClient();
+      await marcarTodasComoLidasService(supabase, currentUser.id);
+      toast.success("Todas as notificações foram marcadas como lidas");
+      fetchNotificacoes();
+    } catch (error) {
       toast.error("Erro ao marcar todas como lidas");
-      return;
     }
-
-    toast.success("Todas as notificações foram marcadas como lidas");
-    fetchNotificacoes();
   };
 
   const excluirNotificacao = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("notificacoes")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
+    try {
+      const supabase = createClient();
+      await excluirNotificacaoService(supabase, id);
+      toast.success("Notificação excluída");
+      fetchNotificacoes();
+    } catch (error) {
       toast.error("Erro ao excluir notificação");
-      return;
     }
-
-    toast.success("Notificação excluída");
-    fetchNotificacoes();
   };
 
   const handleNotificacaoClick = (notificacao: Tables<"notificacoes">) => {

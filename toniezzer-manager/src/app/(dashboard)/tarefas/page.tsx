@@ -3,6 +3,7 @@ import { TarefasTable } from "@/components/features/tarefas/tarefas-table";
 import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
 import { buscarTarefas } from "@/lib/services/tarefas";
 import { buscarSubetapasResumidas } from "@/lib/services/subetapas";
+import { buscarUsuariosParaDropdown } from "@/lib/services/users";
 
 interface User {
   id: string;
@@ -43,15 +44,15 @@ export default async function TarefasPage() {
     tarefasRaw,
     subetapasRaw,
     { data: etapasData },
-    { data: usersData },
+    usersData,
   ] = await Promise.all([
     buscarTarefas(supabase),
     buscarSubetapasResumidas(supabase),
     supabase.from("etapas").select("id, nome").order("ordem"),
-    supabase.from("users").select("id, nome_completo").eq("ativo", true),
+    buscarUsuariosParaDropdown(supabase),
   ]);
 
-  const users = (usersData || []) as User[];
+  const users = usersData as User[];
   const etapas = (etapasData || []) as EtapaDB[];
 
   // Montar mapa etapa_id -> nome

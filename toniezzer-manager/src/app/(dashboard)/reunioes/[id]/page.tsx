@@ -9,6 +9,8 @@ import { ResumoViewer, ActionItemsList } from '@/components/features/reunioes'
 import { ArrowLeft, FileText, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { buscarReuniaoPorId, deletarReuniao } from '@/lib/services/reunioes'
+import { buscarAcoesPorReuniao, atualizarStatusAcao } from '@/lib/services/reunioes-acoes'
 import type { Tables, AcaoStatus } from '@/lib/types/database'
 import { parseDateString } from '@/lib/utils'
 import {
@@ -38,76 +40,50 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
 
   useEffect(() => {
     async function loadReuniao() {
-      const supabase = createClient()
-      
-      // Carregar reunião
-      const { data: reuniaoData, error: reuniaoError } = await supabase
-        .from('reunioes')
-        .select('*')
-        .eq('id', resolvedParams.id)
-        .single()
+      try {
+        const supabase = createClient()
 
-      if (reuniaoError || !reuniaoData) {
-        console.error('Erro ao carregar reunião:', reuniaoError)
+        // Carregar reunião
+        const reuniaoData = await buscarReuniaoPorId(supabase, resolvedParams.id)
+        setReuniao(reuniaoData)
+
+        // Carregar ações
+        const acoesData = await buscarAcoesPorReuniao(supabase, resolvedParams.id)
+        setAcoes(acoesData || [])
+        setLoading(false)
+      } catch (error) {
+        console.error('Erro ao carregar reunião:', error)
         toast.error('Reunião não encontrada')
         router.push('/reunioes')
-        return
       }
-
-      setReuniao(reuniaoData)
-
-      // Carregar ações
-      const { data: acoesData } = await supabase
-        .from('reunioes_acoes')
-        .select(`
-          *,
-          responsavel:users!reunioes_acoes_responsavel_id_fkey(nome_completo),
-          categoria:categorias(nome, cor)
-        `)
-        .eq('reuniao_id', resolvedParams.id)
-        .order('created_at', { ascending: true })
-
-      setAcoes(acoesData || [])
-      setLoading(false)
     }
     loadReuniao()
   }, [resolvedParams.id, router])
 
   const handleStatusChange = async (acaoId: string, newStatus: AcaoStatus) => {
-    const supabase = createClient()
-    
-    const { error } = await supabase
-      .from('reunioes_acoes')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', acaoId)
+    try {
+      const supabase = createClient()
+      await atualizarStatusAcao(supabase, acaoId, newStatus)
 
-    if (error) {
+      setAcoes(prev => prev.map(a =>
+        a.id === acaoId ? { ...a, status: newStatus } : a
+      ))
+
+      toast.success(newStatus === 'concluido' ? 'Ação concluída!' : 'Status atualizado')
+    } catch (error) {
       toast.error('Erro ao atualizar status')
-      return
     }
-
-    setAcoes(prev => prev.map(a => 
-      a.id === acaoId ? { ...a, status: newStatus } : a
-    ))
-    
-    toast.success(newStatus === 'concluido' ? 'Ação concluída!' : 'Status atualizado')
   }
 
   const handleDelete = async () => {
-    const supabase = createClient()
-    
-    const { error } = await supabase
-      .from('reunioes')
-      .delete()
-      .eq('id', resolvedParams.id)
-
-    if (error) {
+    try {
+      const supabase = createClient()
+      await deletarReuniao(supabase, resolvedParams.id)
+      toast.success('Reunião excluída')
+      router.push('/reunioes')
+    } catch (error) {
       toast.error('Erro ao excluir reunião')
-      return
     }
-
-    toast.success('Reunião excluída')
-    router.push('/reunioes')
   }
 
   if (loading) {

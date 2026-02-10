@@ -40,6 +40,7 @@ import {
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
+import { atualizarDocumento, deletarDocumento } from "@/lib/services/documentos";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -144,17 +145,12 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
     const supabase = createClient();
 
     try {
-      const { error } = await supabase
-        .from("documentos")
-        .update({
-          nome: editNome,
-          created_at: new Date(editData + "T12:00:00").toISOString(),
-          tags: editTags.length > 0 ? editTags : null,
-          etapa_relacionada_id: editEtapa || null,
-        })
-        .eq("id", fotoSelecionada.id);
-
-      if (error) throw error;
+      await atualizarDocumento(supabase, fotoSelecionada.id, {
+        nome: editNome,
+        created_at: new Date(editData + "T12:00:00").toISOString(),
+        tags: editTags.length > 0 ? editTags : null,
+        etapa_relacionada_id: editEtapa || null,
+      });
 
       toast.success("Foto atualizada com sucesso");
       setModoEdicao(false);
@@ -239,9 +235,7 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
 
       await supabase.storage.from("fotos-obra").remove([fileName]);
 
-      const { error } = await supabase.from("documentos").delete().eq("id", foto.id);
-
-      if (error) throw error;
+      await deletarDocumento(supabase, foto.id);
 
       toast.success("Foto excluida com sucesso");
       setFotoParaExcluir(null);
