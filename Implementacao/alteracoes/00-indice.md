@@ -33,6 +33,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 |---|---------|-----------|--------|-----|
 | 03 | [alteracao03.md](./alteracao/alteracao03.md) | Centralizar CRUD em funções utilitárias (services) | 🟡 Em discussão | ⏳ pendente |
 | 04 | [alteracao04.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
+| 05 | [spec-alteracao05.md](./spec/spec-alteracao05.md) | Editar data de vencimento de parcelas inline | 🔵 Pronto para executar | ⏳ pendente |
 
 ## PRD / Commit Pendente
 
