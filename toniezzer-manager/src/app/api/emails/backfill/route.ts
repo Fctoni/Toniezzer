@@ -66,7 +66,16 @@ interface BodyStructure {
   childNodes?: BodyStructure[]
 }
 
+// GET para permitir execução via navegador (já autenticado pelo middleware)
+export async function GET() {
+  return backfill()
+}
+
 export async function POST() {
+  return backfill()
+}
+
+async function backfill() {
   try {
     const supabase = await createClient()
 
