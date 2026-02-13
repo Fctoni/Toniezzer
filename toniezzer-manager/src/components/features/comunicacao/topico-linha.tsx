@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Tables, TopicoStatus, TopicoPrioridade } from "@/lib/types/database";
+import type { Tables, TopicoStatus, TopicoPrioridade } from "@/lib/types/database";
 import {
   MessageSquare,
   Pin,

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Tables } from '@/lib/types/database'
+import type { Tables } from '@/lib/types/database'
 import { buscarFornecedores, desativarFornecedor } from '@/lib/services/fornecedores'
 import { FornecedorForm } from '@/components/features/fornecedores/fornecedor-form'
 import { Button } from '@/components/ui/button'

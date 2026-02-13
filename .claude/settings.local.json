@@ -29,7 +29,8 @@
       "Bash(curl:*)",
       "Bash(node:*)",
       "Bash(npm install:*)",
-      "Bash(npx vitest run:*)"
+      "Bash(npx vitest run:*)",
+      "Bash(npx eslint:*)"
     ]
   },
   "enabledMcpjsonServers": [

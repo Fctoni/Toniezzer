@@ -58,7 +58,7 @@ import {
   GripVertical,
   List,
 } from 'lucide-react'
-import { Tables } from '@/lib/types/database'
+import type { Tables } from '@/lib/types/database'
 import {
   buscarCategorias as buscarCategoriasService,
   atualizarCategoria,

@@ -269,24 +269,38 @@ async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
   console.log('[PROCESS] XML recebido:', xmlString.substring(0, 500))
   
   try {
-    const result = await parseXml(xmlString) as Record<string, any>
-    
+    // Interfaces locais para a estrutura do XML de NF-e
+    interface NFeDetalhe { prod?: { xProd?: string } }
+    interface NFeDetPag { tPag?: string }
+    interface NFeInfNFe {
+      emit?: { xNome?: string; xFant?: string; CNPJ?: string; CPF?: string }
+      ide?: { nNF?: string; dhEmi?: string; dEmi?: string }
+      total?: { ICMSTot?: { vNF?: string; vProd?: string } }
+      det?: NFeDetalhe | NFeDetalhe[]
+      pag?: { detPag?: NFeDetPag | NFeDetPag[]; tPag?: string } | NFeDetPag | NFeDetPag[]
+    }
+    interface NFeXmlResult {
+      nfeProc?: { NFe?: { infNFe?: NFeInfNFe } }
+      NFe?: { infNFe?: NFeInfNFe }
+      infNFe?: NFeInfNFe
+    }
+
+    const result = await parseXml(xmlString) as NFeXmlResult
+
     // Estrutura padrão de NF-e
     const nfe = result?.nfeProc?.NFe?.infNFe || result?.NFe?.infNFe || result?.infNFe
-    
+
     if (nfe) {
       const emit = nfe.emit || {}
       const fornecedor = emit.xNome || emit.xFant || null
       const cnpj = emit.CNPJ || emit.CPF || null
-      
+
       const ide = nfe.ide || {}
       const numero_nf = ide.nNF || null
       const dataEmissao = ide.dhEmi || ide.dEmi || null
-      
+
       const total = nfe.total?.ICMSTot || {}
-      const valor = parseFloat(total.vNF) || parseFloat(total.vProd) || null
-      
-      interface NFeDetalhe { prod?: { xProd?: string } }
+      const valor = parseFloat(total.vNF || '') || parseFloat(total.vProd || '') || null
 
       const det = nfe.det
       let descricao = ''
@@ -295,16 +309,18 @@ async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
       } else if (det?.prod?.xProd) {
         descricao = det.prod.xProd
       }
-      
-      const pag = nfe.pag?.detPag || nfe.pag
+
+      const pagRaw = nfe.pag
+      const pag = pagRaw && 'detPag' in pagRaw ? pagRaw.detPag : pagRaw
       let forma_pagamento: string | null = null
       if (pag) {
-        const tPag = Array.isArray(pag) ? pag[0]?.tPag : pag.tPag
+        const pagItem = Array.isArray(pag) ? pag[0] : pag
+        const tPag = pagItem && 'tPag' in pagItem ? pagItem.tPag : undefined
         const formas: Record<string, string> = {
           '01': 'dinheiro', '02': 'cheque', '03': 'cartao', '04': 'cartao',
           '05': 'cartao', '10': 'boleto', '11': 'boleto', '17': 'pix',
         }
-        forma_pagamento = formas[tPag] || null
+        forma_pagamento = tPag ? formas[tPag] || null : null
       }
       
       let dataFormatada: string | null = null
@@ -467,7 +483,7 @@ export async function POST(request: NextRequest) {
         if (dadosExtraidos && dadosExtraidos.confianca > 0) {
           await atualizarStatusEmail(supabase, email.id, {
             status: 'aguardando_revisao',
-            dados_extraidos: dadosExtraidos as unknown as Json,
+            dados_extraidos: JSON.parse(JSON.stringify(dadosExtraidos)) as Json,
             erro_mensagem: erroDetalhado || null,
             processado_em: new Date().toISOString(),
           })
@@ -479,7 +495,7 @@ export async function POST(request: NextRequest) {
           
           await atualizarStatusEmail(supabase, email.id, {
             status: 'aguardando_revisao',
-            dados_extraidos: (dadosExtraidos || { confianca: 0 }) as unknown as Json,
+            dados_extraidos: JSON.parse(JSON.stringify(dadosExtraidos || { confianca: 0 })) as Json,
             erro_mensagem: mensagemFinal,
             processado_em: new Date().toISOString(),
           })

@@ -58,7 +58,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
       buscarTarefas(supabase),
     ]);
 
-    const subetapasComTarefas: Subetapa[] = (subetapasData as unknown as Subetapa[]).map((s) => ({
+    const subetapasComTarefas: Subetapa[] = subetapasData.map((s) => ({
       ...s,
       tarefas: (tarefasData as Tarefa[]).filter((t) => t.subetapa_id === s.id),
     }));

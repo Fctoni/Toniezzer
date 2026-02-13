@@ -64,7 +64,7 @@ import {
   ShieldCheck,
   Eye,
 } from 'lucide-react'
-import { Tables, UserRole } from '@/lib/types/database'
+import type { Tables, UserRole } from '@/lib/types/database'
 
 type UserWithRole = Tables<'users'>
 

@@ -1,5 +1,5 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
-import { Tables, TablesInsert } from '@/lib/types/database'
+import type { Tables, TablesInsert } from '@/lib/types/database'
 type TopicoComunicacao = Tables<'topicos_comunicacao'>
 
 // ===== SELECT =====

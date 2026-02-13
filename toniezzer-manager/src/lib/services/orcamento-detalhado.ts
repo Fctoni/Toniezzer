@@ -1,5 +1,5 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
-import { Tables } from '@/lib/types/database'
+import type { Tables } from '@/lib/types/database'
 type OrcamentoDetalhado = Tables<'orcamento_detalhado'>
 
 type DetalhamentoComCategoria = Pick<OrcamentoDetalhado, 'id' | 'etapa_id' | 'categoria_id' | 'valor_previsto' | 'observacoes'> & {

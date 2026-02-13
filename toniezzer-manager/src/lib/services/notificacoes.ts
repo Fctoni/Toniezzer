@@ -1,5 +1,5 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
-import { Tables } from '@/lib/types/database'
+import type { Tables } from '@/lib/types/database'
 type Notificacao = Tables<'notificacoes'>
 
 // ===== SELECT =====

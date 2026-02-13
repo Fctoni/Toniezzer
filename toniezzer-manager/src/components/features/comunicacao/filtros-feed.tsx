@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tables, FeedTipo } from "@/lib/types/database";
+import type { Tables, FeedTipo } from "@/lib/types/database";
 import { X } from "lucide-react";
 
 interface FiltrosFeedProps {

@@ -41,7 +41,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 14 | [spec-alteracao14.md](./spec/spec-alteracao14.md) | Editar data de vencimento de parcelas inline | 🟠 Aguardando testes | ⏳ pendente |
 | 15 | [spec-alteracao15.md](./spec/spec-alteracao15.md) | Instalar Vitest e criar testes para funcoes puras | 🟢 Concluido | ⏳ pendente |
 | 16 | [spec-alteracao16.md](./spec/spec-alteracao16.md) | Eliminar queries Supabase inline e mover storage para services | 🟢 Concluido | ⏳ pendente |
-| 17 | [spec-alteracao17.md](./spec/spec-alteracao17.md) | Correcoes TypeScript: import type, any e double casts | 🔵 Pronto para executar | ⏳ pendente |
+
 | 18 | [spec-alteracao18.md](./spec/spec-alteracao18.md) | Refatorar componentes grandes e adicionar loading/error | 🔵 Pronto para executar | ⏳ pendente |
 | 19 | [spec-alteracao19.md](./spec/spec-alteracao19.md) | Renomear codigo de portugues para ingles | 🔵 Pronto para executar | ⏳ pendente |
 
@@ -57,6 +57,7 @@ Implementação finalizada, mas falta documentar no PRD ou commitar.
 | 06 | [spec-alteracao06.md](./spec-alteracao06.md) | Refatoração de padrões de código (pós-auditoria) | 🟢 Finalizado | ⏳ pendente |
 | 07 | [spec-alteracao07.md](./spec-alteracao07.md) | Correções em services: error handling + return types | 🟢 Finalizado | ⏳ pendente |
 | 08 | [spec-alteracao08.md](./spec-alteracao08.md) | API Routes: Zod + client imports + Server Components | ⏳ pendente |
+| 17 | [spec-alteracao17.md](./spec/spec-alteracao17.md) | Correcoes TypeScript: import type, any e double casts | ⏳ pendente |
 
 
 ## Finalizados

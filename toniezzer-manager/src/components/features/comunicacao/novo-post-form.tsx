@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MencoesInput } from "./mencoes-input";
-import { Tables, FeedTipo } from "@/lib/types/database";
+import type { Tables, FeedTipo } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { criarPost } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";

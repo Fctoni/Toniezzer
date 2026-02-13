@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Tables, TopicoStatus } from "@/lib/types/database";
+import type { Tables, TopicoStatus } from "@/lib/types/database";
 import { buscarTopicoPorId, atualizarStatusTopico, toggleFixadoTopico, deletarTopico } from "@/lib/services/topicos-comunicacao";
 import { buscarMensagensPorTopico, criarMensagem } from "@/lib/services/feed-comunicacao";
 import { MensagemTopico } from "@/components/features/comunicacao/mensagem-topico";

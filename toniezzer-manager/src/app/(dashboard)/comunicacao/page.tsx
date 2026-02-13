@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Tables, TopicoStatus } from "@/lib/types/database";
+import type { Tables, TopicoStatus } from "@/lib/types/database";
 import { buscarTopicos } from "@/lib/services/topicos-comunicacao";
 import { contarMensagensPorTopico } from "@/lib/services/feed-comunicacao";
 import { TopicoLinha } from "@/components/features/comunicacao/topico-linha";

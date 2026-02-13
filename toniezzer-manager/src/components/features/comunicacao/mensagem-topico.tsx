@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tables } from "@/lib/types/database";
+import type { Tables } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { deletarMensagem } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";

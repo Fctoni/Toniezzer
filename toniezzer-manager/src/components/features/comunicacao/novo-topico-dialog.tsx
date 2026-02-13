@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Tables, TopicoPrioridade } from "@/lib/types/database";
+import type { Tables, TopicoPrioridade } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { criarTopico } from "@/lib/services/topicos-comunicacao";
 import { toast } from "sonner";

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { Tables } from "@/lib/types/database";
+import type { Tables } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 interface MencoesInputProps {

@@ -666,7 +666,7 @@ Nenhuma. Todos os buckets de storage ja existem no Supabase. Nao ha novas depend
 - [x] Categoria 3 - 1 arquivo com update inline migrado
 - [x] Categoria 4 - 2 arquivos com storage inline migrados
 - [x] `npx tsc --noEmit` sem erros
-- [ ] Testado manualmente
+- [x] Testado manualmente
 
 ### 5.2 Notas de Implementacao
 
@@ -689,5 +689,5 @@ Todas as 12 violacoes foram corrigidas seguindo a spec. Arquivos criados/modific
 ## 6. Validacao Final
 
 - [x] `npx tsc --noEmit` sem erros
-- [ ] Funcionalidade testada manualmente
+- [x] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)

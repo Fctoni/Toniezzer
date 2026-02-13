@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       nota_fiscal_numero: gasto.nota_fiscal_numero,
       parcela_atual: gasto.parcela_atual,
       parcelas: gasto.parcelas,
-      fornecedor_nome: (gasto.fornecedores as unknown as { nome: string } | null)?.nome || null,
-      criado_por_nome: (gasto.criado_por_user as unknown as { nome_completo: string } | null)?.nome_completo || null,
+      fornecedor_nome: gasto.fornecedores?.nome || null,
+      criado_por_nome: gasto.criado_por_user?.nome_completo || null,
     }));
 
     return NextResponse.json({

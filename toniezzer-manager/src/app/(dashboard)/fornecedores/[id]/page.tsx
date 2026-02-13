@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Tables } from "@/lib/types/database";
+import type { Tables } from "@/lib/types/database";
 import { buscarFornecedorPorId, desativarFornecedor } from "@/lib/services/fornecedores";
 import { buscarGastosPorFornecedor } from "@/lib/services/gastos";
 import { parseDateString } from "@/lib/utils";

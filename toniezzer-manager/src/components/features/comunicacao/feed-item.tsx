@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Tables, FeedTipo } from "@/lib/types/database";
+import type { Tables, FeedTipo } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { deletarPost, criarComentario } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";

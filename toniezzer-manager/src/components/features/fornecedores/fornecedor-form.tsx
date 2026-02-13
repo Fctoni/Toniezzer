@@ -26,7 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { criarFornecedor, atualizarFornecedor } from "@/lib/services/fornecedores";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Tables } from "@/lib/types/database";
+import type { Tables } from "@/lib/types/database";
 
 const fornecedorSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),

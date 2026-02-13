@@ -1,5 +1,5 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
-import { Tables, TablesInsert, TablesUpdate, Json } from '@/lib/types/database'
+import type { Tables, TablesInsert, TablesUpdate, Json } from '@/lib/types/database'
 type EmailMonitorado = Tables<'emails_monitorados'>
 
 // ===== SELECT =====

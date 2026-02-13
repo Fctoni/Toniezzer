@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tables, TopicoStatus, TopicoPrioridade } from "@/lib/types/database";
+import type { Tables, TopicoStatus, TopicoPrioridade } from "@/lib/types/database";
 import {
   MessageSquare,
   Pin,

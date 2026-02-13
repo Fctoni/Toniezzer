@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { TablesUpdate } from '@/lib/types/database'
+import type { TablesUpdate } from '@/lib/types/database'
 import { isAdmin as verificarAdmin, criarUsuario, atualizarUsuario, desativarUsuario } from '@/lib/services/users'
 
 // ===== Zod Schemas =====

@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Tables } from "@/lib/types/database";
+import type { Tables } from "@/lib/types/database";
 import { User } from "@supabase/supabase-js";
 import { buscarUsuariosAtivos } from "@/lib/services/users";
 
