@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { atualizarDataVencimento } from "@/lib/services/gastos";
 import {
   Table,
   TableBody,
@@ -16,9 +20,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, Trash2, FileText, Package, CheckCircle, Clock } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { MoreHorizontal, Eye, Package, CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
-import { parseDateString } from "@/lib/utils";
+import { formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Gasto {
   id: string;
@@ -42,9 +48,25 @@ interface Gasto {
 
 interface LancamentosTableProps {
   gastos: Gasto[];
+  onDataAlterada?: () => void;
 }
 
-export function LancamentosTable({ gastos }: LancamentosTableProps) {
+export function LancamentosTable({ gastos, onDataAlterada }: LancamentosTableProps) {
+  const [editandoDataId, setEditandoDataId] = useState<string | null>(null);
+
+  const handleAlterarData = async (gasto: Gasto, novaData: Date) => {
+    try {
+      const supabase = createClient();
+      await atualizarDataVencimento(supabase, gasto.id, formatDateToString(novaData));
+      toast.success("Data de vencimento atualizada");
+      setEditandoDataId(null);
+      onDataAlterada?.();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar data de vencimento");
+    }
+  };
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -122,7 +144,29 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
       <TableBody>
         {gastos.map((gasto) => (
           <TableRow key={gasto.id}>
-            <TableCell className="font-medium">{formatDate(gasto.data)}</TableCell>
+            <TableCell className="font-medium">
+              {!gasto.pago ? (
+                <Popover
+                  open={editandoDataId === gasto.id}
+                  onOpenChange={(open) => setEditandoDataId(open ? gasto.id : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <span className="cursor-default">
+                      {formatDate(gasto.data)}
+                    </span>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseDateString(gasto.data)}
+                      onSelect={(date) => date && handleAlterarData(gasto, date)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                formatDate(gasto.data)
+              )}
+            </TableCell>
             <TableCell>
               <div>
                 <p className="font-medium">{gasto.descricao}</p>

@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { uploadComprovante } from "@/lib/services/recibos";
-import { marcarPago, atualizarComprovante } from "@/lib/services/gastos";
+import { marcarPago, atualizarComprovante, atualizarDataVencimento } from "@/lib/services/gastos";
 import {
   Table,
   TableBody,
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   CheckCircle,
   Clock,
@@ -51,6 +53,20 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
   const [comprovanteDialogOpen, setComprovanteDialogOpen] = useState(false);
   const [selectedParcela, setSelectedParcela] = useState<Parcela | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [editandoDataId, setEditandoDataId] = useState<string | null>(null);
+
+  const handleAlterarData = async (parcela: Parcela, novaData: Date) => {
+    try {
+      const supabase = createClient();
+      await atualizarDataVencimento(supabase, parcela.id, formatDateToString(novaData));
+      toast.success("Data de vencimento atualizada");
+      setEditandoDataId(null);
+      onParcelaPaga?.();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar data de vencimento");
+    }
+  };
 
   const handleOpenDialog = (parcela: Parcela) => {
     setSelectedParcela(parcela);
@@ -168,7 +184,27 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                   {parcela.parcela_atual}/{parcela.parcelas}
                 </TableCell>
                 <TableCell>
-                  {format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
+                  {!parcela.pago ? (
+                    <Popover
+                      open={editandoDataId === parcela.id}
+                      onOpenChange={(open) => setEditandoDataId(open ? parcela.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <span className="cursor-default">
+                          {format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={parseDateString(parcela.data)}
+                          onSelect={(date) => date && handleAlterarData(parcela, date)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   R${" "}

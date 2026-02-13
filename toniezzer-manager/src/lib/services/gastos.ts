@@ -202,6 +202,18 @@ export async function marcarPago(
   if (error) throw error
 }
 
+export async function atualizarDataVencimento(
+  supabase: TypedSupabaseClient,
+  id: string,
+  data: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('gastos')
+    .update({ data })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function atualizarComprovante(
   supabase: TypedSupabaseClient,
   id: string,

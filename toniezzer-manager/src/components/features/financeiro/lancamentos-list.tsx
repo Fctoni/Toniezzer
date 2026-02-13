@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { LancamentosTable } from "./lancamentos-table";
 import {
@@ -42,6 +43,7 @@ export function LancamentosList({
   fornecedores,
   categorias,
 }: LancamentosListProps) {
+  const router = useRouter();
   const [filters, setFilters] = useState<LancamentosFilters>(
     defaultLancamentosFilters
   );
@@ -185,7 +187,7 @@ export function LancamentosList({
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
-          <LancamentosTable gastos={gastosFiltrados} />
+          <LancamentosTable gastos={gastosFiltrados} onDataAlterada={() => router.refresh()} />
         </CardContent>
       </Card>
     </div>
