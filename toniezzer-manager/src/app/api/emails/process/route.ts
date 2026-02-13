@@ -23,14 +23,32 @@ interface DadosExtraidos {
   confianca: number
 }
 
-// Baixar anexo do IMAP
-async function baixarAnexo(uid: number, part: string): Promise<Buffer | null> {
+// Baixar anexo do Storage (ou fallback IMAP)
+async function baixarAnexo(params: { storage_path?: string; uid: number; part: string }): Promise<Buffer | null> {
+  // Caminho 1: Supabase Storage
+  if (params.storage_path) {
+    console.log('[PROCESS] Baixando do Storage:', params.storage_path)
+    const supabase = await createClient()
+    const { data, error } = await supabase.storage
+      .from('email-anexos')
+      .download(params.storage_path)
+
+    if (!error && data) {
+      const buffer = Buffer.from(await data.arrayBuffer())
+      console.log('[PROCESS] Baixado do Storage, tamanho:', buffer.length, 'bytes')
+      return buffer
+    }
+
+    console.error('[PROCESS] Erro Storage:', error?.message, '- tentando IMAP...')
+  }
+
+  // Caminho 2: fallback IMAP
   if (!process.env.EMAIL_IMAP_HOST || !process.env.EMAIL_IMAP_USER || !process.env.EMAIL_IMAP_PASSWORD) {
     throw new Error('Credenciais IMAP não configuradas')
   }
 
-  console.log('[PROCESS] Conectando ao IMAP para baixar anexo...')
-  
+  console.log('[PROCESS] Baixando do IMAP uid:', params.uid, 'part:', params.part)
+
   const client = new ImapFlow({
     host: process.env.EMAIL_IMAP_HOST,
     port: parseInt(process.env.EMAIL_IMAP_PORT || '993'),
@@ -46,23 +64,18 @@ async function baixarAnexo(uid: number, part: string): Promise<Buffer | null> {
   const lock = await client.getMailboxLock('INBOX')
 
   try {
-    console.log('[PROCESS] Baixando anexo uid:', uid, 'part:', part)
-    
-    const { content } = await client.download(uid.toString(), part, { uid: true })
-    
-    if (!content) {
-      return null
-    }
+    const { content } = await client.download(params.uid.toString(), params.part, { uid: true })
+
+    if (!content) return null
 
     const chunks: Buffer[] = []
     for await (const chunk of content) {
       chunks.push(Buffer.from(chunk))
     }
-    
-    const buffer = Buffer.concat(chunks)
-    console.log('[PROCESS] Anexo baixado, tamanho:', buffer.length, 'bytes')
-    return buffer
 
+    const buffer = Buffer.concat(chunks)
+    console.log('[PROCESS] Baixado do IMAP, tamanho:', buffer.length, 'bytes')
+    return buffer
   } finally {
     lock.release()
     await client.logout()
@@ -367,6 +380,7 @@ export async function POST(request: NextRequest) {
           tamanho: number
           part: string
           uid: number
+          storage_path?: string
         }> | null
 
         if (!anexos || anexos.length === 0) {
@@ -390,8 +404,12 @@ export async function POST(request: NextRequest) {
           console.log('[EMAIL PROCESS] Processando anexo:', anexo.nome, anexo.tipo)
 
           try {
-            // Baixar anexo do IMAP
-            const buffer = await baixarAnexo(anexo.uid, anexo.part)
+            // Baixar anexo (Storage ou IMAP fallback)
+            const buffer = await baixarAnexo({
+              storage_path: anexo.storage_path,
+              uid: anexo.uid,
+              part: anexo.part,
+            })
             
             if (!buffer) {
               const msg = `Anexo "${anexo.nome}": falha ao baixar do servidor IMAP`

@@ -35,6 +35,7 @@ export function EmailPreview({ email }: EmailPreviewProps) {
     tamanho?: number
     part: string
     uid: number
+    storage_path?: string
   }> | null
 
   const formatDate = (dateStr: string) => {
@@ -59,11 +60,20 @@ export function EmailPreview({ email }: EmailPreviewProps) {
     return `${(kb / 1024).toFixed(1)} MB`
   }
 
-  const getAnexoUrl = (anexo: { uid: number; part: string; tipo: string; nome: string }) => {
-    return `/api/emails/attachment?uid=${anexo.uid}&part=${anexo.part}&tipo=${encodeURIComponent(anexo.tipo)}&nome=${encodeURIComponent(anexo.nome)}`
+  const getAnexoUrl = (anexo: { uid: number; part: string; tipo: string; nome: string; storage_path?: string }) => {
+    const params = new URLSearchParams({
+      tipo: anexo.tipo,
+      nome: anexo.nome,
+    })
+    if (anexo.storage_path) {
+      params.set('storage_path', anexo.storage_path)
+    }
+    params.set('uid', String(anexo.uid))
+    params.set('part', anexo.part)
+    return `/api/emails/attachment?${params.toString()}`
   }
 
-  const handlePreview = async (anexo: { uid: number; part: string; tipo: string; nome: string }) => {
+  const handlePreview = async (anexo: { uid: number; part: string; tipo: string; nome: string; storage_path?: string }) => {
     setLoadingAnexo(anexo.nome)
     try {
       const url = getAnexoUrl(anexo)

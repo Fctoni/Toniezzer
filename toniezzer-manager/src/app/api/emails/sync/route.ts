@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
 import { createClient } from '@/lib/supabase/server'
-import { buscarEmailPorIdExterno, criarEmail } from '@/lib/services/emails-monitorados'
+import { buscarEmailPorIdExterno, criarEmail, atualizarAnexosEmail } from '@/lib/services/emails-monitorados'
 
 // Estrutura de body do IMAP
 interface BodyStructure {
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          await criarEmail(supabase, {
+          const emailRecord = await criarEmail(supabase, {
             email_id_externo: pending.emailId,
             remetente: pending.remetente,
             remetente_nome: pending.remetente_nome,
@@ -261,7 +261,58 @@ export async function POST(request: NextRequest) {
             anexos: pending.anexos,
           })
           newEmails++
-          console.log('[EMAIL SYNC] Email inserido com sucesso!')
+          console.log('[EMAIL SYNC] Email inserido com sucesso! id:', emailRecord.id)
+
+          // Upload de anexos para Supabase Storage
+          if (pending.anexos && pending.anexos.length > 0) {
+            const anexosComStorage = [...pending.anexos]
+            let algumUploadOk = false
+
+            for (let i = 0; i < anexosComStorage.length; i++) {
+              const anexo = anexosComStorage[i]
+              try {
+                console.log(`[EMAIL SYNC] Baixando anexo ${i + 1}/${anexosComStorage.length}: ${anexo.nome}`)
+                const { content: anexoContent } = await client.download(
+                  String(pending.uid),
+                  anexo.part,
+                  { uid: true }
+                )
+
+                const anexoChunks: Buffer[] = []
+                for await (const chunk of anexoContent) {
+                  anexoChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array))
+                }
+                const anexoBuffer = Buffer.concat(anexoChunks)
+
+                // Sanitizar filename: remover acentos e caracteres invalidos para Storage
+                const safeName = anexo.nome
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^a-zA-Z0-9._-]/g, '_')
+                const storagePath = `emails/${emailRecord.id}/${anexo.part}-${safeName}`
+                const { error: uploadError } = await supabase.storage
+                  .from('email-anexos')
+                  .upload(storagePath, anexoBuffer, {
+                    contentType: anexo.tipo,
+                    upsert: false,
+                  })
+
+                if (uploadError) {
+                  console.error(`[EMAIL SYNC] Erro upload Storage: ${uploadError.message}`)
+                } else {
+                  (anexosComStorage[i] as Record<string, unknown>).storage_path = storagePath
+                  algumUploadOk = true
+                  console.log(`[EMAIL SYNC] Anexo salvo no Storage: ${storagePath}`)
+                }
+              } catch (anexoError) {
+                console.error(`[EMAIL SYNC] Erro ao processar anexo ${anexo.nome}:`, anexoError)
+              }
+            }
+
+            if (algumUploadOk) {
+              await atualizarAnexosEmail(supabase, emailRecord.id, anexosComStorage)
+              console.log('[EMAIL SYNC] Campo anexos atualizado com storage_path')
+            }
+          }
         } catch (insertError) {
           console.error('[EMAIL SYNC] Erro ao inserir:', insertError)
         }

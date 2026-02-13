@@ -1,5 +1,5 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
-import { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
+import { Tables, TablesInsert, TablesUpdate, Json } from '@/lib/types/database'
 type EmailMonitorado = Tables<'emails_monitorados'>
 
 // ===== SELECT =====
@@ -67,6 +67,18 @@ export async function criarEmail(
 }
 
 // ===== UPDATE =====
+
+export async function atualizarAnexosEmail(
+  supabase: TypedSupabaseClient,
+  id: string,
+  anexos: Json
+): Promise<void> {
+  const { error } = await supabase
+    .from('emails_monitorados')
+    .update({ anexos })
+    .eq('id', id)
+  if (error) throw error
+}
 
 export async function atualizarStatusEmail(
   supabase: TypedSupabaseClient,

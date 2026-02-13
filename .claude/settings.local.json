@@ -25,7 +25,9 @@
       "Bash(do wc -l \"$f\")",
       "Bash(done)",
       "Bash(grep:*)",
-      "Bash(Select-Object -First 80)"
+      "Bash(Select-Object -First 80)",
+      "Bash(curl:*)",
+      "Bash(node:*)"
     ]
   },
   "enabledMcpjsonServers": [
