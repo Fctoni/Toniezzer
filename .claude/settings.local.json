@@ -21,7 +21,8 @@
       "Bash(del \"c:\\\\Users\\\\felip\\\\VSCode\\\\Toniezzer\\\\toniezzer-manager\\\\src\\\\components\\\\features\\\\cronograma\\\\nova-tarefa-dialog.tsx\")",
       "Read(//home/felipe/.claude/**)",
       "mcp__plugin_supabase_supabase__list_projects",
-      "mcp__plugin_supabase_supabase__apply_migration"
+      "mcp__plugin_supabase_supabase__apply_migration",
+      "Bash(git log:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
