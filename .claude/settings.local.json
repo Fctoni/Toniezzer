@@ -19,6 +19,7 @@
       "Bash(powershell -Command \"cd ''c:\\\\Users\\\\tonietto.felipe\\\\My Drive\\\\cursor\\\\Controle de estoque\\\\controle-estoque''; npx tsc --noEmit 2>&1 | Select-Object -First 50\")",
       "mcp__supabase__get_advisors",
       "Bash(del \"c:\\\\Users\\\\felip\\\\VSCode\\\\Toniezzer\\\\toniezzer-manager\\\\src\\\\components\\\\features\\\\cronograma\\\\nova-tarefa-dialog.tsx\")",
+<<<<<<< HEAD
       "mcp__supabase__search_docs",
       "Bash(xargs:*)",
       "Bash(while read f)",
@@ -26,8 +27,15 @@
       "Bash(done)",
       "Bash(grep:*)",
       "Bash(Select-Object -First 80)"
+=======
+      "Read(//home/felipe/.claude/**)",
+      "mcp__plugin_supabase_supabase__list_projects",
+      "mcp__plugin_supabase_supabase__apply_migration",
+      "Bash(git log:*)"
+>>>>>>> main
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
   ]

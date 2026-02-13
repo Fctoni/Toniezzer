@@ -14,6 +14,7 @@ import { formatDateToString } from '@/lib/utils'
 import { buscarEmailPorId, aprovarEmail, rejeitarEmail, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
 import { criarCompra } from '@/lib/services/compras'
 import { criarGastos } from '@/lib/services/gastos'
+import type { ParcelaEditavel } from '@/components/features/emails/form-aprovacao'
 
 export default function EmailDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -50,7 +51,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     nota_fiscal_numero?: string
     etapa_relacionada_id?: string
     observacoes?: string
-  }) => {
+  }, parcelasEditadas: ParcelaEditavel[]) => {
     if (!currentUser || !email) return
     
     setIsSubmitting(true)
@@ -67,6 +68,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         tamanho?: number
         part: string
         uid: number
+        url_storage: string
       }> | null
       
       if (anexos && anexos.length > 0) {
@@ -77,9 +79,8 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         
         if (anexoParaSalvar) {
           try {
-            // Baixar o anexo via API
-            const anexoUrl = `/api/emails/attachment?uid=${anexoParaSalvar.uid}&part=${anexoParaSalvar.part}&tipo=${encodeURIComponent(anexoParaSalvar.tipo)}&nome=${encodeURIComponent(anexoParaSalvar.nome)}`
-            const response = await fetch(anexoUrl)
+            // Baixar o anexo do Storage
+            const response = await fetch(anexoParaSalvar.url_storage)
             
             if (response.ok) {
               const blob = await response.blob()
@@ -141,40 +142,23 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         parcelas_pagas: 0,
       })
 
-      // 3. Criar as parcelas (lançamentos na tabela gastos)
-      const valorTotal = parseFloat(data.valor)
-      const valorParcela = valorTotal / numParcelas
-      const valorArredondado = Math.floor(valorParcela * 100) / 100
-      const diferencaArredondamento = valorTotal - (valorArredondado * numParcelas)
-
-      const lancamentos = []
-      const dataPrimeiraParcela = new Date(data.data + 'T12:00:00')
-
-      for (let i = 0; i < numParcelas; i++) {
-        const dataParcela = new Date(dataPrimeiraParcela)
-        dataParcela.setMonth(dataParcela.getMonth() + i)
-        
-        const valor = i === numParcelas - 1
-          ? valorArredondado + diferencaArredondamento
-          : valorArredondado
-
-        lancamentos.push({
-          compra_id: compra.id,
-          descricao: data.descricao,
-          valor: valor,
-          data: formatDateToString(dataParcela),
-          categoria_id: data.categoria_id,
-          fornecedor_id: data.fornecedor_id,
-          forma_pagamento: data.forma_pagamento,
-          parcelas: numParcelas,
-          parcela_atual: i + 1,
-          etapa_relacionada_id: data.etapa_relacionada_id || null,
-          status: 'aprovado',
-          pago: false,
-          criado_por: currentUser.id,
-          criado_via: 'email',
-        })
-      }
+      // 3. Criar as parcelas (lançamentos na tabela gastos) a partir dos dados editados pelo usuário
+      const lancamentos = parcelasEditadas.map((parcela) => ({
+        compra_id: compra.id,
+        descricao: data.descricao,
+        valor: parcela.valor,
+        data: parcela.data,
+        categoria_id: data.categoria_id,
+        fornecedor_id: data.fornecedor_id,
+        forma_pagamento: data.forma_pagamento,
+        parcelas: numParcelas,
+        parcela_atual: parcela.parcela,
+        etapa_relacionada_id: data.etapa_relacionada_id || null,
+        status: 'aprovado',
+        pago: false,
+        criado_por: currentUser.id,
+        criado_via: 'email',
+      }))
 
       try {
         await criarGastos(supabase, lancamentos)

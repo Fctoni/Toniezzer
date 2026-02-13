@@ -1,5 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import {
   Table,
   TableBody,
@@ -10,15 +15,21 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Pencil, Trash2, FileText, Package, CheckCircle, Clock } from "lucide-react";
+import { MoreHorizontal, Eye, Package, CheckCircle, Clock } from "lucide-react";
 import Link from "next/link";
-import { parseDateString } from "@/lib/utils";
+import { formatDateToString, parseDateString } from "@/lib/utils";
 
 interface Gasto {
   id: string;
@@ -42,9 +53,30 @@ interface Gasto {
 
 interface LancamentosTableProps {
   gastos: Gasto[];
+  onDataAlterada?: () => void;
 }
 
-export function LancamentosTable({ gastos }: LancamentosTableProps) {
+export function LancamentosTable({ gastos, onDataAlterada }: LancamentosTableProps) {
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+
+  const handleDateChange = async (gastoId: string, newDate: Date) => {
+    setEditingDateId(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("gastos")
+        .update({ data: formatDateToString(newDate) })
+        .eq("id", gastoId);
+
+      if (error) throw error;
+
+      toast.success("Data de vencimento atualizada");
+      onDataAlterada?.();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar data de vencimento");
+    }
+  };
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -122,7 +154,30 @@ export function LancamentosTable({ gastos }: LancamentosTableProps) {
       <TableBody>
         {gastos.map((gasto) => (
           <TableRow key={gasto.id}>
-            <TableCell className="font-medium">{formatDate(gasto.data)}</TableCell>
+            <TableCell className="font-medium">
+              {!gasto.pago ? (
+                <Popover
+                  open={editingDateId === gasto.id}
+                  onOpenChange={(open) => setEditingDateId(open ? gasto.id : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <span className="cursor-pointer">
+                      {format(parseDateString(gasto.data), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseDateString(gasto.data)}
+                      onSelect={(date) => date && handleDateChange(gasto.id, date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                formatDate(gasto.data)
+              )}
+            </TableCell>
             <TableCell>
               <div>
                 <p className="font-medium">{gasto.descricao}</p>

@@ -9,24 +9,22 @@ Pontos importantes que temos que levar em consideração.
 
 ## Mega urgente - resolver por whatsapp
 
-### Projeto IFC que nos foi enviado está sem as partes metálicas
--- Enviar arquivo correto, que apareça a espessura correta da laje e as colunas de apoio.
 
 ### Quantificar e posicionar ralos da garagem - 2 dias
 
 ### Posição final das pias e privadas - 2 dias
--- Extremamente urgente: garagem, precisamos em no máximo 2 dias
--- Ducha higiênica ao lado da privada
+- Extremamente urgente: garagem, precisamos em no máximo 2 dias
+- Ducha higiênica ao lado da privada
 
 ### Pontos extra de água na garagem - quantificar e posicionar - 7 dias
--- Importante na oficina
+- Importante na oficina
 
 ### Tomadas - 7 dias
--- Garagem
+- Garagem
 
 ### Piscina
--- Medidas e localização no terreno **com cotas de distanciamentos em relação ao terreno**. Se possível, enviar a planta de todo jardim.
--- Medidas e localização no terreno do deck. Sugestão de material e fornecedor para orçarmos quanto ele custaria.
+- Medidas e localização no terreno **com cotas de distanciamentos em relação ao terreno**. Se possível, enviar a planta de todo jardim.
+- Medidas e localização no terreno do deck. Sugestão de material e fornecedor para orçarmos quanto ele custaria.
 referência Igui:
 
 ![alt text](piscina_igui.png)
@@ -34,20 +32,20 @@ referência Igui:
 ## Finalização do projeto - resolver em reunião
 
 ###  Posição final das pias e privadas
--- Andar térreo: definir prazo
--- Acrescentar ponto de água e esgoto na varanda
--- Ducha higiênica em todas privadas exceto no lavabo
--- Duas pias na suíte do casal
+- Andar térreo: definir prazo
+- Acrescentar ponto de água e esgoto na varanda
+- Ducha higiênica em todas privadas exceto no lavabo
+- Duas pias na suíte do casal
 
 ### Tomadas 
--- Andar térreo
+- Andar térreo
 
 ### Revestimentos
--- Breezes: para orçar, precisamos detalhar:
+- Breezes: para orçar, precisamos detalhar:
 * Medidas (m²) 
 * Tipo (fixo / veneziana / janela, etc) 
 * Design / disposição dos perfis 
 
 ### Vidros / aberturas
--- Detalhamento de vidros, aberturas e clarabóias para orçarmos.
+- Detalhamento de vidros, aberturas e clarabóias para orçarmos.
 

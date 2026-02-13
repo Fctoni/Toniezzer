@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseString } from 'xml2js'
 import { promisify } from 'util'
-import { ImapFlow } from 'imapflow'
 import type { Json } from '@/lib/types/database'
 import { buscarEmailsParaProcessar, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
 import { formatDateToString } from '@/lib/utils'
@@ -23,50 +22,20 @@ interface DadosExtraidos {
   confianca: number
 }
 
-// Baixar anexo do IMAP
-async function baixarAnexo(uid: number, part: string): Promise<Buffer | null> {
-  if (!process.env.EMAIL_IMAP_HOST || !process.env.EMAIL_IMAP_USER || !process.env.EMAIL_IMAP_PASSWORD) {
-    throw new Error('Credenciais IMAP não configuradas')
+// Baixar anexo do Supabase Storage
+async function baixarAnexoDoStorage(urlStorage: string): Promise<Buffer | null> {
+  console.log('[PROCESS] Baixando anexo do Storage:', urlStorage)
+
+  const response = await fetch(urlStorage)
+  if (!response.ok) {
+    console.error('[PROCESS] Erro ao baixar do Storage:', response.status)
+    return null
   }
 
-  console.log('[PROCESS] Conectando ao IMAP para baixar anexo...')
-  
-  const client = new ImapFlow({
-    host: process.env.EMAIL_IMAP_HOST,
-    port: parseInt(process.env.EMAIL_IMAP_PORT || '993'),
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_IMAP_USER,
-      pass: process.env.EMAIL_IMAP_PASSWORD,
-    },
-    logger: false,
-  })
-
-  await client.connect()
-  const lock = await client.getMailboxLock('INBOX')
-
-  try {
-    console.log('[PROCESS] Baixando anexo uid:', uid, 'part:', part)
-    
-    const { content } = await client.download(uid.toString(), part, { uid: true })
-    
-    if (!content) {
-      return null
-    }
-
-    const chunks: Buffer[] = []
-    for await (const chunk of content) {
-      chunks.push(Buffer.from(chunk))
-    }
-    
-    const buffer = Buffer.concat(chunks)
-    console.log('[PROCESS] Anexo baixado, tamanho:', buffer.length, 'bytes')
-    return buffer
-
-  } finally {
-    lock.release()
-    await client.logout()
-  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  console.log('[PROCESS] Anexo baixado, tamanho:', buffer.length, 'bytes')
+  return buffer
 }
 
 // Processar imagem com Gemini Vision (OCR)
@@ -367,6 +336,7 @@ export async function POST(request: NextRequest) {
           tamanho: number
           part: string
           uid: number
+          url_storage: string
         }> | null
 
         if (!anexos || anexos.length === 0) {
@@ -390,11 +360,11 @@ export async function POST(request: NextRequest) {
           console.log('[EMAIL PROCESS] Processando anexo:', anexo.nome, anexo.tipo)
 
           try {
-            // Baixar anexo do IMAP
-            const buffer = await baixarAnexo(anexo.uid, anexo.part)
-            
+            // Baixar anexo do Storage
+            const buffer = await baixarAnexoDoStorage(anexo.url_storage)
+
             if (!buffer) {
-              const msg = `Anexo "${anexo.nome}": falha ao baixar do servidor IMAP`
+              const msg = `Anexo "${anexo.nome}": falha ao baixar do Storage`
               console.log('[EMAIL PROCESS]', msg)
               errosAnexos.push(msg)
               continue

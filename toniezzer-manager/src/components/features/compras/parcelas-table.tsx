@@ -26,6 +26,8 @@ import {
   Paperclip,
 } from "lucide-react";
 import { formatDateToString, parseDateString } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { ParcelaPagamentoDialog } from "@/components/features/compras/parcela-pagamento-dialog";
 import { ParcelaComprovanteDialog } from "@/components/features/compras/parcela-comprovante-dialog";
 
@@ -51,6 +53,27 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
   const [comprovanteDialogOpen, setComprovanteDialogOpen] = useState(false);
   const [selectedParcela, setSelectedParcela] = useState<Parcela | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+
+  const handleDateChange = async (parcelaId: string, newDate: Date) => {
+    setEditingDateId(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("gastos")
+        .update({ data: formatDateToString(newDate) })
+        .eq("id", parcelaId);
+
+      if (error) throw error;
+
+      toast.success("Data de vencimento atualizada");
+      onParcelaPaga?.();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao atualizar data de vencimento");
+    }
+  };
+
 
   const handleOpenDialog = (parcela: Parcela) => {
     setSelectedParcela(parcela);
@@ -168,7 +191,28 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
                   {parcela.parcela_atual}/{parcela.parcelas}
                 </TableCell>
                 <TableCell>
-                  {format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
+                  {!parcela.pago ? (
+                    <Popover
+                      open={editingDateId === parcela.id}
+                      onOpenChange={(open) => setEditingDateId(open ? parcela.id : null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <span className="cursor-pointer">
+                          {format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={parseDateString(parcela.data)}
+                          onSelect={(date) => date && handleDateChange(parcela.id, date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    format(parseDateString(parcela.data), "dd/MM/yyyy", { locale: ptBR })
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   R${" "}
