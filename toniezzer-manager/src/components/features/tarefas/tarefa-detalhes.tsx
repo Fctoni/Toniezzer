@@ -7,11 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { atualizarTarefa, deletarTarefa } from "@/lib/services/tarefas";
 import { uploadAnexo, downloadAnexo as downloadAnexoService, deletarAnexo } from "@/lib/services/tarefas-anexos";
 import { criarComentario } from "@/lib/services/tarefas-comentarios";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,10 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
-  FileText,
-  Tag,
   Trash2,
-  X,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
@@ -35,6 +28,8 @@ import { TarefaInfoCard } from "@/components/features/tarefas/tarefa-info-card";
 import { TarefaDependenciasCard } from "@/components/features/tarefas/tarefa-dependencias-card";
 import { TarefaAnexosCard } from "@/components/features/tarefas/tarefa-anexos-card";
 import { TarefaComentariosCard } from "@/components/features/tarefas/tarefa-comentarios-card";
+import { TarefaDescricaoCard } from "@/components/features/tarefas/tarefa-descricao-card";
+import { TarefaTagsCard } from "@/components/features/tarefas/tarefa-tags-card";
 
 interface TarefaFull {
   id: string;
@@ -106,7 +101,6 @@ export function TarefaDetalhes({
   const [tarefa, setTarefa] = useState(initialTarefa);
   const [anexos, setAnexos] = useState(initialAnexos);
   const [comentarios, setComentarios] = useState(initialComentarios);
-  const [newTag, setNewTag] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -128,11 +122,9 @@ export function TarefaDetalhes({
     }
   };
 
-  const addTag = () => {
-    if (!newTag.trim()) return;
-    const updatedTags = [...(tarefa.tags || []), newTag.trim()];
+  const addTag = (tag: string) => {
+    const updatedTags = [...(tarefa.tags || []), tag];
     updateField("tags", updatedTags);
-    setNewTag("");
   };
 
   const removeTag = (tag: string) => {
@@ -254,63 +246,16 @@ export function TarefaDetalhes({
         <TarefaDependenciasCard dependencias={dependencias} />
       </div>
 
-      {/* Descrição */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Descrição
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={tarefa.descricao || ""}
-            onChange={(e) =>
-              setTarefa((prev) => ({ ...prev, descricao: e.target.value }))
-            }
-            onBlur={() => updateField("descricao", tarefa.descricao || null)}
-            placeholder="Adicione uma descrição..."
-            className="resize-none min-h-[80px]"
-          />
-        </CardContent>
-      </Card>
+      <TarefaDescricaoCard
+        descricao={tarefa.descricao}
+        onUpdate={(value) => updateField("descricao", value)}
+      />
 
-      {/* Tags */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Tags
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {(tarefa.tags || []).map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1">
-                {tag}
-                <button
-                  onClick={() => removeTag(tag)}
-                  className="ml-1 hover:text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              placeholder="Nova tag..."
-              className="h-8"
-              onKeyDown={(e) => e.key === "Enter" && addTag()}
-            />
-            <Button size="sm" variant="outline" onClick={addTag}>
-              Adicionar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <TarefaTagsCard
+        tags={tarefa.tags || []}
+        onAddTag={addTag}
+        onRemoveTag={removeTag}
+      />
 
       <TarefaAnexosCard
         anexos={anexos}
