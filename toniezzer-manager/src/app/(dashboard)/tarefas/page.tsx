@@ -4,15 +4,11 @@ import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dial
 import { buscarTarefas } from "@/lib/services/tarefas";
 import { buscarSubetapasResumidas } from "@/lib/services/subetapas";
 import { buscarUsuariosParaDropdown } from "@/lib/services/users";
+import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
 
 interface User {
   id: string;
   nome_completo: string;
-}
-
-interface EtapaDB {
-  id: string;
-  nome: string;
 }
 
 interface SubetapaDB {
@@ -43,17 +39,16 @@ export default async function TarefasPage() {
   const [
     tarefasRaw,
     subetapasRaw,
-    { data: etapasData },
+    etapas,
     usersData,
   ] = await Promise.all([
     buscarTarefas(supabase),
     buscarSubetapasResumidas(supabase),
-    supabase.from("etapas").select("id, nome").order("ordem"),
+    buscarEtapasParaDropdown(supabase),
     buscarUsuariosParaDropdown(supabase),
   ]);
 
   const users = usersData as User[];
-  const etapas = (etapasData || []) as EtapaDB[];
 
   // Montar mapa etapa_id -> nome
   const etapaMap = new Map(etapas.map((e) => [e.id, e.nome]));

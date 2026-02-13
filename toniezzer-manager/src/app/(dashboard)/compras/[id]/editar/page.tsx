@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { buscarCompraPorId } from "@/lib/services/compras";
 import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
 import { buscarFornecedoresParaDropdown } from "@/lib/services/fornecedores";
+import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package } from "lucide-react";
@@ -103,15 +104,15 @@ export default function EditarCompraPage() {
     });
 
     // Buscar categorias, fornecedores e etapas
-    const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+    const [categoriasData, fornecedoresData, etapasData] = await Promise.all([
       buscarCategoriasParaDropdown(supabase),
       buscarFornecedoresParaDropdown(supabase),
-      supabase.from("etapas").select("id, nome").order("ordem"),
+      buscarEtapasParaDropdown(supabase),
     ]);
 
     setCategorias(categoriasData);
     setFornecedores(fornecedoresData);
-    if (etapasRes.data) setEtapas(etapasRes.data);
+    setEtapas(etapasData);
 
     setLoading(false);
   }, [id, router]);

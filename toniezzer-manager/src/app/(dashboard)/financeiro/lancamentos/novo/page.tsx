@@ -3,15 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormLancamento } from "@/components/features/financeiro/form-lancamento";
 import { buscarCategoriasAtivas } from "@/lib/services/categorias";
 import { buscarFornecedoresAtivos } from "@/lib/services/fornecedores";
+import { buscarEtapas } from "@/lib/services/etapas";
 
 export default async function NovoLancamentoPage() {
   const supabase = await createClient();
 
-  const [categorias, fornecedores, { data: etapas }] =
+  const [categorias, fornecedores, etapas] =
     await Promise.all([
       buscarCategoriasAtivas(supabase),
       buscarFornecedoresAtivos(supabase),
-      supabase.from("etapas").select("*").order("ordem"),
+      buscarEtapas(supabase),
     ]);
 
   return (
@@ -31,7 +32,7 @@ export default async function NovoLancamentoPage() {
           <FormLancamento
             categorias={categorias || []}
             fornecedores={fornecedores || []}
-            etapas={etapas || []}
+            etapas={etapas}
           />
         </CardContent>
       </Card>

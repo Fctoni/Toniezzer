@@ -6,18 +6,17 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
 import { buscarFornecedoresParaDropdown } from "@/lib/services/fornecedores";
+import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
 
 export default async function NovaCompraPage() {
   const supabase = await createClient();
 
   // Buscar dados necessários
-  const [categorias, fornecedores, etapasRes] = await Promise.all([
+  const [categorias, fornecedores, etapas] = await Promise.all([
     buscarCategoriasParaDropdown(supabase),
     buscarFornecedoresParaDropdown(supabase),
-    supabase.from("etapas").select("id, nome").order("ordem"),
+    buscarEtapasParaDropdown(supabase),
   ]);
-
-  const etapas = etapasRes.data || [];
 
   // Verificar se tem fornecedores cadastrados
   const temFornecedores = fornecedores.length > 0;

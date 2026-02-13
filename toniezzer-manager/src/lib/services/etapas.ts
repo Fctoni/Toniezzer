@@ -19,6 +19,17 @@ export async function buscarEtapaNome(
   return data
 }
 
+export async function buscarEtapasParaDropdown(
+  supabase: TypedSupabaseClient
+): Promise<Pick<Etapa, 'id' | 'nome'>[]> {
+  const { data, error } = await supabase
+    .from('etapas')
+    .select('id, nome')
+    .order('ordem')
+  if (error) throw error
+  return data
+}
+
 // ===== INSERT =====
 
 export async function criarEtapa(

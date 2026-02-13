@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Camera } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { uploadFile } from '@/lib/services/storage'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { formatDateToString } from '@/lib/utils'
@@ -63,14 +64,12 @@ export default function FotoReciboPage() {
       // 3. Upload da imagem para o Storage (para manter referência)
       const supabase = createClient()
       const fileName = `ocr/${Date.now()}-${file.name}`
-      const { error: uploadError } = await supabase.storage
-        .from('notas-compras')
-        .upload(fileName, file)
 
       let publicUrl = ''
-      if (!uploadError) {
-        const { data } = supabase.storage.from('notas-compras').getPublicUrl(fileName)
-        publicUrl = data.publicUrl
+      try {
+        publicUrl = await uploadFile(supabase, 'notas-compras', fileName, file)
+      } catch (uploadError) {
+        console.error('Erro no upload:', uploadError)
       }
 
       setImageUrl(publicUrl)

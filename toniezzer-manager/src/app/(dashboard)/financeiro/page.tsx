@@ -15,19 +15,20 @@ import { GastosChart } from "@/components/features/financeiro/gastos-chart";
 import { parseDateString } from "@/lib/utils";
 import { buscarCategoriasAtivas } from "@/lib/services/categorias";
 import { buscarGastosAprovados } from "@/lib/services/gastos";
+import { buscarEtapas } from "@/lib/services/etapas";
 
 export default async function FinanceiroPage() {
   const supabase = await createClient();
 
-  const [categorias, gastos, { data: etapas }] = await Promise.all([
+  const [categorias, gastos, etapas] = await Promise.all([
     buscarCategoriasAtivas(supabase),
     buscarGastosAprovados(supabase),
-    supabase.from("etapas").select("*").order("ordem"),
+    buscarEtapas(supabase),
   ]);
 
   // Orçamento agora vem das etapas
   const orcamentoTotal =
-    etapas?.reduce((acc, etapa) => acc + (Number(etapa.orcamento) || 0), 0) || 0;
+    etapas.reduce((acc, etapa) => acc + (Number(etapa.orcamento) || 0), 0);
   const gastoTotal = gastos?.reduce((acc, g) => acc + Number(g.valor), 0) || 0;
   const percentualGasto = orcamentoTotal > 0 ? (gastoTotal / orcamentoTotal) * 100 : 0;
   const saldoRestante = orcamentoTotal - gastoTotal;
@@ -51,7 +52,7 @@ export default async function FinanceiroPage() {
   }) || [];
 
   // Dados por etapa
-  const dadosEtapas = etapas?.map((etapa) => {
+  const dadosEtapas = etapas.map((etapa) => {
     const gastoEtapa =
       gastos
         ?.filter((g) => g.etapa_relacionada_id === etapa.id)
@@ -65,7 +66,7 @@ export default async function FinanceiroPage() {
       percentual,
       status: percentual >= 100 ? "over" : percentual >= 80 ? "warning" : "ok",
     };
-  }) || [];
+  });
 
   // Últimos gastos
   const ultimosGastos = gastos

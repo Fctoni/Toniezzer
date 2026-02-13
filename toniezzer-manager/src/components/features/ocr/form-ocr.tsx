@@ -31,6 +31,7 @@ import { formatDateToString } from '@/lib/utils'
 import { Check, X } from 'lucide-react'
 import { buscarCategoriasAtivas } from '@/lib/services/categorias'
 import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
+import { buscarEtapas } from '@/lib/services/etapas'
 
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -91,15 +92,15 @@ export function FormOcr({
     async function loadData() {
       const supabase = createClient()
       
-      const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+      const [categoriasData, fornecedoresData, etapasData] = await Promise.all([
         buscarCategoriasAtivas(supabase),
         buscarFornecedoresAtivos(supabase),
-        supabase.from('etapas').select('*').order('ordem'),
+        buscarEtapas(supabase),
       ])
 
       setCategorias(categoriasData)
       setFornecedores(fornecedoresData)
-      if (etapasRes.data) setEtapas(etapasRes.data)
+      setEtapas(etapasData)
       setLoading(false)
     }
     loadData()

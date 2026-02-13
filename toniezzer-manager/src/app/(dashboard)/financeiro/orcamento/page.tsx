@@ -4,24 +4,25 @@ import { OrcamentoEtapaEditor } from "@/components/features/cronograma/orcamento
 import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
 import { buscarGastosPorEtapa } from "@/lib/services/gastos";
 import { buscarDetalhamentoPorEtapa } from "@/lib/services/orcamento-detalhado";
+import { buscarEtapas } from "@/lib/services/etapas";
 
 export default async function OrcamentoPage() {
   const supabase = await createClient();
 
   const [
-    { data: etapas },
+    etapas,
     categorias,
     gastos,
     detalhamentos,
   ] = await Promise.all([
-    supabase.from("etapas").select("*").order("ordem"),
+    buscarEtapas(supabase),
     buscarCategoriasParaDropdown(supabase),
     buscarGastosPorEtapa(supabase),
     buscarDetalhamentoPorEtapa(supabase),
   ]);
 
   // Calcular gastos por etapa
-  const etapasComGastos = etapas?.map((etapa) => {
+  const etapasComGastos = etapas.map((etapa) => {
     const gasto =
       gastos
         ?.filter((g) => g.etapa_relacionada_id === etapa.id)
@@ -37,7 +38,7 @@ export default async function OrcamentoPage() {
       gasto_realizado: gasto,
       tem_detalhamento: temDetalhamento,
     };
-  }) || [];
+  });
 
   const orcamentoTotal = etapasComGastos.reduce(
     (acc, etapa) => acc + (Number(etapa.orcamento) || 0),

@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | [alteracao16.md](../alteracao/alteracao16.md) |
 | Data criacao | 2026-02-13 |
 | Complexidade | 🟢 Baixa |
@@ -659,30 +659,35 @@ Nenhuma. Todos os buckets de storage ja existem no Supabase. Nao ha novas depend
 
 ### 5.1 Progresso
 
-- [ ] `buscarEtapasParaDropdown()` criada em `etapas.ts`
-- [ ] `storage.ts` criado
-- [ ] Categoria 1 - 4 arquivos com `select("id, nome")` migrados
-- [ ] Categoria 2 - 5 arquivos com `select("*")` migrados
-- [ ] Categoria 3 - 1 arquivo com update inline migrado
-- [ ] Categoria 4 - 2 arquivos com storage inline migrados
-- [ ] `npx tsc --noEmit` sem erros
+- [x] `buscarEtapasParaDropdown()` criada em `etapas.ts`
+- [x] `storage.ts` criado
+- [x] Categoria 1 - 4 arquivos com `select("id, nome")` migrados
+- [x] Categoria 2 - 5 arquivos com `select("*")` migrados
+- [x] Categoria 3 - 1 arquivo com update inline migrado
+- [x] Categoria 4 - 2 arquivos com storage inline migrados
+- [x] `npx tsc --noEmit` sem erros
 - [ ] Testado manualmente
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
+Execucao seguiu a spec sem desvios. Nenhum problema encontrado. `npx tsc --noEmit` retornou zero erros.
 
 ### 5.3 Conversa de Execucao
 
-*(problemas encontrados durante execucao, solucoes propostas)*
+#### IA: Execucao completa sem problemas
 
-#### IA:
-[mensagem]
+Todas as 12 violacoes foram corrigidas seguindo a spec. Arquivos criados/modificados:
+- `src/lib/services/etapas.ts` — adicionada `buscarEtapasParaDropdown()`
+- `src/lib/services/storage.ts` — criado com `uploadFile()`, `getPublicUrl()`, `deleteFile()`
+- 4 arquivos Categoria 1 (select id,nome): tarefas, documentos, compras/nova, compras/[id]/editar
+- 5 arquivos Categoria 2 (select *): financeiro, lancamentos/novo, orcamento, form-aprovacao, form-ocr
+- 1 arquivo Categoria 3 (update inline): editar-tarefa-dialog
+- 2 arquivos Categoria 4 (storage inline): foto/page, upload-form
 
 ---
 
 ## 6. Validacao Final
 
-- [ ] `npx tsc --noEmit` sem erros
+- [x] `npx tsc --noEmit` sem erros
 - [ ] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)

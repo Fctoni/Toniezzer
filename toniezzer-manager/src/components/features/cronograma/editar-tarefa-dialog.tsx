@@ -46,6 +46,7 @@ import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDateToString } from "@/lib/utils";
+import { atualizarTarefa } from "@/lib/services/tarefas";
 
 const formSchema = z.object({
   nome: z.string().min(2, "Mínimo 2 caracteres"),
@@ -125,12 +126,7 @@ export function EditarTarefaDialog({
         responsavel_id: data.responsavel_id || null,
       };
 
-      const { error } = await supabase
-        .from("tarefas")
-        .update(updatedData)
-        .eq("id", tarefa.id);
-
-      if (error) throw error;
+      await atualizarTarefa(supabase, tarefa.id, updatedData);
 
       toast.success("Tarefa atualizada!");
       

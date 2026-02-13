@@ -31,6 +31,7 @@ import { formatDateToString } from '@/lib/utils'
 import { QuickAddFornecedor } from '@/components/features/ocr/quick-add-fornecedor'
 import { buscarCategoriasAtivas } from '@/lib/services/categorias'
 import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
+import { buscarEtapas } from '@/lib/services/etapas'
 
 export interface ParcelaEditavel {
   parcela_atual: number
@@ -166,10 +167,10 @@ export function FormAprovacao({
     async function loadData() {
       const supabase = createClient()
 
-      const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
+      const [categoriasData, fornecedoresData, etapasData] = await Promise.all([
         buscarCategoriasAtivas(supabase),
         buscarFornecedoresAtivos(supabase),
-        supabase.from('etapas').select('*').order('ordem'),
+        buscarEtapas(supabase),
       ])
 
       setCategorias(categoriasData)
@@ -196,7 +197,7 @@ export function FormAprovacao({
         if (match) form.setValue('fornecedor_id', match.id)
       }
 
-      if (etapasRes.data) setEtapas(etapasRes.data)
+      setEtapas(etapasData)
 
       setLoading(false)
     }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { criarDocumento } from "@/lib/services/documentos";
+import { uploadFile } from "@/lib/services/storage";
 import { buscarPrimeiroUsuario } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import {
@@ -139,23 +140,14 @@ export function UploadForm({ etapas }: UploadFormProps) {
         const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
         const bucket = tipo === "foto" ? "fotos-obra" : "documentos-privados";
 
-        // Upload para o Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        // Obter URL pública
-        const { data: urlData } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(fileName);
+        // Upload e obter URL pública
+        const publicUrl = await uploadFile(supabase, bucket, fileName, file);
 
         // Salvar no banco
         await criarDocumento(supabase, {
           nome: file.name,
           tipo: tipo,
-          url: urlData.publicUrl,
+          url: publicUrl,
           tamanho_bytes: file.size,
           mime_type: file.type,
           etapa_relacionada_id: etapaId || null,

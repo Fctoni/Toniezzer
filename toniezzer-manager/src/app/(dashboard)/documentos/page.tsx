@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { buscarDocumentosComEtapa } from "@/lib/services/documentos";
+import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,9 +11,9 @@ import { GaleriaFotos } from "@/components/features/documentos/galeria-fotos";
 export default async function DocumentosPage() {
   const supabase = await createClient();
 
-  const [documentos, { data: etapas }] = await Promise.all([
+  const [documentos, etapas] = await Promise.all([
     buscarDocumentosComEtapa(supabase),
-    supabase.from("etapas").select("id, nome").order("ordem"),
+    buscarEtapasParaDropdown(supabase),
   ]);
 
   const fotos = documentos?.filter((d) => d.tipo === "foto" && d.created_at).map(d => ({
@@ -131,7 +132,7 @@ export default async function DocumentosPage() {
               <CardTitle>Galeria de Fotos</CardTitle>
             </CardHeader>
             <CardContent>
-              <GaleriaFotos fotos={fotos} etapas={etapas || []} />
+              <GaleriaFotos fotos={fotos} etapas={etapas} />
             </CardContent>
           </Card>
         </TabsContent>
