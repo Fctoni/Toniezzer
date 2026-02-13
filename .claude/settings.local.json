@@ -27,7 +27,9 @@
       "Bash(grep:*)",
       "Bash(Select-Object -First 80)",
       "Bash(curl:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vitest run:*)"
     ]
   },
   "enabledMcpjsonServers": [

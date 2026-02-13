@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | [alteracao15.md](../alteracao/alteracao15.md) |
 | Data criacao | 2026-02-13 |
 | Complexidade | 🟢 Baixa |
@@ -24,13 +24,13 @@ Instalar Vitest como framework de testes e criar testes unitarios para as 5 func
 
 ## 2. O que sera feito
 
-- [ ] Instalar `vitest` como devDependency
-- [ ] Criar `vitest.config.ts` com resolucao do alias `@/` -> `src/`
-- [ ] Adicionar scripts `test` e `test:run` no `package.json`
-- [ ] Criar `src/lib/services/etapas.test.ts` com testes para `calcularProgressoEtapa` e `calcularDatasEtapa`
-- [ ] Criar `src/lib/services/subetapas.test.ts` com testes para `calcularProgressoSubetapa`
-- [ ] Criar `src/lib/utils.test.ts` com testes para `formatDateToString` e `parseDateString`
-- [ ] Rodar `npx vitest run` e confirmar que todos os testes passam
+- [x] Instalar `vitest` como devDependency
+- [x] Criar `vitest.config.ts` com resolucao do alias `@/` -> `src/`
+- [x] Adicionar scripts `test` e `test:run` no `package.json`
+- [x] Criar `src/lib/services/etapas.test.ts` com testes para `calcularProgressoEtapa` e `calcularDatasEtapa`
+- [x] Criar `src/lib/services/subetapas.test.ts` com testes para `calcularProgressoSubetapa`
+- [x] Criar `src/lib/utils.test.ts` com testes para `formatDateToString` e `parseDateString`
+- [x] Rodar `npx vitest run` e confirmar que todos os testes passam
 
 ---
 
@@ -189,31 +189,33 @@ Testes para `parseDateString`:
 
 ### 5.1 Progresso
 
-- [ ] Vitest instalado
-- [ ] `vitest.config.ts` criado
-- [ ] Scripts adicionados ao `package.json`
-- [ ] `etapas.test.ts` criado e passando
-- [ ] `subetapas.test.ts` criado e passando
-- [ ] `utils.test.ts` criado e passando
-- [ ] `npx vitest run` sem falhas
-- [ ] `npx tsc --noEmit` sem erros
+- [x] Vitest instalado
+- [x] `vitest.config.ts` criado
+- [x] Scripts adicionados ao `package.json`
+- [x] `etapas.test.ts` criado e passando
+- [x] `subetapas.test.ts` criado e passando
+- [x] `utils.test.ts` criado e passando
+- [x] `npx vitest run` sem falhas
+- [x] `npx tsc --noEmit` sem erros
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
+- Vitest v4.0.18 instalado
+- Nenhum problema encontrado durante a execucao
+- Todos os 27 testes passaram na primeira execucao (7 calcularProgressoEtapa + 7 calcularDatasEtapa + 6 calcularProgressoSubetapa + 4 formatDateToString + 3 parseDateString)
+- TypeScript sem erros
 
 ### 5.3 Conversa de Execucao
 
-*(problemas encontrados durante execucao, solucoes propostas)*
+#### IA: Execucao concluida sem problemas
 
-#### IA:
-[mensagem]
+Todos os arquivos foram criados conforme a especificacao. Vitest instalado, configurado, e 27 testes passando em 3 arquivos de teste.
 
 ---
 
 ## 6. Validacao Final
 
-- [ ] `npx tsc --noEmit` sem erros
-- [ ] `npx vitest run` todos os testes passando
+- [x] `npx tsc --noEmit` sem erros
+- [x] `npx vitest run` todos os testes passando
 - [ ] Funcionalidade testada manualmente
 - [ ] PRD atualizado (via PRD-editor)
