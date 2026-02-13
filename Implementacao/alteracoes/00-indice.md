@@ -34,6 +34,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 03 | [alteracao03.md](./alteracao/alteracao03.md) | Centralizar CRUD em funções utilitárias (services) | 🟡 Em discussão | ⏳ pendente |
 | 04 | [alteracao04.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
 | 05 | [spec-alteracao05.md](./spec/spec-alteracao05.md) | Editar data de vencimento de parcelas inline | 🔵 Pronto para executar | ⏳ pendente |
+| 07 | [spec-alteracao07.md](./spec/spec-alteracao07.md) | Salvar anexos de emails no Supabase Storage durante sincronizacao | 🔵 Pronto para executar | ⏳ pendente |
 
 ## PRD / Commit Pendente
 
@@ -43,6 +44,7 @@ Implementação finalizada, mas falta documentar no PRD ou commitar.
 |---|---------|-----------|-----|
 | 01 | [spec-alteracao01.md](./spec-alteracao01.md) | Sistema de 3 níveis: Etapa → Subetapa → Tarefas | ⏳ pendente |
 | 02 | [spec-alteracao02.md](./spec/spec-alteracao02.md) | Substituir kanban por tabela na página de emails | ⏳ pendente |
+| 06 | [spec-alteracao06.md](./spec/spec-alteracao06.md) | Corpo do email e parcelas editaveis na pagina de emails | ⏳ pendente |
 
 
 ## Finalizados

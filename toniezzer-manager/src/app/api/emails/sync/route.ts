@@ -2,6 +2,57 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
 import { createClient } from '@/lib/supabase/server'
 
+// Percorre a bodyStructure recursivamente procurando text/plain (prioridade) ou text/html (fallback)
+function findTextPart(structure: Record<string, unknown> | null): { partId: string; isHtml: boolean } | null {
+  if (!structure) return null
+
+  const type = structure.type as string | undefined
+  const subtype = (structure as Record<string, unknown>).subtype as string | undefined
+
+  // Nó folha com text/plain — retorna imediatamente (prioridade)
+  if (type === 'text/plain' || (type === 'text' && subtype === 'plain')) {
+    return { partId: (structure.part as string) || '1', isHtml: false }
+  }
+
+  // Nó folha com text/html — guarda como fallback
+  let htmlFallback: { partId: string; isHtml: boolean } | null = null
+  if (type === 'text/html' || (type === 'text' && subtype === 'html')) {
+    htmlFallback = { partId: (structure.part as string) || '1', isHtml: true }
+  }
+
+  // Percorre filhos
+  const children = structure.childNodes as Record<string, unknown>[] | undefined
+  if (children) {
+    for (const child of children) {
+      const result = findTextPart(child)
+      if (result && !result.isHtml) return result // text/plain encontrado
+      if (result && result.isHtml && !htmlFallback) htmlFallback = result
+    }
+  }
+
+  return htmlFallback
+}
+
+// Converte HTML em texto puro preservando line breaks
+function stripHtmlToText(html: string): string {
+  let text = html
+  // Converte tags de bloco em quebras de linha
+  text = text.replace(/<br\s*\/?>/gi, '\n')
+  text = text.replace(/<\/(?:p|div|tr|li|h[1-6])>/gi, '\n')
+  // Remove todas as demais tags HTML
+  text = text.replace(/<[^>]+>/g, '')
+  // Decode entidades HTML básicas
+  text = text.replace(/&amp;/g, '&')
+  text = text.replace(/&lt;/g, '<')
+  text = text.replace(/&gt;/g, '>')
+  text = text.replace(/&quot;/g, '"')
+  text = text.replace(/&nbsp;/g, ' ')
+  text = text.replace(/&#39;/g, "'")
+  // Colapsa múltiplas linhas vazias consecutivas em no máximo 2
+  text = text.replace(/\n{3,}/g, '\n\n')
+  return text.trim()
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -64,13 +115,14 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Extrair informações dos anexos da estrutura (SEM BAIXAR)
-        const anexos: Array<{ 
+        // Extrair informações dos anexos da estrutura e salvar no Storage
+        const anexos: Array<{
           nome: string
           tipo: string
           tamanho: number
           part: string
           uid: number
+          url_storage: string
         }> = []
 
         // Função recursiva para encontrar anexos na estrutura
@@ -96,6 +148,7 @@ export async function POST(request: NextRequest) {
               tamanho: structure.size || 0,
               part: partPath || '1',
               uid: message.uid,
+              url_storage: '',
             })
           }
           
@@ -110,14 +163,75 @@ export async function POST(request: NextRequest) {
         findAttachments(message.bodyStructure)
         console.log('[EMAIL SYNC] Anexos encontrados:', anexos.length)
 
+        // Baixar e salvar cada anexo no Supabase Storage
+        const sanitizedEmailId = emailId.replace(/[<>]/g, '').replace(/[^a-zA-Z0-9._@-]/g, '_')
+        for (const anexo of anexos) {
+          try {
+            const { content: attachContent } = await client.download(message.uid.toString(), anexo.part, { uid: true })
+            if (attachContent) {
+              const attachChunks: Buffer[] = []
+              for await (const chunk of attachContent) {
+                attachChunks.push(Buffer.from(chunk))
+              }
+              const attachBuffer = Buffer.concat(attachChunks)
+
+              const storagePath = `${sanitizedEmailId}/${anexo.nome}`
+              const { error: uploadError } = await supabase.storage
+                .from('email-anexos')
+                .upload(storagePath, attachBuffer, {
+                  contentType: anexo.tipo,
+                  upsert: false,
+                })
+
+              if (uploadError) {
+                console.error('[EMAIL SYNC] Erro upload anexo:', anexo.nome, uploadError.message)
+                anexo.url_storage = ''
+              } else {
+                const { data: publicUrlData } = supabase.storage
+                  .from('email-anexos')
+                  .getPublicUrl(storagePath)
+                anexo.url_storage = publicUrlData.publicUrl
+                console.log('[EMAIL SYNC] Anexo salvo no Storage:', anexo.nome)
+              }
+            } else {
+              anexo.url_storage = ''
+            }
+          } catch (attachError) {
+            console.error('[EMAIL SYNC] Erro ao baixar/salvar anexo:', anexo.nome, attachError)
+            anexo.url_storage = ''
+          }
+        }
+
+        // Extrair corpo do email
+        let corpoTexto: string | null = null
+        try {
+          const textPart = findTextPart(message.bodyStructure as unknown as Record<string, unknown>)
+          if (textPart) {
+            const { content } = await client.download(message.uid.toString(), textPart.partId, { uid: true })
+            if (content) {
+              const chunks: Buffer[] = []
+              for await (const chunk of content) {
+                chunks.push(Buffer.from(chunk))
+              }
+              let rawText = Buffer.concat(chunks).toString('utf-8')
+              if (textPart.isHtml) {
+                rawText = stripHtmlToText(rawText)
+              }
+              corpoTexto = rawText.trim() || null
+            }
+          }
+        } catch (bodyError) {
+          console.error('[EMAIL SYNC] Erro ao extrair corpo (continuando):', bodyError)
+        }
+
         // Determinar status inicial baseado nos anexos
-        const temAnexoProcessavel = anexos.some(a => 
+        const temAnexoProcessavel = anexos.some(a =>
           a.tipo.includes('image') ||
           a.tipo.includes('pdf') ||
           a.tipo.includes('xml')
         )
 
-        // Inserir no banco (NÃO baixamos os anexos aqui, apenas metadados)
+        // Inserir no banco (anexos já foram salvos no Storage acima)
         const { error } = await supabase
           .from('emails_monitorados')
           .insert({
@@ -125,7 +239,7 @@ export async function POST(request: NextRequest) {
             remetente: message.envelope.from?.[0]?.address || '',
             remetente_nome: message.envelope.from?.[0]?.name || null,
             assunto: message.envelope.subject || '(Sem assunto)',
-            corpo: null,
+            corpo: corpoTexto,
             data_recebimento: message.envelope.date?.toISOString() || new Date().toISOString(),
             status: temAnexoProcessavel ? 'nao_processado' : 'aguardando_revisao',
             anexos: anexos.length > 0 ? anexos : null,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/form'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Check, X, RotateCcw } from 'lucide-react'
+import { AlertCircle, Check, X, RotateCcw, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
@@ -45,9 +45,15 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+export interface ParcelaEditavel {
+  parcela: number
+  data: string
+  valor: number
+}
+
 interface FormAprovacaoProps {
   email: Tables<'emails_monitorados'>
-  onAprovar: (data: FormData) => Promise<void>
+  onAprovar: (data: FormData, parcelas: ParcelaEditavel[]) => Promise<void>
   onRejeitar: () => Promise<void>
   onReprocessar?: () => Promise<void>
   isSubmitting?: boolean
@@ -92,6 +98,55 @@ export function FormAprovacao({
       observacoes: `Importado do email de ${email.remetente}\nConfiança IA: ${dadosExtraidos?.confianca ? Math.round(dadosExtraidos.confianca * 100) + '%' : 'N/A'}`,
     },
   })
+
+  // Estado local de parcelas editáveis
+  const [parcelasEditaveis, setParcelasEditaveis] = useState<ParcelaEditavel[]>([])
+
+  const watchedParcelas = form.watch('parcelas')
+  const watchedValor = form.watch('valor')
+  const watchedData = form.watch('data')
+
+  // Regenera parcelas quando número, valor ou data mudam
+  useEffect(() => {
+    const numParcelas = parseInt(watchedParcelas || '1') || 1
+    const valorTotal = parseFloat(watchedValor || '0') || 0
+    const dataBase = watchedData || formatDateToString(new Date())
+
+    const valorParcela = Math.floor((valorTotal / numParcelas) * 100) / 100
+    const diferenca = Math.round((valorTotal - valorParcela * numParcelas) * 100) / 100
+
+    const novasParcelas: ParcelaEditavel[] = []
+    const dataPrimeira = new Date(dataBase + 'T12:00:00')
+
+    for (let i = 0; i < numParcelas; i++) {
+      const dataParcela = new Date(dataPrimeira)
+      dataParcela.setMonth(dataParcela.getMonth() + i)
+
+      novasParcelas.push({
+        parcela: i + 1,
+        data: formatDateToString(dataParcela),
+        valor: i === numParcelas - 1 ? valorParcela + diferenca : valorParcela,
+      })
+    }
+
+    setParcelasEditaveis(novasParcelas)
+  }, [watchedParcelas, watchedValor, watchedData])
+
+  const updateParcela = useCallback((index: number, field: 'data' | 'valor', value: string) => {
+    setParcelasEditaveis(prev => prev.map((p, i) => {
+      if (i !== index) return p
+      if (field === 'valor') return { ...p, valor: parseFloat(value) || 0 }
+      return { ...p, data: value }
+    }))
+  }, [])
+
+  const somaParcelas = useMemo(
+    () => parcelasEditaveis.reduce((acc, p) => acc + p.valor, 0),
+    [parcelasEditaveis]
+  )
+
+  const valorTotal = parseFloat(watchedValor || '0') || 0
+  const diferencaSoma = Math.round((somaParcelas - valorTotal) * 100) / 100
 
   useEffect(() => {
     async function loadData() {
@@ -164,7 +219,7 @@ export function FormAprovacao({
       </CardHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onAprovar)}>
+        <form onSubmit={form.handleSubmit((data) => onAprovar(data, parcelasEditaveis))}>
           <CardContent className="space-y-4">
             {confianca === 0 && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
@@ -380,6 +435,75 @@ export function FormAprovacao({
                 </FormItem>
               )}
             />
+
+            {/* Tabela de parcelas editáveis */}
+            {parcelasEditaveis.length > 0 && (
+              <div className="border rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50 border-b">
+                  <span className="text-sm font-medium">Parcelas</span>
+                  <span className="text-sm text-muted-foreground">
+                    R$ Total {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground w-16">Parcela</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Data</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Valor (R$)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parcelasEditaveis.map((p, index) => (
+                        <tr key={index} className="border-b last:border-b-0">
+                          <td className="px-3 py-1.5 text-muted-foreground">
+                            {p.parcela}/{parcelasEditaveis.length}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="date"
+                              className="h-8 text-sm"
+                              defaultValue={p.data}
+                              onBlur={(e) => updateParcela(index, 'data', e.target.value)}
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="h-8 text-sm"
+                              defaultValue={p.valor.toFixed(2)}
+                              onBlur={(e) => updateParcela(index, 'valor', e.target.value)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-muted/30">
+                        <td colSpan={2} className="px-3 py-2 text-right text-sm font-medium">
+                          Soma:
+                        </td>
+                        <td className="px-3 py-2 text-sm font-medium">
+                          R$ {somaParcelas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Aviso quando soma das parcelas diverge do valor total */}
+            {diferencaSoma !== 0 && parcelasEditaveis.length > 0 && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  A soma das parcelas (R$ {somaParcelas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) difere do valor total (R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) em R$ {Math.abs(diferencaSoma).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col gap-2">
