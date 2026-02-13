@@ -640,9 +640,12 @@ export type Database = {
       fornecedores: {
         Row: {
           ativo: boolean | null
-          avaliacao: number | null
+          banco_agencia: string | null
+          banco_conta: string | null
+          banco_cpf_cnpj: string | null
+          banco_numero: string | null
+          chave_pix: string | null
           cnpj_cpf: string | null
-          comentario_avaliacao: string | null
           created_at: string | null
           created_by: string | null
           email: string | null
@@ -652,13 +655,17 @@ export type Database = {
           nome: string
           telefone: string | null
           tipo: string | null
+          tipo_pagamento: string | null
           updated_at: string | null
         }
         Insert: {
           ativo?: boolean | null
-          avaliacao?: number | null
+          banco_agencia?: string | null
+          banco_conta?: string | null
+          banco_cpf_cnpj?: string | null
+          banco_numero?: string | null
+          chave_pix?: string | null
           cnpj_cpf?: string | null
-          comentario_avaliacao?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -668,13 +675,17 @@ export type Database = {
           nome: string
           telefone?: string | null
           tipo?: string | null
+          tipo_pagamento?: string | null
           updated_at?: string | null
         }
         Update: {
           ativo?: boolean | null
-          avaliacao?: number | null
+          banco_agencia?: string | null
+          banco_conta?: string | null
+          banco_cpf_cnpj?: string | null
+          banco_numero?: string | null
+          chave_pix?: string | null
           cnpj_cpf?: string | null
-          comentario_avaliacao?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -684,6 +695,7 @@ export type Database = {
           nome?: string
           telefone?: string | null
           tipo?: string | null
+          tipo_pagamento?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1527,7 +1539,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_user_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never

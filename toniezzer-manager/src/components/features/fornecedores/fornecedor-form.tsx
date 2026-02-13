@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +36,12 @@ const fornecedorSchema = z.object({
   telefone: z.string().optional(),
   endereco: z.string().optional(),
   especialidade: z.string().optional(),
+  tipo_pagamento: z.enum(["pix", "conta_corrente"]).optional().or(z.literal("")),
+  chave_pix: z.string().optional(),
+  banco_numero: z.string().optional(),
+  banco_agencia: z.string().optional(),
+  banco_conta: z.string().optional(),
+  banco_cpf_cnpj: z.string().optional(),
 });
 
 type FornecedorFormData = z.infer<typeof fornecedorSchema>;
@@ -58,25 +65,58 @@ export function FornecedorForm({ fornecedor, onSuccess }: FornecedorFormProps) {
       telefone: fornecedor?.telefone || "",
       endereco: fornecedor?.endereco || "",
       especialidade: fornecedor?.especialidade || "",
+      tipo_pagamento: (fornecedor?.tipo_pagamento as FornecedorFormData["tipo_pagamento"]) || "",
+      chave_pix: fornecedor?.chave_pix || "",
+      banco_numero: fornecedor?.banco_numero || "",
+      banco_agencia: fornecedor?.banco_agencia || "",
+      banco_conta: fornecedor?.banco_conta || "",
+      banco_cpf_cnpj: fornecedor?.banco_cpf_cnpj || "",
     },
   });
+
+  const tipoPagamento = form.watch("tipo_pagamento");
+
+  useEffect(() => {
+    if (tipoPagamento === "pix") {
+      form.setValue("banco_numero", "");
+      form.setValue("banco_agencia", "");
+      form.setValue("banco_conta", "");
+      form.setValue("banco_cpf_cnpj", "");
+    } else if (tipoPagamento === "conta_corrente") {
+      form.setValue("chave_pix", "");
+    } else {
+      form.setValue("chave_pix", "");
+      form.setValue("banco_numero", "");
+      form.setValue("banco_agencia", "");
+      form.setValue("banco_conta", "");
+      form.setValue("banco_cpf_cnpj", "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoPagamento]);
 
   const onSubmit = async (data: FornecedorFormData) => {
     try {
       const supabase = createClient();
 
+      const payload = {
+        ...data,
+        email: data.email || null,
+        tipo_pagamento: data.tipo_pagamento || null,
+        chave_pix: data.chave_pix || null,
+        banco_numero: data.banco_numero || null,
+        banco_agencia: data.banco_agencia || null,
+        banco_conta: data.banco_conta || null,
+        banco_cpf_cnpj: data.banco_cpf_cnpj || null,
+      };
+
       if (isEditing) {
         await atualizarFornecedor(supabase, fornecedor.id, {
-          ...data,
-          email: data.email || null,
+          ...payload,
           updated_at: new Date().toISOString(),
         });
         toast.success("Fornecedor atualizado!");
       } else {
-        await criarFornecedor(supabase, {
-          ...data,
-          email: data.email || null,
-        });
+        await criarFornecedor(supabase, payload);
         toast.success("Fornecedor cadastrado!");
       }
 
@@ -207,6 +247,114 @@ export function FornecedorForm({ fornecedor, onSuccess }: FornecedorFormProps) {
           )}
         />
 
+        {/* Dados para Pagamento */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">
+            Dados para Pagamento
+          </h3>
+
+          <FormField
+            control={form.control}
+            name="tipo_pagamento"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Pagamento</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="conta_corrente">Conta Corrente</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {tipoPagamento === "pix" && (
+            <FormField
+              control={form.control}
+              name="chave_pix"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Chave PIX</FormLabel>
+                  <FormControl>
+                    <Input placeholder="CPF, email, telefone ou chave aleatória" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {tipoPagamento === "conta_corrente" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="banco_numero"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número do Banco</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="banco_agencia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Agência</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 1234-5" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="banco_conta"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Conta</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: 12345-6" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="banco_cpf_cnpj"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CPF / CNPJ</FormLabel>
+                    <FormControl>
+                      <Input placeholder="CPF ou CNPJ do titular" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-3 justify-end">
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancelar
@@ -223,4 +371,3 @@ export function FornecedorForm({ fornecedor, onSuccess }: FornecedorFormProps) {
     </Form>
   );
 }
-

@@ -119,22 +119,6 @@ export async function atualizarFornecedor(
   return data
 }
 
-export async function atualizarAvaliacao(
-  supabase: TypedSupabaseClient,
-  id: string,
-  avaliacao: number,
-  comentario: string | null
-): Promise<void> {
-  const { error } = await supabase
-    .from('fornecedores')
-    .update({
-      avaliacao,
-      comentario_avaliacao: comentario,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-  if (error) throw error
-}
 
 export async function desativarFornecedor(
   supabase: TypedSupabaseClient,

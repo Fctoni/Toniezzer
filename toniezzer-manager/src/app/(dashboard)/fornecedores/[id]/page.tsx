@@ -4,15 +4,13 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/lib/types/database";
-import { buscarFornecedorPorId, atualizarAvaliacao, desativarFornecedor } from "@/lib/services/fornecedores";
+import { buscarFornecedorPorId, desativarFornecedor } from "@/lib/services/fornecedores";
 import { buscarGastosPorFornecedor } from "@/lib/services/gastos";
 import { parseDateString } from "@/lib/utils";
-import { AvaliacaoStars } from "@/components/features/fornecedores/avaliacao-stars";
 import { FornecedorForm } from "@/components/features/fornecedores/fornecedor-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -45,6 +43,7 @@ import {
   Wrench,
   Package,
   ArrowLeft,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,9 +63,6 @@ export default function FornecedorDetalhesPage({
   );
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [avaliacao, setAvaliacao] = useState<number | null>(null);
-  const [comentario, setComentario] = useState("");
-  const [savingAvaliacao, setSavingAvaliacao] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -79,8 +75,6 @@ export default function FornecedorDetalhesPage({
       ]);
 
       setFornecedor(fornecedorData);
-      setAvaliacao(fornecedorData.avaliacao);
-      setComentario(fornecedorData.comentario_avaliacao || "");
       setGastos(gastosData);
     } catch (error) {
       console.error("Erro ao buscar dados do fornecedor:", error);
@@ -92,27 +86,6 @@ export default function FornecedorDetalhesPage({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleSaveAvaliacao = async () => {
-    if (!avaliacao) {
-      toast.error("Selecione uma avaliação");
-      return;
-    }
-
-    setSavingAvaliacao(true);
-
-    try {
-      const supabase = createClient();
-      await atualizarAvaliacao(supabase, id, avaliacao, comentario || null);
-
-      toast.success("Avaliação salva!");
-      fetchData();
-    } catch {
-      toast.error("Erro ao salvar avaliação");
-    } finally {
-      setSavingAvaliacao(false);
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -151,6 +124,68 @@ export default function FornecedorDetalhesPage({
       </div>
     );
   }
+
+  const renderPaymentInfo = () => {
+    if (!fornecedor.tipo_pagamento) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Nenhum dado de pagamento cadastrado
+        </p>
+      );
+    }
+
+    if (fornecedor.tipo_pagamento === "pix") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Tipo de Pagamento</p>
+            <p className="font-medium">PIX</p>
+          </div>
+          {fornecedor.chave_pix && (
+            <div>
+              <p className="text-sm text-muted-foreground">Chave PIX</p>
+              <p className="font-medium">{fornecedor.chave_pix}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm text-muted-foreground">Tipo de Pagamento</p>
+          <p className="font-medium">Conta Corrente</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {fornecedor.banco_numero && (
+            <div>
+              <p className="text-sm text-muted-foreground">Banco</p>
+              <p className="font-medium">{fornecedor.banco_numero}</p>
+            </div>
+          )}
+          {fornecedor.banco_agencia && (
+            <div>
+              <p className="text-sm text-muted-foreground">Agência</p>
+              <p className="font-medium">{fornecedor.banco_agencia}</p>
+            </div>
+          )}
+          {fornecedor.banco_conta && (
+            <div>
+              <p className="text-sm text-muted-foreground">Conta</p>
+              <p className="font-medium">{fornecedor.banco_conta}</p>
+            </div>
+          )}
+          {fornecedor.banco_cpf_cnpj && (
+            <div>
+              <p className="text-sm text-muted-foreground">CPF / CNPJ</p>
+              <p className="font-medium">{fornecedor.banco_cpf_cnpj}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -279,41 +314,15 @@ export default function FornecedorDetalhesPage({
           </CardContent>
         </Card>
 
-        {/* Avaliação */}
+        {/* Dados para Pagamento */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle className="text-lg">Avaliação</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Dados para Pagamento
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Clique para avaliar
-              </p>
-              <AvaliacaoStars
-                value={avaliacao}
-                onChange={setAvaliacao}
-                size="lg"
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Comentário</p>
-              <Textarea
-                placeholder="Adicione um comentário sobre este fornecedor..."
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                className="resize-none"
-              />
-            </div>
-
-            <Button
-              onClick={handleSaveAvaliacao}
-              disabled={!avaliacao || savingAvaliacao}
-              className="w-full"
-            >
-              {savingAvaliacao ? "Salvando..." : "Salvar Avaliação"}
-            </Button>
-          </CardContent>
+          <CardContent>{renderPaymentInfo()}</CardContent>
         </Card>
       </div>
 
@@ -376,4 +385,3 @@ export default function FornecedorDetalhesPage({
     </div>
   );
 }
-

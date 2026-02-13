@@ -37,6 +37,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 10 | [alteracao10.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
 | 11 | [spec-alteracao11.md](./spec-alteracao11.md) | Melhorias na pagina de emails: corpo do email e parcelas editaveis | 🟠 Aguardando testes | ⏳ pendente |
 | 12 | [spec-alteracao12.md](./spec/spec-alteracao12.md) | Persistir anexos de email no Supabase Storage | 🟠 Aguardando testes | ⏳ pendente |
+| 13 | [spec-alteracao13.md](./spec/spec-alteracao13.md) | Refatorar fornecedores: tabela, remover avaliacao, dados pagamento | 🟠 Aguardando testes | ⏳ pendente |
 
 ## PRD / Commit Pendente
 
