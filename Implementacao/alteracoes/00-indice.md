@@ -35,6 +35,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 04 | [spec-alteracao04.md](./spec-alteracao04.md) | Centralizar CRUD em services (Fase 2: Financeiro) | 🟠 Aguardando testes | ⏳ pendente |
 | 09 | [spec-alteracao09.md](./spec-alteracao09.md) | Convenções: import order + rename de arquivo | 🔵 Pronto para executar | ⏳ pendente |
 | 10 | [alteracao10.md](./alteracao/alteracao04.md) | Atualização otimista local em vez de router.refresh() | 🟡 Em discussão | ⏳ pendente |
+| 11 | [spec-alteracao11.md](./spec-alteracao11.md) | Melhorias na pagina de emails: corpo do email e parcelas editaveis | 🟠 Aguardando testes | ⏳ pendente |
 
 ## PRD / Commit Pendente
 

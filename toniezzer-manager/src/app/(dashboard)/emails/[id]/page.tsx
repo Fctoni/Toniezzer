@@ -4,13 +4,12 @@ import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { EmailPreview, FormAprovacao } from '@/components/features/emails'
+import { EmailPreview, FormAprovacao, type ParcelaEditavel } from '@/components/features/emails'
 import { ArrowLeft, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import type { Tables } from '@/lib/types/database'
-import { formatDateToString } from '@/lib/utils'
 import { buscarEmailPorId, aprovarEmail, rejeitarEmail, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
 import { criarCompra } from '@/lib/services/compras'
 import { criarGastos } from '@/lib/services/gastos'
@@ -50,7 +49,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     nota_fiscal_numero?: string
     etapa_relacionada_id?: string
     observacoes?: string
-  }) => {
+  }, parcelasEditadas: ParcelaEditavel[]) => {
     if (!currentUser || !email) return
     
     setIsSubmitting(true)
@@ -141,40 +140,23 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         parcelas_pagas: 0,
       })
 
-      // 3. Criar as parcelas (lançamentos na tabela gastos)
-      const valorTotal = parseFloat(data.valor)
-      const valorParcela = valorTotal / numParcelas
-      const valorArredondado = Math.floor(valorParcela * 100) / 100
-      const diferencaArredondamento = valorTotal - (valorArredondado * numParcelas)
-
-      const lancamentos = []
-      const dataPrimeiraParcela = new Date(data.data + 'T12:00:00')
-
-      for (let i = 0; i < numParcelas; i++) {
-        const dataParcela = new Date(dataPrimeiraParcela)
-        dataParcela.setMonth(dataParcela.getMonth() + i)
-        
-        const valor = i === numParcelas - 1
-          ? valorArredondado + diferencaArredondamento
-          : valorArredondado
-
-        lancamentos.push({
-          compra_id: compra.id,
-          descricao: data.descricao,
-          valor: valor,
-          data: formatDateToString(dataParcela),
-          categoria_id: data.categoria_id,
-          fornecedor_id: data.fornecedor_id,
-          forma_pagamento: data.forma_pagamento,
-          parcelas: numParcelas,
-          parcela_atual: i + 1,
-          etapa_relacionada_id: data.etapa_relacionada_id || null,
-          status: 'aprovado',
-          pago: false,
-          criado_por: currentUser.id,
-          criado_via: 'email',
-        })
-      }
+      // 3. Criar as parcelas a partir dos dados editados pelo usuário
+      const lancamentos = parcelasEditadas.map((p) => ({
+        compra_id: compra.id,
+        descricao: data.descricao,
+        valor: p.valor,
+        data: p.data,
+        categoria_id: data.categoria_id,
+        fornecedor_id: data.fornecedor_id,
+        forma_pagamento: data.forma_pagamento,
+        parcelas: parcelasEditadas.length,
+        parcela_atual: p.parcela_atual,
+        etapa_relacionada_id: data.etapa_relacionada_id || null,
+        status: 'aprovado',
+        pago: false,
+        criado_por: currentUser.id,
+        criado_via: 'email',
+      }))
 
       try {
         await criarGastos(supabase, lancamentos)

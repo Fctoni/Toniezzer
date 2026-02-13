@@ -106,6 +106,20 @@ export function EmailPreview({ email }: EmailPreviewProps) {
           </div>
         </div>
 
+        {/* Mensagem (corpo do email) */}
+        {email.corpo && (
+          <div className="border rounded-lg">
+            <div className="p-2 bg-muted/50 border-b text-xs text-muted-foreground">
+              Mensagem
+            </div>
+            <ScrollArea className="h-[150px] p-3">
+              <div className="text-sm whitespace-pre-wrap">
+                {email.corpo}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
         {/* Anexos */}
         {anexos && anexos.length > 0 && (
           <div className="space-y-3">
@@ -210,20 +224,6 @@ export function EmailPreview({ email }: EmailPreviewProps) {
           <div className="text-center py-6 text-muted-foreground">
             <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nenhum anexo encontrado</p>
-          </div>
-        )}
-
-        {/* Corpo do email (se houver) */}
-        {email.corpo && (
-          <div className="border rounded-lg">
-            <div className="p-2 bg-muted/50 border-b text-xs text-muted-foreground">
-              Conteúdo do Email
-            </div>
-            <ScrollArea className="h-[150px] p-3">
-              <div className="text-sm whitespace-pre-wrap">
-                {email.corpo}
-              </div>
-            </ScrollArea>
           </div>
         )}
 

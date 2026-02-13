@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +32,12 @@ import { QuickAddFornecedor } from '@/components/features/ocr/quick-add-forneced
 import { buscarCategoriasAtivas } from '@/lib/services/categorias'
 import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
 
+export interface ParcelaEditavel {
+  parcela_atual: number
+  data: string
+  valor: number
+}
+
 const formSchema = z.object({
   descricao: z.string().min(3, 'Mínimo 3 caracteres'),
   valor: z.string().min(1, 'Valor é obrigatório'),
@@ -49,7 +55,7 @@ type FormData = z.infer<typeof formSchema>
 
 interface FormAprovacaoProps {
   email: Tables<'emails_monitorados'>
-  onAprovar: (data: FormData) => Promise<void>
+  onAprovar: (data: FormData, parcelas: ParcelaEditavel[]) => Promise<void>
   onRejeitar: () => Promise<void>
   onReprocessar?: () => Promise<void>
   isSubmitting?: boolean
@@ -66,6 +72,8 @@ export function FormAprovacao({
   const [fornecedores, setFornecedores] = useState<Tables<'fornecedores'>[]>([])
   const [etapas, setEtapas] = useState<Tables<'etapas'>[]>([])
   const [loading, setLoading] = useState(true)
+  const [parcelas, setParcelas] = useState<ParcelaEditavel[]>([])
+  const [generationKey, setGenerationKey] = useState(0)
 
   const dadosExtraidos = email.dados_extraidos as {
     fornecedor?: string
@@ -95,10 +103,69 @@ export function FormAprovacao({
     },
   })
 
+  const watchedParcelas = form.watch('parcelas')
+  const watchedValor = form.watch('valor')
+  const watchedData = form.watch('data')
+
+  // Gerar parcelas quando campos-chave mudam
+  useEffect(() => {
+    const numParcelas = parseInt(watchedParcelas || '1')
+    const valorTotal = parseFloat(watchedValor || '0')
+    const dataBase = watchedData || ''
+
+    if (numParcelas < 1 || !valorTotal || !dataBase) {
+      setParcelas([])
+      return
+    }
+
+    const valorParcela = valorTotal / numParcelas
+    const valorArredondado = Math.floor(valorParcela * 100) / 100
+    const diferencaArredondamento = Math.round((valorTotal - (valorArredondado * numParcelas)) * 100) / 100
+
+    const novasParcelas: ParcelaEditavel[] = []
+    const dataPrimeira = new Date(dataBase + 'T12:00:00')
+
+    for (let i = 0; i < numParcelas; i++) {
+      const dataParcela = new Date(dataPrimeira)
+      dataParcela.setMonth(dataParcela.getMonth() + i)
+
+      novasParcelas.push({
+        parcela_atual: i + 1,
+        data: formatDateToString(dataParcela),
+        valor: i === numParcelas - 1
+          ? Math.round((valorArredondado + diferencaArredondamento) * 100) / 100
+          : valorArredondado,
+      })
+    }
+
+    setParcelas(novasParcelas)
+    setGenerationKey(prev => prev + 1)
+  }, [watchedParcelas, watchedValor, watchedData])
+
+  // Validacao: soma das parcelas vs valor total
+  const somaParcelas = useMemo(
+    () => Math.round(parcelas.reduce((sum, p) => sum + p.valor, 0) * 100) / 100,
+    [parcelas]
+  )
+  const valorTotalNum = parseFloat(watchedValor || '0')
+  const somaCorreta = parcelas.length === 0 || Math.abs(Math.round(somaParcelas * 100) - Math.round(valorTotalNum * 100)) < 1
+
+  const handleParcelaDataChange = (index: number, newData: string) => {
+    setParcelas(prev => prev.map((p, i) =>
+      i === index ? { ...p, data: newData } : p
+    ))
+  }
+
+  const handleParcelaValorChange = (index: number, newValor: number) => {
+    setParcelas(prev => prev.map((p, i) =>
+      i === index ? { ...p, valor: newValor } : p
+    ))
+  }
+
   useEffect(() => {
     async function loadData() {
       const supabase = createClient()
-      
+
       const [categoriasData, fornecedoresData, etapasRes] = await Promise.all([
         buscarCategoriasAtivas(supabase),
         buscarFornecedoresAtivos(supabase),
@@ -130,7 +197,7 @@ export function FormAprovacao({
       }
 
       if (etapasRes.data) setEtapas(etapasRes.data)
-      
+
       setLoading(false)
     }
     loadData()
@@ -164,7 +231,7 @@ export function FormAprovacao({
       </CardHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onAprovar)}>
+        <form onSubmit={form.handleSubmit((data) => onAprovar(data, parcelas))}>
           <CardContent className="space-y-4">
             {confianca === 0 && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
@@ -269,7 +336,7 @@ export function FormAprovacao({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <QuickAddFornecedor 
+                      <QuickAddFornecedor
                         onFornecedorAdded={(novoFornecedor) => {
                           setFornecedores(prev => [...prev, novoFornecedor as Tables<'fornecedores'>])
                           field.onChange(novoFornecedor.id)
@@ -340,14 +407,73 @@ export function FormAprovacao({
               />
             </div>
 
+            {/* Tabela de parcelas editáveis */}
+            {parcelas.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Detalhamento das Parcelas</div>
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Header */}
+                  <div className="grid grid-cols-[60px_1fr_1fr] bg-muted/50 border-b text-xs text-muted-foreground font-medium">
+                    <div className="p-2">Parcela</div>
+                    <div className="p-2">Data</div>
+                    <div className="p-2">Valor (R$)</div>
+                  </div>
+                  {/* Rows */}
+                  {parcelas.map((p, index) => (
+                    <div key={index} className="grid grid-cols-[60px_1fr_1fr] border-b last:border-b-0">
+                      <div className="p-2 text-sm text-muted-foreground flex items-center">
+                        {p.parcela_atual}/{parcelas.length}
+                      </div>
+                      <div className="p-1">
+                        <Input
+                          type="date"
+                          value={p.data}
+                          className="h-8 text-sm"
+                          onChange={(e) => handleParcelaDataChange(index, e.target.value)}
+                        />
+                      </div>
+                      <div className="p-1">
+                        <Input
+                          key={`valor-${generationKey}-${index}`}
+                          type="number"
+                          step="0.01"
+                          defaultValue={p.valor}
+                          className="h-8 text-sm"
+                          onBlur={(e) => handleParcelaValorChange(index, parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {/* Total */}
+                  <div className="grid grid-cols-[60px_1fr_1fr] bg-muted/30 border-t">
+                    <div className="p-2"></div>
+                    <div className="p-2 text-sm font-medium text-right">Total:</div>
+                    <div className="p-2 text-sm font-medium">
+                      R$ {somaParcelas.toFixed(2).replace('.', ',')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aviso de validação */}
+                {!somaCorreta && (
+                  <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>
+                      Soma das parcelas (R$ {somaParcelas.toFixed(2).replace('.', ',')}) difere do valor total (R$ {valorTotalNum.toFixed(2).replace('.', ',')})
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="etapa_relacionada_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Etapa Relacionada</FormLabel>
-                  <Select 
-                    onValueChange={(val) => field.onChange(val === '_none' ? '' : val)} 
+                  <Select
+                    onValueChange={(val) => field.onChange(val === '_none' ? '' : val)}
                     value={field.value || '_none'}
                   >
                     <FormControl>
@@ -425,4 +551,3 @@ export function FormAprovacao({
     </Card>
   )
 }
-
