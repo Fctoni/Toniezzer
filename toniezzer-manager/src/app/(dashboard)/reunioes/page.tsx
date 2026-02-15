@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ReuniaoCard } from '@/components/features/reunioes'
 import { Plus, Search, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { buscarReunioesComDetalhes } from '@/lib/services/reunioes'
+import { fetchMeetingsWithDetails } from '@/lib/services/reunioes'
 import type { Tables } from '@/lib/types/database'
 
 type ReuniaoComContagem = Tables<'reunioes'> & {
@@ -25,7 +25,7 @@ export default function ReunioesPage() {
     async function loadReunioes() {
       try {
         const supabase = createClient()
-        const data = await buscarReunioesComDetalhes(supabase)
+        const data = await fetchMeetingsWithDetails(supabase)
 
         // Processar dados para adicionar contagens
         const reunioesProcessadas = data.map(r => ({

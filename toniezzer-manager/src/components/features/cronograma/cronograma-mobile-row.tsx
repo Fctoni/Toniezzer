@@ -11,7 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
+import { NewTaskDialog } from "@/components/features/tarefas/new-task-dialog";
 import {
   type Subetapa,
   type Tarefa,
@@ -177,7 +177,7 @@ export function CronogramaMobileRow({
           ))}
 
           {/* + Nova Tarefa */}
-          <NovaTarefaDialog
+          <NewTaskDialog
             users={users}
             subetapas={subetapasOptions}
             defaultSubetapaId={subetapa.id}

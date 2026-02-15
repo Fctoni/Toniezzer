@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, DollarSign, Tags, Grid3x3 } from "lucide-react";
 import { MatrizTabelaWrapper } from "@/components/features/financeiro/matriz-tabela-wrapper";
 import { MatrizGrafico } from "@/components/features/financeiro/matriz-grafico";
-import { buscarCategoriasAtivas } from "@/lib/services/categorias";
-import { buscarGastosMatriz } from "@/lib/services/gastos";
-import { buscarDetalhamentoMatriz } from "@/lib/services/orcamento-detalhado";
+import { fetchActiveCategories } from "@/lib/services/categorias";
+import { fetchExpensesMatrix } from "@/lib/services/gastos";
+import { fetchBudgetDetailMatrix } from "@/lib/services/orcamento-detalhado";
 
 // Tipos
 interface CelulaMatriz {
@@ -40,13 +40,13 @@ export default async function MatrizGastosPage() {
 
   // Buscar dados
   const [categorias, { data: etapas }, gastos, detalhamentos] = await Promise.all([
-    buscarCategoriasAtivas(supabase),
+    fetchActiveCategories(supabase),
     supabase
       .from("etapas")
       .select("*")
       .order("ordem"),
-    buscarGastosMatriz(supabase),
-    buscarDetalhamentoMatriz(supabase),
+    fetchExpensesMatrix(supabase),
+    fetchBudgetDetailMatrix(supabase),
   ]);
 
   // Processar dados em estrutura de matriz

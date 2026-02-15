@@ -1,16 +1,16 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesUpdate } from '@/lib/types/database'
-type Etapa = Tables<'etapas'>
+type Stage = Tables<'etapas'>
 
 // ===== SELECT =====
 
-export async function buscarEtapas(supabase: TypedSupabaseClient): Promise<Etapa[]> {
+export async function fetchStages(supabase: TypedSupabaseClient): Promise<Stage[]> {
   const { data, error } = await supabase.from('etapas').select('*').order('ordem')
   if (error) throw error
   return data
 }
 
-export async function buscarEtapaNome(
+export async function fetchStageName(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<{ nome: string } | null> {
@@ -19,9 +19,9 @@ export async function buscarEtapaNome(
   return data
 }
 
-export async function buscarEtapasParaDropdown(
+export async function fetchStagesForDropdown(
   supabase: TypedSupabaseClient
-): Promise<Pick<Etapa, 'id' | 'nome'>[]> {
+): Promise<Pick<Stage, 'id' | 'nome'>[]> {
   const { data, error } = await supabase
     .from('etapas')
     .select('id, nome')
@@ -32,7 +32,7 @@ export async function buscarEtapasParaDropdown(
 
 // ===== INSERT =====
 
-export async function criarEtapa(
+export async function createStage(
   supabase: TypedSupabaseClient,
   data: {
     nome: string
@@ -40,7 +40,7 @@ export async function criarEtapa(
     responsavel_id?: string | null
     ordem: number
   }
-): Promise<Etapa> {
+): Promise<Stage> {
   const { data: etapa, error } = await supabase
     .from('etapas')
     .insert({
@@ -60,24 +60,24 @@ export async function criarEtapa(
 
 // ===== UPDATE =====
 
-export async function atualizarEtapa(
+export async function updateStage(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'etapas'>
-): Promise<Etapa> {
-  const updatesComDatas = { ...updates }
+): Promise<Stage> {
+  const updatesWithDates = { ...updates }
 
   if (updates.status === 'em_andamento') {
-    updatesComDatas.data_inicio_real = updatesComDatas.data_inicio_real ?? new Date().toISOString().split('T')[0]
+    updatesWithDates.data_inicio_real = updatesWithDates.data_inicio_real ?? new Date().toISOString().split('T')[0]
   }
   if (updates.status === 'concluida') {
-    updatesComDatas.data_fim_real = updatesComDatas.data_fim_real ?? new Date().toISOString().split('T')[0]
-    updatesComDatas.progresso_percentual = 100
+    updatesWithDates.data_fim_real = updatesWithDates.data_fim_real ?? new Date().toISOString().split('T')[0]
+    updatesWithDates.progresso_percentual = 100
   }
 
   const { data, error } = await supabase
     .from('etapas')
-    .update(updatesComDatas)
+    .update(updatesWithDates)
     .eq('id', id)
     .select()
     .single()
@@ -85,11 +85,11 @@ export async function atualizarEtapa(
   return data
 }
 
-export async function reordenarEtapas(
+export async function reorderStages(
   supabase: TypedSupabaseClient,
-  etapasOrdenadas: { id: string; ordem: number }[]
+  orderedStages: { id: string; ordem: number }[]
 ): Promise<void> {
-  for (const item of etapasOrdenadas) {
+  for (const item of orderedStages) {
     const { error } = await supabase
       .from('etapas')
       .update({ ordem: item.ordem })
@@ -100,7 +100,7 @@ export async function reordenarEtapas(
 
 // ===== DELETE =====
 
-export async function deletarEtapa(
+export async function deleteStage(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -110,7 +110,7 @@ export async function deletarEtapa(
 
 // ===== DEPENDÊNCIAS =====
 
-export async function criarDependenciaEtapa(
+export async function createStageDependency(
   supabase: TypedSupabaseClient,
   data: { etapa_id: string; depende_de_etapa_id: string; tipo: string }
 ): Promise<void> {
@@ -120,7 +120,7 @@ export async function criarDependenciaEtapa(
 
 // ===== CÁLCULOS =====
 
-export function calcularProgressoEtapa(
+export function calculateStageProgress(
   etapa: { progresso_percentual?: number | null; subetapas: { status: string }[] }
 ): number {
   if (etapa.subetapas.length === 0) return etapa.progresso_percentual ?? 0
@@ -128,7 +128,7 @@ export function calcularProgressoEtapa(
   return Math.round((concluidas / etapa.subetapas.length) * 100)
 }
 
-export function calcularDatasEtapa(
+export function calculateStageDates(
   subetapas: { data_inicio_prevista: string | null; data_fim_prevista: string | null }[]
 ): { inicio: string | null; fim: string | null } {
   if (subetapas.length === 0) return { inicio: null, fim: null }

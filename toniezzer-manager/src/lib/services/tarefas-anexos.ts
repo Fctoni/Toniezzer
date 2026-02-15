@@ -1,13 +1,13 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables } from '@/lib/types/database'
-type TarefaAnexo = Tables<'tarefas_anexos'>
+type TaskAttachment = Tables<'tarefas_anexos'>
 
 // ===== SELECT =====
 
-export async function buscarAnexosDaTarefa(
+export async function fetchTaskAttachments(
   supabase: TypedSupabaseClient,
   tarefaId: string
-): Promise<Pick<TarefaAnexo, 'id' | 'nome_original' | 'tipo_arquivo' | 'tamanho_bytes' | 'storage_path' | 'created_at' | 'created_by'>[]> {
+): Promise<Pick<TaskAttachment, 'id' | 'nome_original' | 'tipo_arquivo' | 'tamanho_bytes' | 'storage_path' | 'created_at' | 'created_by'>[]> {
   const { data, error } = await supabase
     .from('tarefas_anexos')
     .select('id, nome_original, tipo_arquivo, tamanho_bytes, storage_path, created_at, created_by')
@@ -19,28 +19,28 @@ export async function buscarAnexosDaTarefa(
 
 // ===== UPLOAD =====
 
-export async function uploadAnexo(
+export async function uploadAttachment(
   supabase: TypedSupabaseClient,
   tarefaId: string,
   file: File,
   userId: string
-): Promise<TarefaAnexo> {
-  const nomeArquivo = `${tarefaId}/${Date.now()}-${file.name}`
+): Promise<TaskAttachment> {
+  const fileName = `${tarefaId}/${Date.now()}-${file.name}`
 
   const { error: uploadError } = await supabase.storage
     .from('tarefas-anexos')
-    .upload(nomeArquivo, file)
+    .upload(fileName, file)
   if (uploadError) throw uploadError
 
   const { data, error } = await supabase
     .from('tarefas_anexos')
     .insert({
       tarefa_id: tarefaId,
-      nome_arquivo: nomeArquivo,
+      nome_arquivo: fileName,
       nome_original: file.name,
       tipo_arquivo: file.type,
       tamanho_bytes: file.size,
-      storage_path: nomeArquivo,
+      storage_path: fileName,
       created_by: userId,
     })
     .select()
@@ -51,7 +51,7 @@ export async function uploadAnexo(
 
 // ===== DOWNLOAD =====
 
-export async function downloadAnexo(
+export async function downloadAttachment(
   supabase: TypedSupabaseClient,
   storagePath: string
 ): Promise<Blob> {
@@ -64,7 +64,7 @@ export async function downloadAnexo(
 
 // ===== DELETE =====
 
-export async function deletarAnexo(
+export async function deleteAttachment(
   supabase: TypedSupabaseClient,
   id: string,
   storagePath: string

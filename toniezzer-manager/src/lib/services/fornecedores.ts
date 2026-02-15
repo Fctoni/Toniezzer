@@ -1,13 +1,13 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Fornecedor = Tables<'fornecedores'>
+type Supplier = Tables<'fornecedores'>
 
 // ===== SELECT =====
 
-export async function buscarFornecedores(
+export async function fetchSuppliers(
   supabase: TypedSupabaseClient,
   filtros?: { tipo?: string; search?: string }
-): Promise<Fornecedor[]> {
+): Promise<Supplier[]> {
   let query = supabase
     .from('fornecedores')
     .select('*')
@@ -26,10 +26,10 @@ export async function buscarFornecedores(
   return data
 }
 
-export async function buscarFornecedorPorId(
+export async function fetchSupplierById(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<Fornecedor> {
+): Promise<Supplier> {
   const { data, error } = await supabase
     .from('fornecedores')
     .select('*')
@@ -39,9 +39,9 @@ export async function buscarFornecedorPorId(
   return data
 }
 
-export async function buscarFornecedoresParaDropdown(
+export async function fetchSuppliersForDropdown(
   supabase: TypedSupabaseClient
-): Promise<Pick<Fornecedor, 'id' | 'nome'>[]> {
+): Promise<Pick<Supplier, 'id' | 'nome'>[]> {
   const { data, error } = await supabase
     .from('fornecedores')
     .select('id, nome')
@@ -51,9 +51,9 @@ export async function buscarFornecedoresParaDropdown(
   return data
 }
 
-export async function buscarTodosFornecedoresParaDropdown(
+export async function fetchAllSuppliersForDropdown(
   supabase: TypedSupabaseClient
-): Promise<Pick<Fornecedor, 'id' | 'nome'>[]> {
+): Promise<Pick<Supplier, 'id' | 'nome'>[]> {
   const { data, error } = await supabase
     .from('fornecedores')
     .select('id, nome')
@@ -62,9 +62,9 @@ export async function buscarTodosFornecedoresParaDropdown(
   return data
 }
 
-export async function buscarFornecedoresAtivos(
+export async function fetchActiveSuppliers(
   supabase: TypedSupabaseClient
-): Promise<Fornecedor[]> {
+): Promise<Supplier[]> {
   const { data, error } = await supabase
     .from('fornecedores')
     .select('*')
@@ -76,10 +76,10 @@ export async function buscarFornecedoresAtivos(
 
 // ===== INSERT =====
 
-export async function criarFornecedor(
+export async function createSupplier(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'fornecedores'>
-): Promise<Fornecedor> {
+): Promise<Supplier> {
   const { data: fornecedor, error } = await supabase
     .from('fornecedores')
     .insert(data)
@@ -89,10 +89,10 @@ export async function criarFornecedor(
   return fornecedor
 }
 
-export async function criarFornecedorRapido(
+export async function createQuickSupplier(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'fornecedores'>
-): Promise<Fornecedor> {
+): Promise<Supplier> {
   const { data: fornecedor, error } = await supabase
     .from('fornecedores')
     .insert(data)
@@ -104,11 +104,11 @@ export async function criarFornecedorRapido(
 
 // ===== UPDATE =====
 
-export async function atualizarFornecedor(
+export async function updateSupplier(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'fornecedores'>
-): Promise<Fornecedor> {
+): Promise<Supplier> {
   const { data, error } = await supabase
     .from('fornecedores')
     .update(updates)
@@ -120,7 +120,7 @@ export async function atualizarFornecedor(
 }
 
 
-export async function desativarFornecedor(
+export async function deactivateSupplier(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

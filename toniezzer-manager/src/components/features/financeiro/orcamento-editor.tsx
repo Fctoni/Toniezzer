@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarOrcamentoCategoria } from "@/lib/services/categorias";
+import { updateCategoryBudget } from "@/lib/services/categorias";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -73,7 +73,7 @@ export function OrcamentoEditor({
       const supabase = createClient();
 
       for (const cat of categorias) {
-        await atualizarOrcamentoCategoria(supabase, cat.id, Number(cat.orcamento) || 0);
+        await updateCategoryBudget(supabase, cat.id, Number(cat.orcamento) || 0);
       }
 
       toast.success("Orçamentos atualizados!");

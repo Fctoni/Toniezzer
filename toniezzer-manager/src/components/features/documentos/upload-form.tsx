@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { criarDocumento } from "@/lib/services/documentos";
+import { createDocument } from "@/lib/services/documentos";
 import { uploadFile } from "@/lib/services/storage";
-import { buscarPrimeiroUsuario } from "@/lib/services/users";
+import { fetchFirstUser } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -127,7 +127,7 @@ export function UploadForm({ etapas }: UploadFormProps) {
     // Buscar usuário padrão
     let userId: string | undefined;
     try {
-      const user = await buscarPrimeiroUsuario(supabase);
+      const user = await fetchFirstUser(supabase);
       userId = user.id;
     } catch {
       // ignora erro se não encontrar usuário
@@ -144,7 +144,7 @@ export function UploadForm({ etapas }: UploadFormProps) {
         const publicUrl = await uploadFile(supabase, bucket, fileName, file);
 
         // Salvar no banco
-        await criarDocumento(supabase, {
+        await createDocument(supabase, {
           nome: file.name,
           tipo: tipo,
           url: publicUrl,

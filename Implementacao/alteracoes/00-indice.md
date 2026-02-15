@@ -42,7 +42,7 @@ Este arquivo lista todas as alterações do projeto e seu status atual.
 | 15 | [spec-alteracao15.md](./spec/spec-alteracao15.md) | Instalar Vitest e criar testes para funcoes puras | 🟢 Concluido | ⏳ pendente |
 | 16 | [spec-alteracao16.md](./spec/spec-alteracao16.md) | Eliminar queries Supabase inline e mover storage para services | 🟢 Concluido | ⏳ pendente |
 
-| 19 | [spec-alteracao19.md](./spec/spec-alteracao19.md) | Renomear codigo de portugues para ingles | 🔵 Pronto para executar | ⏳ pendente |
+| 19 | [spec-alteracao19.md](./spec/spec-alteracao19.md) | Renomear codigo de portugues para ingles | 🟢 Concluido | ⏳ pendente |
 
 ## PRD / Commit Pendente
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarDataVencimento } from "@/lib/services/gastos";
+import { updateDueDate } from "@/lib/services/gastos";
 import {
   Table,
   TableBody,
@@ -57,7 +57,7 @@ export function LancamentosTable({ gastos, onDataAlterada }: LancamentosTablePro
   const handleAlterarData = async (gasto: Gasto, novaData: Date) => {
     try {
       const supabase = createClient();
-      await atualizarDataVencimento(supabase, gasto.id, formatDateToString(novaData));
+      await updateDueDate(supabase, gasto.id, formatDateToString(novaData));
       toast.success("Data de vencimento atualizada");
       setEditandoDataId(null);
       onDataAlterada?.();

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ComprasList } from "@/components/features/compras/compras-list";
 import { Package, Plus } from "lucide-react";
-import { buscarComprasComDetalhes } from "@/lib/services/compras";
-import { buscarTodosFornecedoresParaDropdown } from "@/lib/services/fornecedores";
-import { buscarTodasCategoriasParaDropdown } from "@/lib/services/categorias";
+import { fetchPurchasesWithDetails } from "@/lib/services/compras";
+import { fetchAllSuppliersForDropdown } from "@/lib/services/fornecedores";
+import { fetchAllCategoriesForDropdown } from "@/lib/services/categorias";
 
 type CompraComRelacoes = {
   id: string;
@@ -35,17 +35,17 @@ export default async function ComprasPage() {
   // Buscar compras
   let compras: CompraComRelacoes[] | null = null;
   try {
-    const comprasRaw = await buscarComprasComDetalhes(supabase);
+    const comprasRaw = await fetchPurchasesWithDetails(supabase);
     compras = comprasRaw as CompraComRelacoes[];
   } catch (error) {
     console.error("Erro ao buscar compras:", error);
   }
 
   // Buscar fornecedores para o filtro
-  const fornecedores = await buscarTodosFornecedoresParaDropdown(supabase);
+  const fornecedores = await fetchAllSuppliersForDropdown(supabase);
 
   // Buscar categorias para o filtro
-  const categorias = await buscarTodasCategoriasParaDropdown(supabase);
+  const categorias = await fetchAllCategoriesForDropdown(supabase);
 
   // Buscar etapas para o filtro
   const { data: etapas } = await supabase

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Tables } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
-import { deletarMensagem } from "@/lib/services/feed-comunicacao";
+import { deleteMessage } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 
@@ -78,7 +78,7 @@ export function MensagemTopico({
     setIsDeleting(true);
     try {
       const supabase = createClient();
-      await deletarMensagem(supabase, mensagem.id);
+      await deleteMessage(supabase, mensagem.id);
 
       toast.success("Mensagem excluída!");
       onDelete?.();

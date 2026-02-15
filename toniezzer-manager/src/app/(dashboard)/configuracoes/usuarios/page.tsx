@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
-import { buscarUsuarios } from '@/lib/services/users'
+import { fetchUsers as fetchUsersService } from '@/lib/services/users'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -101,7 +101,7 @@ export default function UsuariosPage() {
   const fetchUsers = async () => {
     try {
       const supabase = createClient()
-      const data = await buscarUsuarios(supabase)
+      const data = await fetchUsersService(supabase)
       setUsers(data)
     } catch (error) {
       console.error('Erro ao buscar usuarios:', error)

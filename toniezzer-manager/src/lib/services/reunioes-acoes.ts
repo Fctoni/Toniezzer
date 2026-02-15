@@ -1,10 +1,10 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert } from '@/lib/types/database'
-type ReuniaoAcao = Tables<'reunioes_acoes'>
+type MeetingAction = Tables<'reunioes_acoes'>
 
 // ===== SELECT =====
 
-export async function buscarAcoesPorReuniao(supabase: TypedSupabaseClient, reuniaoId: string) {
+export async function fetchActionsByMeeting(supabase: TypedSupabaseClient, reuniaoId: string) {
   const { data, error } = await supabase
     .from('reunioes_acoes')
     .select('*, responsavel:responsavel_id(nome_completo), categoria:categoria_id(nome, cor)')
@@ -16,10 +16,10 @@ export async function buscarAcoesPorReuniao(supabase: TypedSupabaseClient, reuni
 
 // ===== INSERT =====
 
-export async function criarAcoes(
+export async function createActions(
   supabase: TypedSupabaseClient,
   acoes: TablesInsert<'reunioes_acoes'>[]
-): Promise<ReuniaoAcao[]> {
+): Promise<MeetingAction[]> {
   const { data, error } = await supabase
     .from('reunioes_acoes')
     .insert(acoes)
@@ -30,7 +30,7 @@ export async function criarAcoes(
 
 // ===== UPDATE =====
 
-export async function atualizarStatusAcao(
+export async function updateActionStatus(
   supabase: TypedSupabaseClient,
   id: string,
   status: string

@@ -1,14 +1,14 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables } from '@/lib/types/database'
-type Notificacao = Tables<'notificacoes'>
+type Notification = Tables<'notificacoes'>
 
 // ===== SELECT =====
 
-export async function buscarNotificacoes(
+export async function fetchNotifications(
   supabase: TypedSupabaseClient,
   usuarioId: string,
   filtros?: { tipo?: string; lida?: boolean }
-): Promise<Notificacao[]> {
+): Promise<Notification[]> {
   let query = supabase
     .from('notificacoes')
     .select('*')
@@ -27,11 +27,11 @@ export async function buscarNotificacoes(
   return data
 }
 
-export async function buscarNotificacoesRecentes(
+export async function fetchRecentNotifications(
   supabase: TypedSupabaseClient,
   usuarioId: string,
   limit: number
-): Promise<Notificacao[]> {
+): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('notificacoes')
     .select('*')
@@ -42,9 +42,9 @@ export async function buscarNotificacoesRecentes(
   return data
 }
 
-export async function buscarNotificacoesNaoLidas(
+export async function fetchUnreadNotifications(
   supabase: TypedSupabaseClient
-): Promise<Notificacao[]> {
+): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('notificacoes')
     .select('*')
@@ -56,7 +56,7 @@ export async function buscarNotificacoesNaoLidas(
 
 // ===== UPDATE =====
 
-export async function marcarComoLida(
+export async function markAsRead(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -67,7 +67,7 @@ export async function marcarComoLida(
   if (error) throw error
 }
 
-export async function marcarTodasComoLidas(
+export async function markAllAsRead(
   supabase: TypedSupabaseClient,
   usuarioId: string
 ): Promise<void> {
@@ -81,7 +81,7 @@ export async function marcarTodasComoLidas(
 
 // ===== DELETE =====
 
-export async function excluirNotificacao(
+export async function deleteNotification(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

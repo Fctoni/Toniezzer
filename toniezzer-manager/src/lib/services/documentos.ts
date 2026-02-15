@@ -1,10 +1,10 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Documento = Tables<'documentos'>
+type Document = Tables<'documentos'>
 
 // ===== SELECT =====
 
-export async function buscarDocumentosComEtapa(supabase: TypedSupabaseClient) {
+export async function fetchDocumentsWithStage(supabase: TypedSupabaseClient) {
   const { data, error } = await supabase
     .from('documentos')
     .select('id, nome, url, tipo, tags, tamanho_bytes, created_at, etapa_relacionada_id, etapas(nome)')
@@ -15,10 +15,10 @@ export async function buscarDocumentosComEtapa(supabase: TypedSupabaseClient) {
 
 // ===== INSERT =====
 
-export async function criarDocumento(
+export async function createDocument(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'documentos'>
-): Promise<Documento> {
+): Promise<Document> {
   const { data: documento, error } = await supabase
     .from('documentos')
     .insert(data)
@@ -30,11 +30,11 @@ export async function criarDocumento(
 
 // ===== UPDATE =====
 
-export async function atualizarDocumento(
+export async function updateDocument(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'documentos'>
-): Promise<Documento> {
+): Promise<Document> {
   const { data, error } = await supabase
     .from('documentos')
     .update(updates)
@@ -47,7 +47,7 @@ export async function atualizarDocumento(
 
 // ===== DELETE =====
 
-export async function deletarDocumento(
+export async function deleteDocument(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

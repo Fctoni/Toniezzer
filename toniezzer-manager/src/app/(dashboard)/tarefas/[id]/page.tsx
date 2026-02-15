@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { TarefaDetalhes } from "@/components/features/tarefas/tarefa-detalhes";
+import { TaskDetails } from "@/components/features/tarefas/task-details";
 import { notFound } from "next/navigation";
-import { buscarTarefaPorId, buscarTarefasPorIds } from "@/lib/services/tarefas";
-import { buscarSubetapaPorId } from "@/lib/services/subetapas";
-import { buscarEtapaNome } from "@/lib/services/etapas";
-import { buscarAnexosDaTarefa } from "@/lib/services/tarefas-anexos";
-import { buscarComentariosDaTarefa } from "@/lib/services/tarefas-comentarios";
-import { buscarDependenciasDaTarefa } from "@/lib/services/tarefas-dependencias";
-import { buscarUsuariosParaDropdown, buscarUsuarioPorEmail } from "@/lib/services/users";
+import { fetchTaskById, fetchTasksByIds } from "@/lib/services/tarefas";
+import { fetchSubstageById } from "@/lib/services/subetapas";
+import { fetchStageName } from "@/lib/services/etapas";
+import { fetchTaskAttachments } from "@/lib/services/tarefas-anexos";
+import { fetchTaskComments } from "@/lib/services/tarefas-comentarios";
+import { fetchTaskDependencies } from "@/lib/services/tarefas-dependencias";
+import { fetchUsersForDropdown, fetchUserByEmail } from "@/lib/services/users";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +20,7 @@ export default async function TarefaPage({ params }: PageProps) {
   // Buscar tarefa
   let tarefa;
   try {
-    tarefa = await buscarTarefaPorId(supabase, id);
+    tarefa = await fetchTaskById(supabase, id);
   } catch {
     notFound();
   }
@@ -30,11 +30,11 @@ export default async function TarefaPage({ params }: PageProps) {
   }
 
   // Buscar subetapa + etapa
-  const subetapa = await buscarSubetapaPorId(supabase, tarefa.subetapa_id);
+  const subetapa = await fetchSubstageById(supabase, tarefa.subetapa_id);
 
   let etapaNome = "—";
   if (subetapa?.etapa_id) {
-    const etapa = await buscarEtapaNome(supabase, subetapa.etapa_id);
+    const etapa = await fetchStageName(supabase, subetapa.etapa_id);
     etapaNome = etapa?.nome || "—";
   }
 
@@ -48,10 +48,10 @@ export default async function TarefaPage({ params }: PageProps) {
       data: { user: authUser },
     },
   ] = await Promise.all([
-    buscarDependenciasDaTarefa(supabase, id),
-    buscarAnexosDaTarefa(supabase, id),
-    buscarComentariosDaTarefa(supabase, id),
-    buscarUsuariosParaDropdown(supabase),
+    fetchTaskDependencies(supabase, id),
+    fetchTaskAttachments(supabase, id),
+    fetchTaskComments(supabase, id),
+    fetchUsersForDropdown(supabase),
     supabase.auth.getUser(),
   ]);
 
@@ -63,7 +63,7 @@ export default async function TarefaPage({ params }: PageProps) {
   const depTarefaIds = deps.map((d) => d.depende_de_tarefa_id);
   let depTarefas: { id: string; nome: string; status: string }[] = [];
   if (depTarefaIds.length > 0) {
-    depTarefas = await buscarTarefasPorIds(supabase, depTarefaIds);
+    depTarefas = await fetchTasksByIds(supabase, depTarefaIds);
   }
 
   const dependencias = deps.map((d) => {
@@ -94,7 +94,7 @@ export default async function TarefaPage({ params }: PageProps) {
   let currentUserId: string | null = null;
   if (authUser?.email) {
     try {
-      const currentUser = await buscarUsuarioPorEmail(supabase, authUser.email);
+      const currentUser = await fetchUserByEmail(supabase, authUser.email);
       currentUserId = currentUser.id;
     } catch {
       currentUserId = null;
@@ -102,7 +102,7 @@ export default async function TarefaPage({ params }: PageProps) {
   }
 
   return (
-    <TarefaDetalhes
+    <TaskDetails
       tarefa={tarefa}
       etapaNome={etapaNome}
       subetapaNome={subetapa?.nome || "—"}

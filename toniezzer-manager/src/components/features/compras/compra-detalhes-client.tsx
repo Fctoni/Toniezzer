@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { cancelarCompra } from "@/lib/services/compras";
-import { buscarGastosPorCompra } from "@/lib/services/gastos";
+import { cancelPurchase } from "@/lib/services/compras";
+import { fetchExpensesByPurchase } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +81,7 @@ export function CompraDetalhesClient({
   const carregarParcelas = async () => {
     try {
       const supabase = createClient();
-      const parcelasData = await buscarGastosPorCompra(supabase, compra.id);
+      const parcelasData = await fetchExpensesByPurchase(supabase, compra.id);
       setParcelas(
         parcelasData.map((p) => ({
           id: p.id,
@@ -105,7 +105,7 @@ export function CompraDetalhesClient({
 
     try {
       const supabase = createClient();
-      await cancelarCompra(supabase, compra.id);
+      await cancelPurchase(supabase, compra.id);
 
       toast.success("Compra cancelada com sucesso");
       router.push("/compras");

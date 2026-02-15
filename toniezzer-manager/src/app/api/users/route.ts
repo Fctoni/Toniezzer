@@ -3,11 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { TablesUpdate } from '@/lib/types/database'
-import { isAdmin as verificarAdmin, criarUsuario, atualizarUsuario, desativarUsuario } from '@/lib/services/users'
+import { isAdmin as verificarAdmin, createUser, updateUser, deactivateUser } from '@/lib/services/users'
 
 // ===== Zod Schemas =====
 
-const criarUsuarioSchema = z.object({
+const createUserSchema = z.object({
   email: z.string().email('Email invalido'),
   password: z.string().min(6, 'Senha deve ter no minimo 6 caracteres'),
   nome_completo: z.string().min(2, 'Nome deve ter no minimo 2 caracteres'),
@@ -16,7 +16,7 @@ const criarUsuarioSchema = z.object({
   telefone: z.string().nullable().optional(),
 })
 
-const atualizarUsuarioSchema = z.object({
+const updateUserSchema = z.object({
   id: z.string().uuid('ID invalido'),
   nome_completo: z.string().min(2).optional(),
   role: z.enum(['admin', 'editor', 'viewer']).optional(),
@@ -49,15 +49,15 @@ export async function POST(request: Request) {
 
     const body = await request.json()
 
-    const resultado = criarUsuarioSchema.safeParse(body)
-    if (!resultado.success) {
+    const result = createUserSchema.safeParse(body)
+    if (!result.success) {
       return NextResponse.json(
-        { error: resultado.error.issues[0].message },
+        { error: result.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    const { email, password, nome_completo, role, especialidade, telefone } = resultado.data
+    const { email, password, nome_completo, role, especialidade, telefone } = result.data
 
     const adminClient = createAdminClient()
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     // 2. Criar perfil na tabela public.users
     try {
-      const profileData = await criarUsuario(adminClient, {
+      const profileData = await createUser(adminClient, {
         id: authData.user.id,
         email,
         nome_completo,
@@ -127,15 +127,15 @@ export async function PATCH(request: Request) {
 
     const body = await request.json()
 
-    const resultado = atualizarUsuarioSchema.safeParse(body)
-    if (!resultado.success) {
+    const result = updateUserSchema.safeParse(body)
+    if (!result.success) {
       return NextResponse.json(
-        { error: resultado.error.issues[0].message },
+        { error: result.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    const { id, nome_completo, role, especialidade, telefone, ativo, nova_senha } = resultado.data
+    const { id, nome_completo, role, especialidade, telefone, ativo, nova_senha } = result.data
 
     const adminClient = createAdminClient()
 
@@ -149,7 +149,7 @@ export async function PATCH(request: Request) {
 
     if (Object.keys(updateData).length > 0) {
       try {
-        await atualizarUsuario(adminClient, id, updateData)
+        await updateUser(adminClient, id, updateData)
       } catch (profileError) {
         console.error('Erro ao atualizar perfil:', profileError)
         return NextResponse.json(
@@ -210,7 +210,7 @@ export async function DELETE(request: Request) {
     const adminClient = createAdminClient()
 
     // Soft delete - apenas desativar
-    await desativarUsuario(adminClient, id)
+    await deactivateUser(adminClient, id)
 
     return NextResponse.json({ success: true })
 

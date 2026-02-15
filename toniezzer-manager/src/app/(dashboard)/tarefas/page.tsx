@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { TarefasTable } from "@/components/features/tarefas/tarefas-table";
-import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
-import { buscarTarefas } from "@/lib/services/tarefas";
-import { buscarSubetapasResumidas } from "@/lib/services/subetapas";
-import { buscarUsuariosParaDropdown } from "@/lib/services/users";
-import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
+import { NewTaskDialog } from "@/components/features/tarefas/new-task-dialog";
+import { fetchTasks } from "@/lib/services/tarefas";
+import { fetchSubstagesSummary } from "@/lib/services/subetapas";
+import { fetchUsersForDropdown } from "@/lib/services/users";
+import { fetchStagesForDropdown } from "@/lib/services/etapas";
 
 interface User {
   id: string;
@@ -42,10 +42,10 @@ export default async function TarefasPage() {
     etapas,
     usersData,
   ] = await Promise.all([
-    buscarTarefas(supabase),
-    buscarSubetapasResumidas(supabase),
-    buscarEtapasParaDropdown(supabase),
-    buscarUsuariosParaDropdown(supabase),
+    fetchTasks(supabase),
+    fetchSubstagesSummary(supabase),
+    fetchStagesForDropdown(supabase),
+    fetchUsersForDropdown(supabase),
   ]);
 
   const users = usersData as User[];
@@ -89,7 +89,7 @@ export default async function TarefasPage() {
         <h1 className="text-xl md:text-2xl font-bold tracking-tight">
           Tarefas
         </h1>
-        <NovaTarefaDialog users={users} subetapas={subetapasOptions} />
+        <NewTaskDialog users={users} subetapas={subetapasOptions} />
       </div>
 
       <TarefasTable

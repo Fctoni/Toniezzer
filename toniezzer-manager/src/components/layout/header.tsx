@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { buscarNotificacoesRecentes, marcarComoLida as marcarComoLidaService } from "@/lib/services/notificacoes";
+import { fetchRecentNotifications, markAsRead as markAsReadService } from "@/lib/services/notificacoes";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
@@ -54,7 +54,7 @@ export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
 
     try {
       const supabase = createClient();
-      const data = await buscarNotificacoesRecentes(supabase, currentUser.id, 10);
+      const data = await fetchRecentNotifications(supabase, currentUser.id, 10);
 
       const notificacoesFormatadas = data.map(n => ({
         ...n,
@@ -101,7 +101,7 @@ export function Header({ isMobile = false, onMenuClick }: HeaderProps) {
   const marcarComoLida = async (id: string) => {
     try {
       const supabase = createClient();
-      await marcarComoLidaService(supabase, id);
+      await markAsReadService(supabase, id);
     } catch (error) {
       console.error("Erro ao marcar como lida:", error);
     }

@@ -1,18 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
-import { buscarEtapas } from "@/lib/services/etapas";
-import { buscarTopicos } from "@/lib/services/topicos-comunicacao";
-import { contarMensagensPorTopico } from "@/lib/services/feed-comunicacao";
+import { fetchStages } from "@/lib/services/etapas";
+import { fetchTopics } from "@/lib/services/topicos-comunicacao";
+import { countMessagesByTopic } from "@/lib/services/feed-comunicacao";
 import { ComunicacaoPageClient } from "@/components/features/comunicacao/comunicacao-page-client";
 
 export default async function ComunicacaoPage() {
   const supabase = await createClient();
 
-  const etapas = await buscarEtapas(supabase);
+  const etapas = await fetchStages(supabase);
 
-  const topicosData = await buscarTopicos(supabase);
+  const topicosData = await fetchTopics(supabase);
   const initialTopicos = await Promise.all(
     topicosData.map(async (topico) => {
-      const count = await contarMensagensPorTopico(supabase, topico.id);
+      const count = await countMessagesByTopic(supabase, topico.id);
       return {
         ...topico,
         _count: { mensagens: count },

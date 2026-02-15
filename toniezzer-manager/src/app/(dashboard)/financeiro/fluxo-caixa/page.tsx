@@ -3,15 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FluxoCaixaChart } from "@/components/features/financeiro/fluxo-caixa-chart";
 import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { buscarGastosAprovadosResumidos } from "@/lib/services/gastos";
-import { buscarCategoriasAtivas } from "@/lib/services/categorias";
+import { fetchApprovedExpensesSummary } from "@/lib/services/gastos";
+import { fetchActiveCategories } from "@/lib/services/categorias";
 
 export default async function FluxoCaixaPage() {
   const supabase = await createClient();
 
   const [gastos, categorias] = await Promise.all([
-    buscarGastosAprovadosResumidos(supabase),
-    buscarCategoriasAtivas(supabase),
+    fetchApprovedExpensesSummary(supabase),
+    fetchActiveCategories(supabase),
   ]);
 
   const orcamentoTotal =

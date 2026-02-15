@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { buscarNotificacoes, marcarComoLida as marcarComoLidaService, marcarTodasComoLidas as marcarTodasComoLidasService, excluirNotificacao as excluirNotificacaoService } from "@/lib/services/notificacoes";
+import { fetchNotifications, markAsRead as markAsReadService, markAllAsRead as markAllAsReadService, deleteNotification as deleteNotificationService } from "@/lib/services/notificacoes";
 import type { Tables, NotificacaoTipo } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +120,7 @@ export default function NotificacoesPage() {
         filtros.lida = true;
       }
 
-      const data = await buscarNotificacoes(supabase, currentUser.id, filtros);
+      const data = await fetchNotifications(supabase, currentUser.id, filtros);
       setNotificacoes(data);
     } catch (error) {
       console.error("Erro ao buscar notificações:", error);
@@ -153,7 +153,7 @@ export default function NotificacoesPage() {
   const marcarComoLida = async (id: string) => {
     try {
       const supabase = createClient();
-      await marcarComoLidaService(supabase, id);
+      await markAsReadService(supabase, id);
       fetchNotificacoes();
     } catch (error) {
       toast.error("Erro ao marcar como lida");
@@ -165,7 +165,7 @@ export default function NotificacoesPage() {
 
     try {
       const supabase = createClient();
-      await marcarTodasComoLidasService(supabase, currentUser.id);
+      await markAllAsReadService(supabase, currentUser.id);
       toast.success("Todas as notificações foram marcadas como lidas");
       fetchNotificacoes();
     } catch (error) {
@@ -176,7 +176,7 @@ export default function NotificacoesPage() {
   const excluirNotificacao = async (id: string) => {
     try {
       const supabase = createClient();
-      await excluirNotificacaoService(supabase, id);
+      await deleteNotificationService(supabase, id);
       toast.success("Notificação excluída");
       fetchNotificacoes();
     } catch (error) {

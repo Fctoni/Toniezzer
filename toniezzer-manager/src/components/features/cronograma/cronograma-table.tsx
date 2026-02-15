@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { buscarEtapas, atualizarEtapa, reordenarEtapas } from "@/lib/services/etapas";
-import { buscarSubetapas, atualizarSubetapa, reordenarSubetapas } from "@/lib/services/subetapas";
-import { buscarTarefas, atualizarTarefa, reordenarTarefas } from "@/lib/services/tarefas";
+import { fetchStages, updateStage, reorderStages } from "@/lib/services/etapas";
+import { fetchSubstages, updateSubstage, reorderSubstages } from "@/lib/services/subetapas";
+import { fetchTasks, updateTask, reorderTasks } from "@/lib/services/tarefas";
 import {
   DndContext,
   closestCenter,
@@ -23,9 +23,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { cn, formatDateToString } from "@/lib/utils";
-import { NovaEtapaDialog } from "./nova-etapa-dialog";
-import { EditarEtapaDialog } from "./editar-etapa-dialog";
-import { EditarSubetapaDialog } from "./editar-subetapa-dialog";
+import { NewStageDialog } from "./new-stage-dialog";
+import { EditStageDialog } from "./edit-stage-dialog";
+import { EditSubstageDialog } from "./edit-substage-dialog";
 import { SortableEtapaRow } from "./sortable-etapa-row";
 import {
   type Tarefa,
@@ -53,9 +53,9 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     const supabase = createClient();
 
     const [etapasData, subetapasData, tarefasData] = await Promise.all([
-      buscarEtapas(supabase),
-      buscarSubetapas(supabase),
-      buscarTarefas(supabase),
+      fetchStages(supabase),
+      fetchSubstages(supabase),
+      fetchTasks(supabase),
     ]);
 
     const subetapasComTarefas: Subetapa[] = subetapasData.map((s) => ({
@@ -114,7 +114,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      await reordenarEtapas(
+      await reorderStages(
         supabase,
         newEtapas.map((e, i) => ({ id: e.id, ordem: i + 1 }))
       );
@@ -132,7 +132,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      await reordenarSubetapas(
+      await reorderSubstages(
         supabase,
         newSubetapas.map((s, i) => ({ id: s.id, ordem: i + 1 }))
       );
@@ -155,7 +155,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
     const supabase = createClient();
     try {
-      await reordenarTarefas(
+      await reorderTasks(
         supabase,
         newTarefas.map((t, i) => ({ id: t.id, ordem: i + 1 }))
       );
@@ -192,7 +192,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      await atualizarEtapa(supabase, etapaId, { [field]: value });
+      await updateStage(supabase, etapaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");
@@ -225,7 +225,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      await atualizarSubetapa(supabase, subetapaId, { [field]: value });
+      await updateSubstage(supabase, subetapaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");
@@ -261,7 +261,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     );
 
     try {
-      await atualizarTarefa(supabase, tarefaId, { [field]: value });
+      await updateTask(supabase, tarefaId, { [field]: value });
       toast.success("Atualizado!");
     } catch {
       toast.error("Erro ao atualizar");
@@ -316,7 +316,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     setEditingSubetapa(null);
   };
 
-  // Construir opções de subetapas para NovaTarefaDialog
+  // Construir opções de subetapas para NewTaskDialog
   const subetapasOptions = etapas.flatMap((e) =>
     e.subetapas.map((s) => ({
       id: s.id,
@@ -329,7 +329,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg">
         <p className="text-muted-foreground mb-4">Nenhuma etapa cadastrada</p>
-        <NovaEtapaDialog users={users} etapas={[]} proximaOrdem={1} />
+        <NewStageDialog users={users} etapas={[]} proximaOrdem={1} />
       </div>
     );
   }
@@ -395,7 +395,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
       {/* Dialog de Edição de Etapa */}
       {editingEtapa && (
-        <EditarEtapaDialog
+        <EditStageDialog
           etapa={editingEtapa}
           users={users}
           open={!!editingEtapa}
@@ -407,7 +407,7 @@ export function CronogramaTable({ etapas: initialEtapas, users }: CronogramaTabl
 
       {/* Dialog de Edição de Subetapa */}
       {editingSubetapa && (
-        <EditarSubetapaDialog
+        <EditSubstageDialog
           subetapa={editingSubetapa}
           users={users}
           open={!!editingSubetapa}

@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { criarSubetapa } from "@/lib/services/subetapas";
+import { createTask } from "@/lib/services/tarefas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -34,8 +35,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, CalendarIcon, Loader2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDateToString } from "@/lib/utils";
@@ -43,9 +48,10 @@ import { cn, formatDateToString } from "@/lib/utils";
 const formSchema = z.object({
   nome: z.string().min(2, "Mínimo 2 caracteres"),
   descricao: z.string().optional(),
-  data_inicio_prevista: z.date().optional(),
-  data_fim_prevista: z.date().optional(),
   responsavel_id: z.string().optional(),
+  prioridade: z.string(),
+  data_prevista: z.date().optional().nullable(),
+  subetapa_id: z.string().min(1, "Selecione a subetapa"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -55,23 +61,29 @@ interface User {
   nome_completo: string;
 }
 
-interface NovaSubetapaDialogProps {
-  etapaId: string;
-  etapaNome: string;
-  users: User[];
-  proximaOrdem: number;
-  trigger?: React.ReactNode;
-  onSuccess?: (etapaId?: string) => void;
+interface SubetapaOption {
+  id: string;
+  nome: string;
+  etapa_nome: string;
 }
 
-export function NovaSubetapaDialog({
-  etapaId,
-  etapaNome,
+interface NewTaskDialogProps {
+  users: User[];
+  subetapas: SubetapaOption[];
+  defaultSubetapaId?: string;
+  proximaOrdem?: number;
+  trigger?: React.ReactNode;
+  onSuccess?: () => void;
+}
+
+export function NewTaskDialog({
   users,
-  proximaOrdem,
+  subetapas,
+  defaultSubetapaId,
+  proximaOrdem = 0,
   trigger,
   onSuccess,
-}: NovaSubetapaDialogProps) {
+}: NewTaskDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +93,10 @@ export function NovaSubetapaDialog({
     defaultValues: {
       nome: "",
       descricao: "",
+      responsavel_id: undefined,
+      prioridade: "media",
+      data_prevista: null,
+      subetapa_id: defaultSubetapaId || "",
     },
   });
 
@@ -90,32 +106,31 @@ export function NovaSubetapaDialog({
     try {
       const supabase = createClient();
 
-      await criarSubetapa(supabase, {
-        etapa_id: etapaId,
+      await createTask(supabase, {
+        subetapa_id: data.subetapa_id,
         nome: data.nome,
         descricao: data.descricao || null,
-        data_inicio_prevista: data.data_inicio_prevista
-          ? formatDateToString(data.data_inicio_prevista)
-          : null,
-        data_fim_prevista: data.data_fim_prevista
-          ? formatDateToString(data.data_fim_prevista)
-          : null,
         responsavel_id: data.responsavel_id || null,
+        prioridade: data.prioridade,
+        data_prevista: data.data_prevista
+          ? formatDateToString(data.data_prevista)
+          : null,
         ordem: proximaOrdem,
+        tags: [],
       });
 
-      toast.success("Subetapa criada com sucesso!");
-      setOpen(false);
+      toast.success("Tarefa criada!");
       form.reset();
+      setOpen(false);
 
       if (onSuccess) {
-        onSuccess(etapaId);
+        onSuccess();
       } else {
         router.refresh();
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar subetapa");
+      toast.error("Erro ao criar tarefa");
     } finally {
       setIsSubmitting(false);
     }
@@ -125,30 +140,55 @@ export function NovaSubetapaDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
-            <Plus className="h-3 w-3" />
-            Subetapa
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Tarefa
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Nova Subetapa</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Adicionando subetapa em: <strong>{etapaNome}</strong>
-          </p>
+          <DialogTitle>Nova Tarefa</DialogTitle>
+          <DialogDescription>
+            Crie uma nova tarefa vinculada a uma subetapa.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="subetapa_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subetapa *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a subetapa" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subetapas.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.etapa_nome} / {sub.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="nome"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome da Subetapa *</FormLabel>
+                  <FormLabel>Nome da Tarefa *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Base da caixa" {...field} />
+                    <Input placeholder="Ex: Adquirir concreto" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -163,7 +203,7 @@ export function NovaSubetapaDialog({
                   <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Detalhes da subetapa..."
+                      placeholder="Detalhes da tarefa..."
                       className="resize-none h-20"
                       {...field}
                     />
@@ -173,41 +213,27 @@ export function NovaSubetapaDialog({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="data_inicio_prevista"
+                name="responsavel_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Início</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
-                            ) : (
-                              <span>Selecione</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Responsável</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.nome_completo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -215,10 +241,34 @@ export function NovaSubetapaDialog({
 
               <FormField
                 control={form.control}
-                name="data_fim_prevista"
+                name="prioridade"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Fim</FormLabel>
+                    <FormLabel>Prioridade</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data_prevista"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data Prevista</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -230,9 +280,9 @@ export function NovaSubetapaDialog({
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              format(field.value, "dd/MM/yy", { locale: ptBR })
                             ) : (
-                              <span>Selecione</span>
+                              <span>Data</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -241,7 +291,7 @@ export function NovaSubetapaDialog({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value || undefined}
                           onSelect={field.onChange}
                           initialFocus
                         />
@@ -253,32 +303,7 @@ export function NovaSubetapaDialog({
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="responsavel_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione (opcional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.nome_completo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-4 pt-4">
+            <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -288,8 +313,10 @@ export function NovaSubetapaDialog({
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Criando..." : "Criar Subetapa"}
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isSubmitting ? "Criando..." : "Criar Tarefa"}
               </Button>
             </div>
           </form>

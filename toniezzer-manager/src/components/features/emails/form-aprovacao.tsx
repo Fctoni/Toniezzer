@@ -29,9 +29,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
 import { formatDateToString } from '@/lib/utils'
 import { QuickAddFornecedor } from '@/components/features/ocr/quick-add-fornecedor'
-import { buscarCategoriasAtivas } from '@/lib/services/categorias'
-import { buscarFornecedoresAtivos } from '@/lib/services/fornecedores'
-import { buscarEtapas } from '@/lib/services/etapas'
+import { fetchActiveCategories } from '@/lib/services/categorias'
+import { fetchActiveSuppliers } from '@/lib/services/fornecedores'
+import { fetchStages } from '@/lib/services/etapas'
 
 export interface ParcelaEditavel {
   parcela_atual: number
@@ -168,9 +168,9 @@ export function FormAprovacao({
       const supabase = createClient()
 
       const [categoriasData, fornecedoresData, etapasData] = await Promise.all([
-        buscarCategoriasAtivas(supabase),
-        buscarFornecedoresAtivos(supabase),
-        buscarEtapas(supabase),
+        fetchActiveCategories(supabase),
+        fetchActiveSuppliers(supabase),
+        fetchStages(supabase),
       ])
 
       setCategorias(categoriasData)

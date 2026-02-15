@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
 import { createClient } from '@/lib/supabase/server'
-import { buscarEmailPorIdExterno, criarEmail, atualizarAnexosEmail } from '@/lib/services/emails-monitorados'
+import { fetchEmailByExternalId, createEmail, updateEmailAttachments } from '@/lib/services/emails-monitorados'
 
 // Estrutura de body do IMAP
 interface BodyStructure {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         console.log('[EMAIL SYNC] Processando:', emailId, message.envelope.subject)
 
         // Verificar se já existe
-        const existing = await buscarEmailPorIdExterno(supabase, emailId)
+        const existing = await fetchEmailByExternalId(supabase, emailId)
 
         if (existing) {
           console.log('[EMAIL SYNC] Email já existe, pulando...')
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          const emailRecord = await criarEmail(supabase, {
+          const emailRecord = await createEmail(supabase, {
             email_id_externo: pending.emailId,
             remetente: pending.remetente,
             remetente_nome: pending.remetente_nome,
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
             }
 
             if (algumUploadOk) {
-              await atualizarAnexosEmail(supabase, emailRecord.id, anexosComStorage)
+              await updateEmailAttachments(supabase, emailRecord.id, anexosComStorage)
               console.log('[EMAIL SYNC] Campo anexos atualizado com storage_path')
             }
           }

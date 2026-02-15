@@ -22,21 +22,21 @@ import {
 import { Label } from "@/components/ui/label";
 import type { Tables, TopicoPrioridade } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
-import { criarTopico } from "@/lib/services/topicos-comunicacao";
+import { createTopic } from "@/lib/services/topicos-comunicacao";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
-interface NovoTopicoDialogProps {
+interface NewTopicDialogProps {
   etapas: Tables<"etapas">[];
   currentUserId: string;
   onSuccess?: () => void;
 }
 
-export function NovoTopicoDialog({
+export function NewTopicDialog({
   etapas,
   currentUserId,
   onSuccess,
-}: NovoTopicoDialogProps) {
+}: NewTopicDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [titulo, setTitulo] = useState("");
@@ -58,7 +58,7 @@ export function NovoTopicoDialog({
     try {
       const supabase = createClient();
 
-      const data = await criarTopico(supabase, {
+      const data = await createTopic(supabase, {
         titulo: titulo.trim(),
         descricao: descricao.trim() || null,
         prioridade,

@@ -7,9 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
-import { atualizarCompra } from "@/lib/services/compras";
-import { atualizarGastosPorCompra } from "@/lib/services/gastos";
+import { fetchActiveSubcategories } from "@/lib/services/subcategorias";
+import { updatePurchase } from "@/lib/services/compras";
+import { updateExpensesByPurchase } from "@/lib/services/gastos";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -129,7 +129,7 @@ export function CompraEditForm({
     const fetchSubcategorias = async () => {
       try {
         const supabase = createClient();
-        const data = await buscarSubcategoriasAtivas(supabase);
+        const data = await fetchActiveSubcategories(supabase);
         setSubcategorias(data);
       } catch (error) {
         console.error("Erro ao buscar subcategorias:", error);
@@ -235,7 +235,7 @@ export function CompraEditForm({
       const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
 
       // Atualizar a compra
-      await atualizarCompra(supabase, compra.id, {
+      await updatePurchase(supabase, compra.id, {
         descricao: data.descricao,
         data_compra: formatDateToString(data.data_compra),
         fornecedor_id: data.fornecedor_id,
@@ -251,7 +251,7 @@ export function CompraEditForm({
       // Atualizar os gastos (parcelas) com os novos dados
       // Apenas atualiza campos basicos, nao altera valores ou datas das parcelas
       try {
-        await atualizarGastosPorCompra(supabase, compra.id, {
+        await updateExpensesByPurchase(supabase, compra.id, {
           descricao: data.descricao,
           categoria_id: data.categoria_id,
           subcategoria_id: subcategoriaId,

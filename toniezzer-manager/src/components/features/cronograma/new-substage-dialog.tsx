@@ -1,20 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { criarTarefa } from "@/lib/services/tarefas";
+import { createSubstage } from "@/lib/services/subetapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -35,12 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Loader2, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDateToString } from "@/lib/utils";
@@ -48,10 +43,9 @@ import { cn, formatDateToString } from "@/lib/utils";
 const formSchema = z.object({
   nome: z.string().min(2, "Mínimo 2 caracteres"),
   descricao: z.string().optional(),
+  data_inicio_prevista: z.date().optional(),
+  data_fim_prevista: z.date().optional(),
   responsavel_id: z.string().optional(),
-  prioridade: z.string(),
-  data_prevista: z.date().optional().nullable(),
-  subetapa_id: z.string().min(1, "Selecione a subetapa"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -61,29 +55,23 @@ interface User {
   nome_completo: string;
 }
 
-interface SubetapaOption {
-  id: string;
-  nome: string;
-  etapa_nome: string;
-}
-
-interface NovaTarefaDialogProps {
+interface NewSubstageDialogProps {
+  etapaId: string;
+  etapaNome: string;
   users: User[];
-  subetapas: SubetapaOption[];
-  defaultSubetapaId?: string;
-  proximaOrdem?: number;
+  proximaOrdem: number;
   trigger?: React.ReactNode;
-  onSuccess?: () => void;
+  onSuccess?: (etapaId?: string) => void;
 }
 
-export function NovaTarefaDialog({
+export function NewSubstageDialog({
+  etapaId,
+  etapaNome,
   users,
-  subetapas,
-  defaultSubetapaId,
-  proximaOrdem = 0,
+  proximaOrdem,
   trigger,
   onSuccess,
-}: NovaTarefaDialogProps) {
+}: NewSubstageDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,10 +81,6 @@ export function NovaTarefaDialog({
     defaultValues: {
       nome: "",
       descricao: "",
-      responsavel_id: undefined,
-      prioridade: "media",
-      data_prevista: null,
-      subetapa_id: defaultSubetapaId || "",
     },
   });
 
@@ -106,31 +90,32 @@ export function NovaTarefaDialog({
     try {
       const supabase = createClient();
 
-      await criarTarefa(supabase, {
-        subetapa_id: data.subetapa_id,
+      await createSubstage(supabase, {
+        etapa_id: etapaId,
         nome: data.nome,
         descricao: data.descricao || null,
-        responsavel_id: data.responsavel_id || null,
-        prioridade: data.prioridade,
-        data_prevista: data.data_prevista
-          ? formatDateToString(data.data_prevista)
+        data_inicio_prevista: data.data_inicio_prevista
+          ? formatDateToString(data.data_inicio_prevista)
           : null,
+        data_fim_prevista: data.data_fim_prevista
+          ? formatDateToString(data.data_fim_prevista)
+          : null,
+        responsavel_id: data.responsavel_id || null,
         ordem: proximaOrdem,
-        tags: [],
       });
 
-      toast.success("Tarefa criada!");
-      form.reset();
+      toast.success("Subetapa criada com sucesso!");
       setOpen(false);
+      form.reset();
 
       if (onSuccess) {
-        onSuccess();
+        onSuccess(etapaId);
       } else {
         router.refresh();
       }
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar tarefa");
+      toast.error("Erro ao criar subetapa");
     } finally {
       setIsSubmitting(false);
     }
@@ -140,55 +125,30 @@ export function NovaTarefaDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Tarefa
+          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+            <Plus className="h-3 w-3" />
+            Subetapa
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Nova Tarefa</DialogTitle>
-          <DialogDescription>
-            Crie uma nova tarefa vinculada a uma subetapa.
-          </DialogDescription>
+          <DialogTitle>Nova Subetapa</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Adicionando subetapa em: <strong>{etapaNome}</strong>
+          </p>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="subetapa_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subetapa *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a subetapa" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {subetapas.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.id}>
-                          {sub.etapa_nome} / {sub.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="nome"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome da Tarefa *</FormLabel>
+                  <FormLabel>Nome da Subetapa *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Adquirir concreto" {...field} />
+                    <Input placeholder="Ex: Base da caixa" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -203,7 +163,7 @@ export function NovaTarefaDialog({
                   <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Detalhes da tarefa..."
+                      placeholder="Detalhes da subetapa..."
                       className="resize-none h-20"
                       {...field}
                     />
@@ -213,62 +173,13 @@ export function NovaTarefaDialog({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="responsavel_id"
+                name="data_inicio_prevista"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Responsável</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.nome_completo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="prioridade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prioridade</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="critica">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="data_prevista"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data Prevista</FormLabel>
+                    <FormLabel>Data Início</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -280,9 +191,9 @@ export function NovaTarefaDialog({
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "dd/MM/yy", { locale: ptBR })
+                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
                             ) : (
-                              <span>Data</span>
+                              <span>Selecione</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -291,7 +202,46 @@ export function NovaTarefaDialog({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value || undefined}
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data_fim_prevista"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data Fim</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
                         />
@@ -303,7 +253,32 @@ export function NovaTarefaDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
+            <FormField
+              control={form.control}
+              name="responsavel_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Responsável</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.nome_completo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -313,10 +288,8 @@ export function NovaTarefaDialog({
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {isSubmitting ? "Criando..." : "Criar Tarefa"}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? "Criando..." : "Criar Subetapa"}
               </Button>
             </div>
           </form>

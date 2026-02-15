@@ -1,11 +1,11 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert } from '@/lib/types/database'
-type FeedComunicacao = Tables<'feed_comunicacao'>
-type FeedComentario = Tables<'feed_comentarios'>
+type FeedPost = Tables<'feed_comunicacao'>
+type FeedComment = Tables<'feed_comentarios'>
 
 // ===== SELECT =====
 
-export async function buscarMensagensPorTopico(supabase: TypedSupabaseClient, topicoId: string) {
+export async function fetchMessagesByTopic(supabase: TypedSupabaseClient, topicoId: string) {
   const { data, error } = await supabase
     .from('feed_comunicacao')
     .select('*, autor:autor_id(*)')
@@ -15,7 +15,7 @@ export async function buscarMensagensPorTopico(supabase: TypedSupabaseClient, to
   return data
 }
 
-export async function contarMensagensPorTopico(
+export async function countMessagesByTopic(
   supabase: TypedSupabaseClient,
   topicoId: string
 ): Promise<number> {
@@ -29,10 +29,10 @@ export async function contarMensagensPorTopico(
 
 // ===== INSERT =====
 
-export async function criarMensagem(
+export async function createMessage(
   supabase: TypedSupabaseClient,
   data: { tipo: string; conteudo: string; autor_id: string; topico_id: string; mencoes?: string[] | null }
-): Promise<FeedComunicacao> {
+): Promise<FeedPost> {
   const { data: mensagem, error } = await supabase
     .from('feed_comunicacao')
     .insert({
@@ -48,10 +48,10 @@ export async function criarMensagem(
   return mensagem
 }
 
-export async function criarPost(
+export async function createPost(
   supabase: TypedSupabaseClient,
   data: { tipo: string; conteudo: string; autor_id: string; mencoes?: string[] | null; etapa_relacionada_id?: string | null }
-): Promise<FeedComunicacao> {
+): Promise<FeedPost> {
   const { data: post, error } = await supabase
     .from('feed_comunicacao')
     .insert({
@@ -67,10 +67,10 @@ export async function criarPost(
   return post
 }
 
-export async function criarPostDecisao(
+export async function createDecisionPost(
   supabase: TypedSupabaseClient,
   data: { tipo: string; conteudo: string; autor_id: string; reuniao_relacionada_id: string }
-): Promise<FeedComunicacao> {
+): Promise<FeedPost> {
   const { data: post, error } = await supabase
     .from('feed_comunicacao')
     .insert({
@@ -87,7 +87,7 @@ export async function criarPostDecisao(
 
 // ===== DELETE =====
 
-export async function deletarPost(
+export async function deletePost(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -95,7 +95,7 @@ export async function deletarPost(
   if (error) throw error
 }
 
-export async function deletarMensagem(
+export async function deleteMessage(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -103,9 +103,9 @@ export async function deletarMensagem(
   if (error) throw error
 }
 
-// ===== COMENTÁRIOS =====
+// ===== COMMENTS =====
 
-export async function criarComentario(
+export async function createFeedComment(
   supabase: TypedSupabaseClient,
   data: { feed_id: string; conteudo: string; autor_id: string }
 ) {

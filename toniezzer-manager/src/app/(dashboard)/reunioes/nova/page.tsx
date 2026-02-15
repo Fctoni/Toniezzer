@@ -11,7 +11,7 @@ import { UploadPlaud } from '@/components/features/reunioes'
 import { ArrowLeft, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
-import { criarReuniao } from '@/lib/services/reunioes'
+import { createMeeting } from '@/lib/services/reunioes'
 import { toast } from 'sonner'
 
 export default function NovaReuniaoPage() {
@@ -64,7 +64,7 @@ export default function NovaReuniaoPage() {
       const supabase = createClient()
       
       // 1. Criar a reunião
-      const reuniao = await criarReuniao(supabase, {
+      const reuniao = await createMeeting(supabase, {
         titulo: tituloFinal,
         data_reuniao: dataFinal,
         participantes: participantes.length > 0 ? participantes : null,

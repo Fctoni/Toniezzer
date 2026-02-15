@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables, TopicoStatus } from "@/lib/types/database";
-import { buscarTopicoPorId, atualizarStatusTopico, toggleFixadoTopico, deletarTopico } from "@/lib/services/topicos-comunicacao";
-import { buscarMensagensPorTopico, criarMensagem } from "@/lib/services/feed-comunicacao";
+import { fetchTopicById, updateTopicStatus, togglePinnedTopic, deleteTopic } from "@/lib/services/topicos-comunicacao";
+import { fetchMessagesByTopic, createMessage } from "@/lib/services/feed-comunicacao";
 import { MensagemTopico } from "@/components/features/comunicacao/mensagem-topico";
 import { MencoesInput } from "@/components/features/comunicacao/mencoes-input";
 import { Button } from "@/components/ui/button";
@@ -76,8 +76,8 @@ export default function TopicoPage({
 
     try {
       const [topicoData, mensagensData] = await Promise.all([
-        buscarTopicoPorId(supabase, id),
-        buscarMensagensPorTopico(supabase, id),
+        fetchTopicById(supabase, id),
+        fetchMessagesByTopic(supabase, id),
       ]);
 
       setTopico(topicoData as TopicoWithRelations);
@@ -128,7 +128,7 @@ export default function TopicoPage({
     try {
       const supabase = createClient();
 
-      await criarMensagem(supabase, {
+      await createMessage(supabase, {
         tipo: "post",
         conteudo: novaMensagem,
         autor_id: currentUser.id,
@@ -149,7 +149,7 @@ export default function TopicoPage({
   const handleUpdateStatus = async (status: TopicoStatus) => {
     try {
       const supabase = createClient();
-      await atualizarStatusTopico(supabase, id, status);
+      await updateTopicStatus(supabase, id, status);
 
       toast.success(
         status === "resolvido"
@@ -167,7 +167,7 @@ export default function TopicoPage({
   const handleToggleFixado = async () => {
     try {
       const supabase = createClient();
-      await toggleFixadoTopico(supabase, id, !topico?.fixado);
+      await togglePinnedTopic(supabase, id, !topico?.fixado);
 
       toast.success(topico?.fixado ? "Tópico desafixado!" : "Tópico fixado!");
       fetchData();
@@ -179,7 +179,7 @@ export default function TopicoPage({
   const handleDelete = async () => {
     try {
       const supabase = createClient();
-      await deletarTopico(supabase, id);
+      await deleteTopic(supabase, id);
 
       toast.success("Tópico excluído!");
       router.push("/comunicacao");

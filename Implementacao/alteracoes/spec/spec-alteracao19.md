@@ -2,7 +2,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Status | 🔵 Pronto para executar |
+| Status | 🟢 Concluido |
 | Conversa | [alteracao19.md](../alteracao/alteracao19.md) |
 | Data criacao | 2026-02-13 |
 | Complexidade | 🔴 Alta |
@@ -493,28 +493,28 @@ Nenhuma dependencia externa necessaria. Alteracao puramente de refatoracao de no
 
 ## 5. Execucao
 
-*(preenchido pelo Executor)*
-
 ### 5.1 Progresso
 
-- [ ] Fase 1: Services renomeados (21 arquivos)
-- [ ] Fase 1: Todos os consumidores atualizados
-- [ ] Fase 2: Componentes renomeados (12 arquivos)
-- [ ] Fase 2: Interfaces renomeadas
-- [ ] Fase 3: API routes renomeadas (3 arquivos)
-- [ ] Fase 4: `npx tsc --noEmit` sem erros
+- [x] Fase 1: Services renomeados (21 arquivos)
+- [x] Fase 1: Todos os consumidores atualizados (~50+ arquivos)
+- [x] Fase 2: Componentes renomeados (12 arquivos)
+- [x] Fase 2: Interfaces renomeadas
+- [x] Fase 3: API routes renomeadas (3 arquivos)
+- [x] Fase 4: `npx tsc --noEmit` sem erros
 - [ ] Testado manualmente
 
 ### 5.2 Notas de Implementacao
 
-[Decisoes tomadas durante a execucao, problemas encontrados, solucoes aplicadas]
-
-### 5.3 Conversa de Execucao
-
-*(problemas encontrados durante execucao, solucoes propostas)*
-
-#### IA:
-[mensagem]
+- **Estrategia**: Execucao bottom-up conforme spec — services primeiro (dos menos dependidos para os mais), depois consumers, componentes, API routes
+- **Services 1-6**: Renomeados manualmente com validacao de consumers via Grep
+- **Services 7-18**: Renomeados em paralelo usando agents (2 agents simultaneos)
+- **Services 19-21** (subetapas, tarefas, etapas): Renomeados manualmente, consumers atualizados em 2 agents paralelos
+- **Testes unitarios**: `etapas.test.ts` e `subetapas.test.ts` atualizados para usar nomes EN
+- **Fase 2 (componentes)**: 12 arquivos renomeados com atualizacao de interfaces, exports, e todos os consumers (imports + JSX)
+- **Fase 3 (API routes)**: 3 arquivos atualizados internamente. No `plaud/route.ts`, variavel `resultado` renomeada para `result` e variavel de resposta Gemini renomeada para `geminiResult` para evitar conflito de escopo
+- **Funcoes locais em componentes** (ex: `calcularProgressoEtapa` em `cronograma-mobile.tsx`): Nao renomeadas pois sao funcoes locais definidas inline, nao imports de services. Fora do escopo da spec
+- **Conflito de nomes**: Em `configuracoes/usuarios/page.tsx`, import `fetchUsers` foi aliased para `fetchUsersService` para evitar conflito com funcao local de mesmo nome
+- **Validacao final**: `npx tsc --noEmit` retornou zero erros
 
 ---
 

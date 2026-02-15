@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/types/database";
-import { buscarFornecedorPorId, desativarFornecedor } from "@/lib/services/fornecedores";
-import { buscarGastosPorFornecedor } from "@/lib/services/gastos";
+import { fetchSupplierById, deactivateSupplier } from "@/lib/services/fornecedores";
+import { fetchExpensesBySupplier } from "@/lib/services/gastos";
 import { parseDateString } from "@/lib/utils";
 import { FornecedorForm } from "@/components/features/fornecedores/fornecedor-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,8 +70,8 @@ export default function FornecedorDetalhesPage({
       const supabase = createClient();
 
       const [fornecedorData, gastosData] = await Promise.all([
-        buscarFornecedorPorId(supabase, id),
-        buscarGastosPorFornecedor(supabase, id),
+        fetchSupplierById(supabase, id),
+        fetchExpensesBySupplier(supabase, id),
       ]);
 
       setFornecedor(fornecedorData);
@@ -90,7 +90,7 @@ export default function FornecedorDetalhesPage({
   const handleDelete = async () => {
     try {
       const supabase = createClient();
-      await desativarFornecedor(supabase, id);
+      await deactivateSupplier(supabase, id);
 
       toast.success("Fornecedor excluído!");
       router.push("/fornecedores");

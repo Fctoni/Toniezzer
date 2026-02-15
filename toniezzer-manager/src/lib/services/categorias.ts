@@ -1,16 +1,16 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Categoria = Tables<'categorias'>
+type Category = Tables<'categorias'>
 
 // ===== SELECT =====
 
-export async function buscarCategorias(supabase: TypedSupabaseClient): Promise<Categoria[]> {
+export async function fetchCategories(supabase: TypedSupabaseClient): Promise<Category[]> {
   const { data, error } = await supabase.from('categorias').select('*').order('ordem')
   if (error) throw error
   return data
 }
 
-export async function buscarCategoriasAtivas(supabase: TypedSupabaseClient): Promise<Categoria[]> {
+export async function fetchActiveCategories(supabase: TypedSupabaseClient): Promise<Category[]> {
   const { data, error } = await supabase
     .from('categorias')
     .select('*')
@@ -20,9 +20,9 @@ export async function buscarCategoriasAtivas(supabase: TypedSupabaseClient): Pro
   return data
 }
 
-export async function buscarCategoriasParaDropdown(
+export async function fetchCategoriesForDropdown(
   supabase: TypedSupabaseClient
-): Promise<Pick<Categoria, 'id' | 'nome' | 'cor'>[]> {
+): Promise<Pick<Category, 'id' | 'nome' | 'cor'>[]> {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome, cor')
@@ -32,9 +32,9 @@ export async function buscarCategoriasParaDropdown(
   return data
 }
 
-export async function buscarTodasCategoriasParaDropdown(
+export async function fetchAllCategoriesForDropdown(
   supabase: TypedSupabaseClient
-): Promise<Pick<Categoria, 'id' | 'nome' | 'cor'>[]> {
+): Promise<Pick<Category, 'id' | 'nome' | 'cor'>[]> {
   const { data, error } = await supabase
     .from('categorias')
     .select('id, nome, cor')
@@ -43,7 +43,7 @@ export async function buscarTodasCategoriasParaDropdown(
   return data
 }
 
-export async function buscarMaxOrdem(supabase: TypedSupabaseClient): Promise<number> {
+export async function fetchMaxOrder(supabase: TypedSupabaseClient): Promise<number> {
   const { data, error } = await supabase
     .from('categorias')
     .select('ordem')
@@ -55,10 +55,10 @@ export async function buscarMaxOrdem(supabase: TypedSupabaseClient): Promise<num
 
 // ===== INSERT =====
 
-export async function criarCategoria(
+export async function createCategory(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'categorias'>
-): Promise<Categoria> {
+): Promise<Category> {
   const { data: categoria, error } = await supabase
     .from('categorias')
     .insert(data)
@@ -70,11 +70,11 @@ export async function criarCategoria(
 
 // ===== UPDATE =====
 
-export async function atualizarCategoria(
+export async function updateCategory(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'categorias'>
-): Promise<Categoria> {
+): Promise<Category> {
   const { data, error } = await supabase
     .from('categorias')
     .update(updates)
@@ -85,7 +85,7 @@ export async function atualizarCategoria(
   return data
 }
 
-export async function reordenarCategorias(
+export async function reorderCategories(
   supabase: TypedSupabaseClient,
   items: { id: string; ordem: number }[]
 ): Promise<void> {
@@ -98,7 +98,7 @@ export async function reordenarCategorias(
   }
 }
 
-export async function toggleAtivoCategoria(
+export async function toggleActiveCategory(
   supabase: TypedSupabaseClient,
   id: string,
   ativo: boolean
@@ -110,7 +110,7 @@ export async function toggleAtivoCategoria(
   if (error) throw error
 }
 
-export async function atualizarOrcamentoCategoria(
+export async function updateCategoryBudget(
   supabase: TypedSupabaseClient,
   id: string,
   orcamento: number
@@ -124,7 +124,7 @@ export async function atualizarOrcamentoCategoria(
 
 // ===== DELETE =====
 
-export async function deletarCategoria(
+export async function deleteCategory(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -132,9 +132,9 @@ export async function deletarCategoria(
   if (error) throw error
 }
 
-// ===== VALIDAÇÕES =====
+// ===== VALIDATIONS =====
 
-export async function verificarDuplicataCategoria(
+export async function checkDuplicateCategory(
   supabase: TypedSupabaseClient,
   nome: string,
   excludeId?: string
@@ -153,7 +153,7 @@ export async function verificarDuplicataCategoria(
   return (count || 0) > 0
 }
 
-export async function verificarUsoCategoria(
+export async function checkCategoryUsage(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<{ compras: number; gastos: number; orcamento: number }> {

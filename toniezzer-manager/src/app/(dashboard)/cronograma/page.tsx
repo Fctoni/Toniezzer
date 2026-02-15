@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { CronogramaWrapper } from "@/components/features/cronograma/cronograma-wrapper";
-import { NovaEtapaDialog } from "@/components/features/cronograma/nova-etapa-dialog";
+import { NewStageDialog } from "@/components/features/cronograma/new-stage-dialog";
 import { Badge } from "@/components/ui/badge";
-import { buscarEtapas } from "@/lib/services/etapas";
-import { buscarSubetapas } from "@/lib/services/subetapas";
-import { buscarTarefas } from "@/lib/services/tarefas";
-import { buscarGastosPorEtapa } from "@/lib/services/gastos";
-import { buscarUsuariosAtivos } from "@/lib/services/users";
+import { fetchStages } from "@/lib/services/etapas";
+import { fetchSubstages } from "@/lib/services/subetapas";
+import { fetchTasks } from "@/lib/services/tarefas";
+import { fetchExpensesByStage } from "@/lib/services/gastos";
+import { fetchActiveUsers } from "@/lib/services/users";
 
 interface User {
   id: string;
@@ -81,11 +81,11 @@ export default async function CronogramaPage() {
     tarefasRaw,
     gastos,
   ] = await Promise.all([
-    buscarEtapas(supabase),
-    buscarUsuariosAtivos(supabase),
-    buscarSubetapas(supabase),
-    buscarTarefas(supabase),
-    buscarGastosPorEtapa(supabase),
+    fetchStages(supabase),
+    fetchActiveUsers(supabase),
+    fetchSubstages(supabase),
+    fetchTasks(supabase),
+    fetchExpensesByStage(supabase),
   ]);
 
   const users = usersData as User[];
@@ -196,7 +196,7 @@ export default async function CronogramaPage() {
           </div>
         </div>
 
-        <NovaEtapaDialog
+        <NewStageDialog
           users={users}
           etapas={etapas}
           proximaOrdem={etapas.length + 1}

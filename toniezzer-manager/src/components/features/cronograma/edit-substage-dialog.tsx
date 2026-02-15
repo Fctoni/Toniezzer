@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarEtapa, deletarEtapa } from "@/lib/services/etapas";
+import { updateSubstage, deleteSubstage } from "@/lib/services/subetapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,11 +41,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn, formatDateToString } from "@/lib/utils";
 
 const formSchema = z.object({
-  nome: z.string().min(3, "Mínimo 3 caracteres"),
+  nome: z.string().min(2, "Mínimo 2 caracteres"),
   descricao: z.string().optional(),
+  data_inicio_prevista: z.date().optional().nullable(),
+  data_fim_prevista: z.date().optional().nullable(),
   responsavel_id: z.string().optional(),
 });
 
@@ -56,7 +63,7 @@ interface User {
   nome_completo: string;
 }
 
-interface Etapa {
+interface Subetapa {
   id: string;
   nome: string;
   descricao: string | null;
@@ -65,23 +72,23 @@ interface Etapa {
   responsavel_id: string | null;
 }
 
-interface EditarEtapaDialogProps {
-  etapa: Etapa;
+interface EditSubstageDialogProps {
+  subetapa: Subetapa;
   users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: (updatedEtapa: Partial<Etapa> & { id: string }) => void;
-  onDelete?: (etapaId: string) => void;
+  onSuccess?: (updatedSubetapa: Partial<Subetapa> & { id: string }) => void;
+  onDelete?: (subetapaId: string) => void;
 }
 
-export function EditarEtapaDialog({
-  etapa,
+export function EditSubstageDialog({
+  subetapa,
   users,
   open,
   onOpenChange,
   onSuccess,
   onDelete,
-}: EditarEtapaDialogProps) {
+}: EditSubstageDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -89,9 +96,15 @@ export function EditarEtapaDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome: etapa.nome,
-      descricao: etapa.descricao || "",
-      responsavel_id: etapa.responsavel_id || undefined,
+      nome: subetapa.nome,
+      descricao: subetapa.descricao || "",
+      data_inicio_prevista: subetapa.data_inicio_prevista
+        ? new Date(subetapa.data_inicio_prevista)
+        : null,
+      data_fim_prevista: subetapa.data_fim_prevista
+        ? new Date(subetapa.data_fim_prevista)
+        : null,
+      responsavel_id: subetapa.responsavel_id || undefined,
     },
   });
 
@@ -104,21 +117,26 @@ export function EditarEtapaDialog({
       const updatedData = {
         nome: data.nome,
         descricao: data.descricao || null,
+        data_inicio_prevista: data.data_inicio_prevista
+          ? formatDateToString(data.data_inicio_prevista)
+          : null,
+        data_fim_prevista: data.data_fim_prevista
+          ? formatDateToString(data.data_fim_prevista)
+          : null,
         responsavel_id: data.responsavel_id || null,
       };
 
-      await atualizarEtapa(supabase, etapa.id, updatedData);
+      await updateSubstage(supabase, subetapa.id, updatedData);
 
-      toast.success("Etapa atualizada!");
-      
-      // Notificar o parent com os dados atualizados
+      toast.success("Subetapa atualizada!");
+
       if (onSuccess) {
-        onSuccess({ id: etapa.id, ...updatedData });
+        onSuccess({ id: subetapa.id, ...updatedData });
       }
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao atualizar etapa");
+      toast.error("Erro ao atualizar subetapa");
     } finally {
       setIsSubmitting(false);
     }
@@ -130,20 +148,18 @@ export function EditarEtapaDialog({
     try {
       const supabase = createClient();
 
-      // O banco faz cascade: etapa → subetapas → tarefas → anexos/comentários/dependências
-      await deletarEtapa(supabase, etapa.id);
+      await deleteSubstage(supabase, subetapa.id);
 
-      toast.success("Etapa excluída!");
+      toast.success("Subetapa excluída!");
       setShowDeleteAlert(false);
-      
-      // Notificar o parent sobre a exclusão
+
       if (onDelete) {
-        onDelete(etapa.id);
+        onDelete(subetapa.id);
       }
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao excluir etapa");
+      toast.error("Erro ao excluir subetapa");
     } finally {
       setIsDeleting(false);
     }
@@ -152,9 +168,9 @@ export function EditarEtapaDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Editar Etapa</DialogTitle>
+            <DialogTitle>Editar Subetapa</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -164,9 +180,9 @@ export function EditarEtapaDialog({
                 name="nome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Etapa *</FormLabel>
+                    <FormLabel>Nome da Subetapa *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Fundação" {...field} />
+                      <Input placeholder="Ex: Base da caixa" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -181,8 +197,8 @@ export function EditarEtapaDialog({
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Descrição detalhada..."
-                        className="resize-none"
+                        placeholder="Detalhes da subetapa..."
+                        className="resize-none h-20"
                         {...field}
                       />
                     </FormControl>
@@ -191,11 +207,84 @@ export function EditarEtapaDialog({
                 )}
               />
 
-              <div className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
-                <p className="font-medium mb-1">Datas da Etapa</p>
-                <p className="text-xs">
-                  As datas de início e fim são calculadas automaticamente com base nas tarefas da etapa.
-                </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="data_inicio_prevista"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data Início</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="data_fim_prevista"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data Fim</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <FormField
@@ -234,7 +323,7 @@ export function EditarEtapaDialog({
                   <Trash2 className="mr-2 h-4 w-4" />
                   Excluir
                 </Button>
-                
+
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -258,9 +347,9 @@ export function EditarEtapaDialog({
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir etapa?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir subetapa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A etapa <strong>{etapa.nome}</strong> e todas as suas tarefas serão excluídas permanentemente.
+              Esta ação não pode ser desfeita. A subetapa <strong>{subetapa.nome}</strong> e todas as suas tarefas serão excluídas permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -285,4 +374,3 @@ export function EditarEtapaDialog({
     </>
   );
 }
-

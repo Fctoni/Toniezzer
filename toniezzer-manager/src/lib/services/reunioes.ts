@@ -1,10 +1,10 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert } from '@/lib/types/database'
-type Reuniao = Tables<'reunioes'>
+type Meeting = Tables<'reunioes'>
 
 // ===== SELECT =====
 
-export async function buscarReunioesComDetalhes(supabase: TypedSupabaseClient) {
+export async function fetchMeetingsWithDetails(supabase: TypedSupabaseClient) {
   const { data, error } = await supabase
     .from('reunioes')
     .select('*, created_by_user:created_by(nome_completo), reunioes_acoes(id, status)')
@@ -13,10 +13,10 @@ export async function buscarReunioesComDetalhes(supabase: TypedSupabaseClient) {
   return data
 }
 
-export async function buscarReuniaoPorId(
+export async function fetchMeetingById(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<Reuniao> {
+): Promise<Meeting> {
   const { data, error } = await supabase
     .from('reunioes')
     .select('*')
@@ -28,10 +28,10 @@ export async function buscarReuniaoPorId(
 
 // ===== INSERT =====
 
-export async function criarReuniao(
+export async function createMeeting(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'reunioes'>
-): Promise<Reuniao> {
+): Promise<Meeting> {
   const { data: reuniao, error } = await supabase
     .from('reunioes')
     .insert(data)
@@ -43,7 +43,7 @@ export async function criarReuniao(
 
 // ===== DELETE =====
 
-export async function deletarReuniao(
+export async function deleteMeeting(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

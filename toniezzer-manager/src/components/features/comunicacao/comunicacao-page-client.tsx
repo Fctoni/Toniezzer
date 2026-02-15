@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables, TopicoStatus } from "@/lib/types/database";
-import { buscarTopicos } from "@/lib/services/topicos-comunicacao";
-import { contarMensagensPorTopico } from "@/lib/services/feed-comunicacao";
+import { fetchTopics } from "@/lib/services/topicos-comunicacao";
+import { countMessagesByTopic } from "@/lib/services/feed-comunicacao";
 import { TopicoLinha } from "@/components/features/comunicacao/topico-linha";
-import { NovoTopicoDialog } from "@/components/features/comunicacao/novo-topico-dialog";
+import { NewTopicDialog } from "@/components/features/comunicacao/new-topic-dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -61,11 +61,11 @@ export function ComunicacaoPageClient({
       if (statusFilter !== "todos") filtros.status = statusFilter;
       if (search) filtros.search = search;
 
-      const topicosData = await buscarTopicos(supabase, filtros);
+      const topicosData = await fetchTopics(supabase, filtros);
 
       const topicosWithCount = await Promise.all(
         topicosData.map(async (topico) => {
-          const count = await contarMensagensPorTopico(supabase, topico.id);
+          const count = await countMessagesByTopic(supabase, topico.id);
           return {
             ...topico,
             _count: { mensagens: count },
@@ -159,7 +159,7 @@ export function ComunicacaoPageClient({
           </p>
         </div>
         {currentUser && (
-          <NovoTopicoDialog
+          <NewTopicDialog
             etapas={etapas}
             currentUserId={currentUser.id}
             onSuccess={fetchTopicos}

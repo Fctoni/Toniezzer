@@ -5,8 +5,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { uploadComprovante } from "@/lib/services/recibos";
-import { marcarPago, atualizarComprovante, atualizarDataVencimento } from "@/lib/services/gastos";
+import { uploadReceipt } from "@/lib/services/recibos";
+import { markAsPaid, updateReceipt, updateDueDate } from "@/lib/services/gastos";
 import {
   Table,
   TableBody,
@@ -58,7 +58,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
   const handleAlterarData = async (parcela: Parcela, novaData: Date) => {
     try {
       const supabase = createClient();
-      await atualizarDataVencimento(supabase, parcela.id, formatDateToString(novaData));
+      await updateDueDate(supabase, parcela.id, formatDateToString(novaData));
       toast.success("Data de vencimento atualizada");
       setEditandoDataId(null);
       onParcelaPaga?.();
@@ -93,7 +93,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         const fileName = `comprovantes/${Date.now()}-${selectedParcela.id}.${fileExt}`;
 
         try {
-          comprovanteUrl = await uploadComprovante(supabase, fileName, arquivoComprovante);
+          comprovanteUrl = await uploadReceipt(supabase, fileName, arquivoComprovante);
         } catch (uploadError) {
           console.error("Erro no upload:", uploadError);
           toast.error("Erro ao fazer upload do comprovante");
@@ -103,7 +103,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         }
       }
 
-      await marcarPago(supabase, selectedParcela.id, {
+      await markAsPaid(supabase, selectedParcela.id, {
         pago: true,
         pago_em: formatDateToString(dataPagamento),
         comprovante_pagamento_url: comprovanteUrl,
@@ -135,7 +135,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
 
       let comprovanteUrl: string;
       try {
-        comprovanteUrl = await uploadComprovante(supabase, fileName, arquivoComprovante);
+        comprovanteUrl = await uploadReceipt(supabase, fileName, arquivoComprovante);
       } catch (uploadError) {
         console.error("Erro no upload:", uploadError);
         toast.error("Erro ao fazer upload do comprovante");
@@ -144,7 +144,7 @@ export function ParcelasTable({ parcelas, onParcelaPaga }: ParcelasTableProps) {
         return;
       }
 
-      await atualizarComprovante(supabase, selectedParcela.id, comprovanteUrl);
+      await updateReceipt(supabase, selectedParcela.id, comprovanteUrl);
 
       toast.success("Comprovante anexado com sucesso!");
       setComprovanteDialogOpen(false);

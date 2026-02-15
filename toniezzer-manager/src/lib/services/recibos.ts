@@ -2,7 +2,7 @@ import { TypedSupabaseClient } from '@/lib/types/supabase'
 
 // ===== STORAGE =====
 
-export async function uploadComprovante(
+export async function uploadReceipt(
   supabase: TypedSupabaseClient,
   fileName: string,
   file: File

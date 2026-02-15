@@ -1,27 +1,27 @@
 import { describe, it, expect } from 'vitest'
-import { calcularProgressoSubetapa } from './subetapas'
+import { calculateSubstageProgress } from './subetapas'
 
-describe('calcularProgressoSubetapa', () => {
+describe('calculateSubstageProgress', () => {
   it('retorna 0 quando sem tarefas e sem progresso', () => {
-    expect(calcularProgressoSubetapa({ tarefas: [] })).toBe(0)
+    expect(calculateSubstageProgress({ tarefas: [] })).toBe(0)
   })
 
   it('retorna progresso_percentual quando sem tarefas', () => {
-    expect(calcularProgressoSubetapa({ progresso_percentual: 60, tarefas: [] })).toBe(60)
+    expect(calculateSubstageProgress({ progresso_percentual: 60, tarefas: [] })).toBe(60)
   })
 
   it('retorna 0 quando sem tarefas e progresso null', () => {
-    expect(calcularProgressoSubetapa({ progresso_percentual: null, tarefas: [] })).toBe(0)
+    expect(calculateSubstageProgress({ progresso_percentual: null, tarefas: [] })).toBe(0)
   })
 
   it('retorna 100 quando todas tarefas concluidas', () => {
     const subetapa = { tarefas: [{ status: 'concluida' }, { status: 'concluida' }] }
-    expect(calcularProgressoSubetapa(subetapa)).toBe(100)
+    expect(calculateSubstageProgress(subetapa)).toBe(100)
   })
 
   it('retorna 0 quando nenhuma tarefa concluida', () => {
     const subetapa = { tarefas: [{ status: 'em_andamento' }] }
-    expect(calcularProgressoSubetapa(subetapa)).toBe(0)
+    expect(calculateSubstageProgress(subetapa)).toBe(0)
   })
 
   it('retorna percentual arredondado para parcialmente concluidas', () => {
@@ -32,6 +32,6 @@ describe('calcularProgressoSubetapa', () => {
         { status: 'nao_iniciada' },
       ],
     }
-    expect(calcularProgressoSubetapa(subetapa)).toBe(33)
+    expect(calculateSubstageProgress(subetapa)).toBe(33)
   })
 })

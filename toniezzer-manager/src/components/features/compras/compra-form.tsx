@@ -8,10 +8,10 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { addMonths } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
-import { buscarSubcategoriasAtivas } from "@/lib/services/subcategorias";
-import { criarCompra } from "@/lib/services/compras";
-import { criarGastos } from "@/lib/services/gastos";
-import { buscarPrimeiroUsuario } from "@/lib/services/users";
+import { fetchActiveSubcategories } from "@/lib/services/subcategorias";
+import { createPurchase } from "@/lib/services/compras";
+import { createExpenses } from "@/lib/services/gastos";
+import { fetchFirstUser } from "@/lib/services/users";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -95,7 +95,7 @@ export function CompraForm({
     const fetchSubcategorias = async () => {
       try {
         const supabase = createClient();
-        const data = await buscarSubcategoriasAtivas(supabase);
+        const data = await fetchActiveSubcategories(supabase);
         setSubcategorias(data);
       } catch (error) {
         console.error("Erro ao buscar subcategorias:", error);
@@ -157,7 +157,7 @@ export function CompraForm({
 
       let userId: string | undefined;
       try {
-        const user = await buscarPrimeiroUsuario(supabase);
+        const user = await fetchFirstUser(supabase);
         userId = user.id;
       } catch {
         // ignora erro se não encontrar usuário
@@ -192,7 +192,7 @@ export function CompraForm({
 
       const subcategoriaId = data.subcategoria_id && data.subcategoria_id !== "" ? data.subcategoria_id : null;
 
-      const compra = await criarCompra(supabase, {
+      const compra = await createPurchase(supabase, {
         descricao: data.descricao,
         valor_total: valorNumerico,
         data_compra: formatDateToString(data.data_compra),
@@ -243,7 +243,7 @@ export function CompraForm({
         });
       }
 
-      await criarGastos(supabase, lancamentos);
+      await createExpenses(supabase, lancamentos);
 
       toast.success(
         `Compra criada com ${numParcelas} parcela${numParcelas > 1 ? "s" : ""}!`

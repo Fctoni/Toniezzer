@@ -40,7 +40,7 @@ import {
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarDocumento, deletarDocumento } from "@/lib/services/documentos";
+import { updateDocument, deleteDocument } from "@/lib/services/documentos";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -70,12 +70,12 @@ interface Etapa {
   nome: string;
 }
 
-interface GaleriaFotosProps {
+interface PhotoGalleryProps {
   fotos: Foto[];
   etapas: Etapa[];
 }
 
-export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
+export function PhotoGallery({ fotos, etapas }: PhotoGalleryProps) {
   const router = useRouter();
   const isMobile = useMobile();
   
@@ -145,7 +145,7 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
     const supabase = createClient();
 
     try {
-      await atualizarDocumento(supabase, fotoSelecionada.id, {
+      await updateDocument(supabase, fotoSelecionada.id, {
         nome: editNome,
         created_at: new Date(editData + "T12:00:00").toISOString(),
         tags: editTags.length > 0 ? editTags : null,
@@ -235,7 +235,7 @@ export function GaleriaFotos({ fotos, etapas }: GaleriaFotosProps) {
 
       await supabase.storage.from("fotos-obra").remove([fileName]);
 
-      await deletarDocumento(supabase, foto.id);
+      await deleteDocument(supabase, foto.id);
 
       toast.success("Foto excluida com sucesso");
       setFotoParaExcluir(null);

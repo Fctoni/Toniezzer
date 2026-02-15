@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { buscarCategoriasAtivas } from '@/lib/services/categorias'
-import { buscarUsuariosParaDropdown } from '@/lib/services/users'
-import { criarAcoes } from '@/lib/services/reunioes-acoes'
-import { criarPostDecisao } from '@/lib/services/feed-comunicacao'
+import { fetchActiveCategories } from '@/lib/services/categorias'
+import { fetchUsersForDropdown } from '@/lib/services/users'
+import { createActions } from '@/lib/services/reunioes-acoes'
+import { createDecisionPost } from '@/lib/services/feed-comunicacao'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
 // ===== Zod Schema =====
 
-const processarPlaudSchema = z.object({
+const processPlaudSchema = z.object({
   markdown: z.string().min(1, 'Markdown nao fornecido'),
   reuniao_id: z.string().uuid('ID da reuniao invalido'),
   autor_id: z.string().uuid().optional(),
 })
 
 // Tipo para as ações extraídas
-interface AcaoExtraida {
+interface ExtractedAction {
   tipo: 'decisao' | 'tarefa' | 'gasto' | 'problema' | 'mudanca_escopo'
   descricao: string
   responsavel?: string
@@ -26,27 +26,27 @@ interface AcaoExtraida {
   categoria_sugerida?: string
 }
 
-interface DadosExtraidos {
-  decisoes: AcaoExtraida[]
-  tarefas: AcaoExtraida[]
-  gastos: AcaoExtraida[]
-  problemas: AcaoExtraida[]
-  mudancas_escopo: AcaoExtraida[]
+interface ExtractedData {
+  decisoes: ExtractedAction[]
+  tarefas: ExtractedAction[]
+  gastos: ExtractedAction[]
+  problemas: ExtractedAction[]
+  mudancas_escopo: ExtractedAction[]
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const resultado = processarPlaudSchema.safeParse(body)
-    if (!resultado.success) {
+    const result = processPlaudSchema.safeParse(body)
+    if (!result.success) {
       return NextResponse.json(
-        { error: resultado.error.issues[0].message },
+        { error: result.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    const { markdown, reuniao_id, autor_id } = resultado.data
+    const { markdown, reuniao_id, autor_id } = result.data
 
     console.log('[PLAUD] Recebida requisição para processar reunião:', reuniao_id)
 
@@ -128,8 +128,8 @@ Regras:
       }, { status: 500 })
     }
 
-    const result = await response.json()
-    const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text
+    const geminiResult = await response.json()
+    const textResponse = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!textResponse) {
       return NextResponse.json({
@@ -144,7 +144,7 @@ Regras:
       .replace(/```\n?/g, '')
       .trim()
 
-    let dados: DadosExtraidos
+    let dados: ExtractedData
     try {
       dados = JSON.parse(cleanJson)
     } catch (parseError) {
@@ -159,10 +159,10 @@ Regras:
     console.log('[PLAUD] Dados extraídos:', JSON.stringify(dados, null, 2))
 
     // Buscar usuários para matching de responsáveis
-    const usuarios = await buscarUsuariosParaDropdown(supabase)
+    const usuarios = await fetchUsersForDropdown(supabase)
 
     // Buscar categorias para matching
-    const categorias = await buscarCategoriasAtivas(supabase)
+    const categorias = await fetchActiveCategories(supabase)
 
     // Função para encontrar usuário por nome (matching aproximado)
     const findUsuario = (nome: string | undefined | null) => {
@@ -187,7 +187,7 @@ Regras:
     }
 
     // Consolidar todas as ações em uma lista para inserir
-    const acoesParaInserir: Array<{
+    const actionsToInsert: Array<{
       reuniao_id: string
       tipo: 'decisao' | 'tarefa' | 'gasto' | 'problema' | 'mudanca_escopo'
       descricao: string
@@ -200,7 +200,7 @@ Regras:
 
     // Processar decisões
     for (const item of dados.decisoes || []) {
-      acoesParaInserir.push({
+      actionsToInsert.push({
         reuniao_id,
         tipo: 'decisao',
         descricao: item.descricao,
@@ -214,7 +214,7 @@ Regras:
 
     // Processar tarefas
     for (const item of dados.tarefas || []) {
-      acoesParaInserir.push({
+      actionsToInsert.push({
         reuniao_id,
         tipo: 'tarefa',
         descricao: item.descricao,
@@ -228,7 +228,7 @@ Regras:
 
     // Processar gastos
     for (const item of dados.gastos || []) {
-      acoesParaInserir.push({
+      actionsToInsert.push({
         reuniao_id,
         tipo: 'gasto',
         descricao: item.descricao,
@@ -242,7 +242,7 @@ Regras:
 
     // Processar problemas
     for (const item of dados.problemas || []) {
-      acoesParaInserir.push({
+      actionsToInsert.push({
         reuniao_id,
         tipo: 'problema',
         descricao: item.descricao,
@@ -256,7 +256,7 @@ Regras:
 
     // Processar mudanças de escopo
     for (const item of dados.mudancas_escopo || []) {
-      acoesParaInserir.push({
+      actionsToInsert.push({
         reuniao_id,
         tipo: 'mudanca_escopo',
         descricao: item.descricao,
@@ -269,12 +269,12 @@ Regras:
     }
 
     // Inserir todas as ações no banco
-    let acoesCriadas = 0
-    if (acoesParaInserir.length > 0) {
+    let actionsCreated = 0
+    if (actionsToInsert.length > 0) {
       try {
-        const acoesInseridas = await criarAcoes(supabase, acoesParaInserir)
-        acoesCriadas = acoesInseridas.length
-        console.log('[PLAUD] Ações criadas:', acoesCriadas)
+        const insertedActions = await createActions(supabase, actionsToInsert)
+        actionsCreated = insertedActions.length
+        console.log('[PLAUD] Ações criadas:', actionsCreated)
       } catch (insertError) {
         console.error('[PLAUD] Erro ao inserir ações:', insertError)
       }
@@ -282,13 +282,13 @@ Regras:
 
     // Criar post no feed de comunicação para decisões importantes
     if ((dados.decisoes?.length || 0) > 0 && autor_id) {
-      const decisoesTexto = dados.decisoes
+      const decisionsText = dados.decisoes
         .map((d, i) => `${i + 1}. ${d.descricao}`)
         .join('\n')
 
-      await criarPostDecisao(supabase, {
+      await createDecisionPost(supabase, {
         tipo: 'decisao',
-        conteudo: `📋 **Decisões da Reunião**\n\n${decisoesTexto}`,
+        conteudo: `📋 **Decisões da Reunião**\n\n${decisionsText}`,
         autor_id,
         reuniao_relacionada_id: reuniao_id
       })
@@ -296,7 +296,7 @@ Regras:
 
     return NextResponse.json({
       success: true,
-      acoes_criadas: acoesCriadas,
+      acoes_criadas: actionsCreated,
       resumo: {
         decisoes: dados.decisoes?.length || 0,
         tarefas: dados.tarefas?.length || 0,

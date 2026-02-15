@@ -60,24 +60,24 @@ import {
 } from 'lucide-react'
 import type { Tables } from '@/lib/types/database'
 import {
-  buscarCategorias as buscarCategoriasService,
-  atualizarCategoria,
-  criarCategoria,
-  deletarCategoria,
-  reordenarCategorias,
-  toggleAtivoCategoria,
-  verificarDuplicataCategoria,
-  buscarMaxOrdem,
-  verificarUsoCategoria,
+  fetchCategories as fetchCategoriesService,
+  updateCategory,
+  createCategory,
+  deleteCategory,
+  reorderCategories,
+  toggleActiveCategory,
+  checkDuplicateCategory,
+  fetchMaxOrder,
+  checkCategoryUsage,
 } from '@/lib/services/categorias'
 import {
-  buscarSubcategorias as buscarSubcategoriasService,
-  criarSubcategoria,
-  atualizarSubcategoria as atualizarSubcategoriaService,
-  deletarSubcategoria,
-  toggleAtivoSubcategoria,
-  verificarDuplicataSubcategoria,
-  verificarUsoSubcategoria,
+  fetchSubcategories as fetchSubcategoriesService,
+  createSubcategory,
+  updateSubcategory as updateSubcategoryService,
+  deleteSubcategory,
+  toggleActiveSubcategory,
+  checkDuplicateSubcategory,
+  checkSubcategoryUsage,
 } from '@/lib/services/subcategorias'
 import {
   DndContext,
@@ -411,8 +411,8 @@ export default function CategoriasPage() {
 
     try {
       const [categoriasData, subcategoriasData] = await Promise.all([
-        buscarCategoriasService(supabase),
-        buscarSubcategoriasService(supabase),
+        fetchCategoriesService(supabase),
+        fetchSubcategoriesService(supabase),
       ])
 
       // Associar subcategorias às categorias
@@ -461,7 +461,7 @@ export default function CategoriasPage() {
     // Update all orders in database
     const supabase = createClient()
     try {
-      await reordenarCategorias(
+      await reorderCategories(
         supabase,
         reordered.map((cat, index) => ({ id: cat.id, ordem: index + 1 }))
       )
@@ -529,7 +529,7 @@ export default function CategoriasPage() {
 
     try {
       // Validar nome duplicado
-      const duplicata = await verificarDuplicataCategoria(
+      const duplicata = await checkDuplicateCategory(
         supabase,
         formData.nome.trim(),
         editingCategoria?.id
@@ -543,7 +543,7 @@ export default function CategoriasPage() {
 
       if (editingCategoria) {
         // Atualizar categoria existente
-        await atualizarCategoria(supabase, editingCategoria.id, {
+        await updateCategory(supabase, editingCategoria.id, {
           nome: formData.nome.trim(),
           cor: formData.cor,
           icone: formData.icone,
@@ -552,9 +552,9 @@ export default function CategoriasPage() {
         toast.success('Categoria atualizada com sucesso!')
       } else {
         // Criar nova categoria
-        const novaOrdem = (await buscarMaxOrdem(supabase)) + 1
+        const novaOrdem = (await fetchMaxOrder(supabase)) + 1
 
-        await criarCategoria(supabase, {
+        await createCategory(supabase, {
           nome: formData.nome.trim(),
           cor: formData.cor,
           icone: formData.icone,
@@ -592,7 +592,7 @@ export default function CategoriasPage() {
 
     try {
       // Validar nome duplicado dentro da mesma categoria
-      const duplicata = await verificarDuplicataSubcategoria(
+      const duplicata = await checkDuplicateSubcategory(
         supabase,
         parentCategoriaId,
         subcategoriaFormData.nome.trim(),
@@ -607,14 +607,14 @@ export default function CategoriasPage() {
 
       if (editingSubcategoria) {
         // Atualizar subcategoria existente
-        await atualizarSubcategoriaService(supabase, editingSubcategoria.id, {
+        await updateSubcategoryService(supabase, editingSubcategoria.id, {
           nome: subcategoriaFormData.nome.trim(),
           updated_at: new Date().toISOString(),
         })
         toast.success('Subcategoria atualizada com sucesso!')
       } else {
         // Criar nova subcategoria
-        await criarSubcategoria(supabase, {
+        await createSubcategory(supabase, {
           nome: subcategoriaFormData.nome.trim(),
           categoria_id: parentCategoriaId,
           ativo: true,
@@ -636,7 +636,7 @@ export default function CategoriasPage() {
   const handleToggleActive = async (categoria: Categoria) => {
     const supabase = createClient()
     try {
-      await toggleAtivoCategoria(supabase, categoria.id, !categoria.ativo)
+      await toggleActiveCategory(supabase, categoria.id, !categoria.ativo)
       toast.success(
         categoria.ativo ? 'Categoria desativada com sucesso!' : 'Categoria ativada com sucesso!'
       )
@@ -650,7 +650,7 @@ export default function CategoriasPage() {
   const handleToggleSubcategoriaActive = async (subcategoria: Subcategoria) => {
     const supabase = createClient()
     try {
-      await toggleAtivoSubcategoria(supabase, subcategoria.id, !subcategoria.ativo)
+      await toggleActiveSubcategory(supabase, subcategoria.id, !subcategoria.ativo)
       toast.success(
         subcategoria.ativo ? 'Subcategoria desativada!' : 'Subcategoria ativada!'
       )
@@ -663,7 +663,7 @@ export default function CategoriasPage() {
 
   const checkCategoriaUsage = async (categoriaId: string) => {
     const supabase = createClient()
-    const usage = await verificarUsoCategoria(supabase, categoriaId)
+    const usage = await checkCategoryUsage(supabase, categoriaId)
     const total = usage.compras + usage.gastos + usage.orcamento
     return {
       total,
@@ -675,7 +675,7 @@ export default function CategoriasPage() {
 
   const checkSubcategoriaUsage = async (subcategoriaId: string) => {
     const supabase = createClient()
-    const usage = await verificarUsoSubcategoria(supabase, subcategoriaId)
+    const usage = await checkSubcategoryUsage(supabase, subcategoriaId)
     const total = usage.compras + usage.gastos
     return {
       total,
@@ -738,10 +738,10 @@ export default function CategoriasPage() {
 
     try {
       if (deleteDialog.type === 'categoria') {
-        await deletarCategoria(supabase, deleteDialog.item.id)
+        await deleteCategory(supabase, deleteDialog.item.id)
         toast.success('Categoria deletada com sucesso!')
       } else {
-        await deletarSubcategoria(supabase, deleteDialog.item.id)
+        await deleteSubcategory(supabase, deleteDialog.item.id)
         toast.success('Subcategoria deletada com sucesso!')
       }
 

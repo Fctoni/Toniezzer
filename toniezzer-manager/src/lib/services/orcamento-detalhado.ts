@@ -1,17 +1,17 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables } from '@/lib/types/database'
-type OrcamentoDetalhado = Tables<'orcamento_detalhado'>
+type DetailedBudget = Tables<'orcamento_detalhado'>
 
-type DetalhamentoComCategoria = Pick<OrcamentoDetalhado, 'id' | 'etapa_id' | 'categoria_id' | 'valor_previsto' | 'observacoes'> & {
+type BudgetDetailWithCategory = Pick<DetailedBudget, 'id' | 'etapa_id' | 'categoria_id' | 'valor_previsto' | 'observacoes'> & {
   categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
 }
 
 // ===== SELECT =====
 
-export async function buscarDetalhamentoComCategoria(
+export async function fetchBudgetDetailWithCategory(
   supabase: TypedSupabaseClient,
   etapaId: string
-): Promise<DetalhamentoComCategoria[]> {
+): Promise<BudgetDetailWithCategory[]> {
   const { data, error } = await supabase
     .from('orcamento_detalhado')
     .select(`
@@ -28,9 +28,9 @@ export async function buscarDetalhamentoComCategoria(
   return data
 }
 
-export async function buscarDetalhamentoPorEtapa(
+export async function fetchBudgetDetailByStage(
   supabase: TypedSupabaseClient
-): Promise<Pick<OrcamentoDetalhado, 'etapa_id'>[]> {
+): Promise<Pick<DetailedBudget, 'etapa_id'>[]> {
   const { data, error } = await supabase
     .from('orcamento_detalhado')
     .select('etapa_id')
@@ -38,9 +38,9 @@ export async function buscarDetalhamentoPorEtapa(
   return data
 }
 
-export async function buscarDetalhamentoMatriz(
+export async function fetchBudgetDetailMatrix(
   supabase: TypedSupabaseClient
-): Promise<Pick<OrcamentoDetalhado, 'etapa_id' | 'categoria_id' | 'valor_previsto'>[]> {
+): Promise<Pick<DetailedBudget, 'etapa_id' | 'categoria_id' | 'valor_previsto'>[]> {
   const { data, error } = await supabase
     .from('orcamento_detalhado')
     .select('etapa_id, categoria_id, valor_previsto')
@@ -50,11 +50,11 @@ export async function buscarDetalhamentoMatriz(
 
 // ===== INSERT/UPDATE (delete-then-reinsert) =====
 
-export async function salvarDetalhamento(
+export async function saveBudgetDetail(
   supabase: TypedSupabaseClient,
   etapaId: string,
   items: { categoria_id: string; valor_previsto: number; observacoes?: string }[]
-): Promise<OrcamentoDetalhado[]> {
+): Promise<DetailedBudget[]> {
   // 1. Deletar detalhamento existente da etapa
   const { error: deleteError } = await supabase
     .from('orcamento_detalhado')
@@ -82,7 +82,7 @@ export async function salvarDetalhamento(
 
 // ===== DELETE =====
 
-export async function deletarDetalhamentoPorEtapa(
+export async function deleteBudgetDetailByStage(
   supabase: TypedSupabaseClient,
   etapaId: string
 ): Promise<void> {
@@ -93,9 +93,9 @@ export async function deletarDetalhamentoPorEtapa(
   if (error) throw error
 }
 
-// ===== VALIDAÇÕES =====
+// ===== VALIDATIONS =====
 
-export async function contarDetalhamentoPorCategoria(
+export async function countBudgetDetailByCategory(
   supabase: TypedSupabaseClient,
   categoriaId: string
 ): Promise<number> {

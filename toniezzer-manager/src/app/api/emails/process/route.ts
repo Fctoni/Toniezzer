@@ -4,14 +4,14 @@ import { parseString } from 'xml2js'
 import { promisify } from 'util'
 import { ImapFlow } from 'imapflow'
 import type { Json } from '@/lib/types/database'
-import { buscarEmailsParaProcessar, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
+import { fetchEmailsForProcessing, updateEmailStatus } from '@/lib/services/emails-monitorados'
 import { formatDateToString } from '@/lib/utils'
 
 const parseXml = promisify(parseString)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
 // Estrutura de dados extraídos
-interface DadosExtraidos {
+interface ExtractedData {
   fornecedor: string | null
   cnpj: string | null
   valor: number | null
@@ -24,7 +24,7 @@ interface DadosExtraidos {
 }
 
 // Baixar anexo do Storage (ou fallback IMAP)
-async function baixarAnexo(params: { storage_path?: string; uid: number; part: string }): Promise<Buffer | null> {
+async function downloadAttachment(params: { storage_path?: string; uid: number; part: string }): Promise<Buffer | null> {
   // Caminho 1: Supabase Storage
   if (params.storage_path) {
     console.log('[PROCESS] Baixando do Storage:', params.storage_path)
@@ -83,7 +83,7 @@ async function baixarAnexo(params: { storage_path?: string; uid: number; part: s
 }
 
 // Processar imagem com Gemini Vision (OCR)
-async function processarImagem(base64: string): Promise<DadosExtraidos> {
+async function processImage(base64: string): Promise<ExtractedData> {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY não configurada')
   }
@@ -170,7 +170,7 @@ Regras:
 }
 
 // Processar PDF - enviar diretamente para Gemini (suporta PDF nativo)
-async function processarPDF(buffer: Buffer): Promise<DadosExtraidos> {
+async function processPdf(buffer: Buffer): Promise<ExtractedData> {
   console.log('[PDF] Iniciando processamento, tamanho do buffer:', buffer.length)
   
   if (!GEMINI_API_KEY) {
@@ -263,7 +263,7 @@ Regras:
 }
 
 // Processar XML de NF-e - parser direto
-async function processarXML(buffer: Buffer): Promise<DadosExtraidos> {
+async function processXml(buffer: Buffer): Promise<ExtractedData> {
   const xmlString = buffer.toString('utf-8')
   
   console.log('[PROCESS] XML recebido:', xmlString.substring(0, 500))
@@ -370,7 +370,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Buscar emails pendentes
-    const emails = await buscarEmailsParaProcessar(supabase, 5)
+    const emails = await fetchEmailsForProcessing(supabase, 5)
 
     if (!emails || emails.length === 0) {
       return NextResponse.json({ 
@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log('[EMAIL PROCESS] Processando:', email.id, email.assunto)
 
-        await atualizarStatusEmail(supabase, email.id, { status: 'processando' })
+        await updateEmailStatus(supabase, email.id, { status: 'processando' })
 
         const anexos = email.anexos as Array<{
           nome: string
@@ -401,7 +401,7 @@ export async function POST(request: NextRequest) {
 
         if (!anexos || anexos.length === 0) {
           console.log('[EMAIL PROCESS] Sem anexos')
-          await atualizarStatusEmail(supabase, email.id, {
+          await updateEmailStatus(supabase, email.id, {
             status: 'aguardando_revisao',
             dados_extraidos: { confianca: 0 },
             erro_mensagem: 'Email sem anexos processáveis',
@@ -411,7 +411,7 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        let dadosExtraidos: DadosExtraidos | null = null
+        let dadosExtraidos: ExtractedData | null = null
         const errosAnexos: string[] = []
         let anexosProcessados = 0
         let anexosNaoSuportados: string[] = []
@@ -421,7 +421,7 @@ export async function POST(request: NextRequest) {
 
           try {
             // Baixar anexo (Storage ou IMAP fallback)
-            const buffer = await baixarAnexo({
+            const buffer = await downloadAttachment({
               storage_path: anexo.storage_path,
               uid: anexo.uid,
               part: anexo.part,
@@ -438,15 +438,15 @@ export async function POST(request: NextRequest) {
             if (anexo.tipo.includes('image')) {
               console.log('[EMAIL PROCESS] Processando como IMAGEM (OCR)...')
               const base64 = buffer.toString('base64')
-              dadosExtraidos = await processarImagem(base64)
+              dadosExtraidos = await processImage(base64)
               anexosProcessados++
             } else if (anexo.tipo.includes('pdf')) {
               console.log('[EMAIL PROCESS] Processando como PDF...')
-              dadosExtraidos = await processarPDF(buffer)
+              dadosExtraidos = await processPdf(buffer)
               anexosProcessados++
             } else if (anexo.tipo.includes('xml')) {
               console.log('[EMAIL PROCESS] Processando como XML (NF-e)...')
-              dadosExtraidos = await processarXML(buffer)
+              dadosExtraidos = await processXml(buffer)
               anexosProcessados++
             } else {
               anexosNaoSuportados.push(`${anexo.nome} (${anexo.tipo})`)
@@ -481,7 +481,7 @@ export async function POST(request: NextRequest) {
 
         // Salvar resultados
         if (dadosExtraidos && dadosExtraidos.confianca > 0) {
-          await atualizarStatusEmail(supabase, email.id, {
+          await updateEmailStatus(supabase, email.id, {
             status: 'aguardando_revisao',
             dados_extraidos: JSON.parse(JSON.stringify(dadosExtraidos)) as Json,
             erro_mensagem: erroDetalhado || null,
@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
           const mensagemFinal = erroDetalhado || 
             'Não foi possível extrair dados dos anexos (nenhum dado com confiança suficiente)'
           
-          await atualizarStatusEmail(supabase, email.id, {
+          await updateEmailStatus(supabase, email.id, {
             status: 'aguardando_revisao',
             dados_extraidos: JSON.parse(JSON.stringify(dadosExtraidos || { confianca: 0 })) as Json,
             erro_mensagem: mensagemFinal,
@@ -508,7 +508,7 @@ export async function POST(request: NextRequest) {
       } catch (emailError) {
         console.error('[EMAIL PROCESS] Erro:', email.id, emailError)
         
-        await atualizarStatusEmail(supabase, email.id, {
+        await updateEmailStatus(supabase, email.id, {
           status: 'erro',
           erro_mensagem: emailError instanceof Error ? emailError.message : 'Erro desconhecido',
         })

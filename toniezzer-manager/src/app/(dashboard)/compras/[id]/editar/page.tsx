@@ -5,10 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { buscarCompraPorId } from "@/lib/services/compras";
-import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
-import { buscarFornecedoresParaDropdown } from "@/lib/services/fornecedores";
-import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
+import { fetchPurchaseById } from "@/lib/services/compras";
+import { fetchCategoriesForDropdown } from "@/lib/services/categorias";
+import { fetchSuppliersForDropdown } from "@/lib/services/fornecedores";
+import { fetchStagesForDropdown } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package } from "lucide-react";
@@ -69,7 +69,7 @@ export default function EditarCompraPage() {
     // Buscar compra
     let compraData;
     try {
-      compraData = await buscarCompraPorId(supabase, id);
+      compraData = await fetchPurchaseById(supabase, id);
     } catch (compraError) {
       console.error("Erro ao buscar compra:", compraError);
       toast.error("Erro ao carregar compra");
@@ -105,9 +105,9 @@ export default function EditarCompraPage() {
 
     // Buscar categorias, fornecedores e etapas
     const [categoriasData, fornecedoresData, etapasData] = await Promise.all([
-      buscarCategoriasParaDropdown(supabase),
-      buscarFornecedoresParaDropdown(supabase),
-      buscarEtapasParaDropdown(supabase),
+      fetchCategoriesForDropdown(supabase),
+      fetchSuppliersForDropdown(supabase),
+      fetchStagesForDropdown(supabase),
     ]);
 
     setCategorias(categoriasData);

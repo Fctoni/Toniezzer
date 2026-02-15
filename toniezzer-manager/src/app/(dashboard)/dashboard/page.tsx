@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { buscarEtapas } from "@/lib/services/etapas";
-import { buscarSubetapasDoResponsavel, buscarSubetapasPorIds } from "@/lib/services/subetapas";
-import { buscarTarefasDoResponsavel, buscarTarefasPorSubetapas } from "@/lib/services/tarefas";
-import { buscarCategoriasAtivas } from "@/lib/services/categorias";
-import { buscarGastosAprovados } from "@/lib/services/gastos";
-import { buscarUsuarioPorEmail } from "@/lib/services/users";
-import { buscarNotificacoesNaoLidas } from "@/lib/services/notificacoes";
+import { fetchStages } from "@/lib/services/etapas";
+import { fetchSubstagesByResponsible, fetchSubstagesByIds } from "@/lib/services/subetapas";
+import { fetchTasksByResponsible, fetchTasksBySubstages } from "@/lib/services/tarefas";
+import { fetchActiveCategories } from "@/lib/services/categorias";
+import { fetchApprovedExpenses } from "@/lib/services/gastos";
+import { fetchUserByEmail } from "@/lib/services/users";
+import { fetchUnreadNotifications } from "@/lib/services/notificacoes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   let currentUserId: string | null = null;
   if (user?.email) {
     try {
-      const currentUser = await buscarUsuarioPorEmail(supabase, user.email);
+      const currentUser = await fetchUserByEmail(supabase, user.email);
       currentUserId = currentUser.id;
     } catch {
       currentUserId = null;
@@ -53,15 +53,15 @@ export default async function DashboardPage() {
     minhasTarefasRaw,
     minhasSubetapasRaw,
   ] = await Promise.all([
-    buscarCategoriasAtivas(supabase),
-    buscarGastosAprovados(supabase),
-    buscarEtapas(supabase),
-    buscarNotificacoesNaoLidas(supabase),
+    fetchActiveCategories(supabase),
+    fetchApprovedExpenses(supabase),
+    fetchStages(supabase),
+    fetchUnreadNotifications(supabase),
     currentUserId
-      ? buscarTarefasDoResponsavel(supabase, currentUserId)
+      ? fetchTasksByResponsible(supabase, currentUserId)
       : Promise.resolve([]),
     currentUserId
-      ? buscarSubetapasDoResponsavel(supabase, currentUserId)
+      ? fetchSubstagesByResponsible(supabase, currentUserId)
       : Promise.resolve([]),
   ]);
 
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
   const subetapaIds = [...new Set(minhasTarefas.map((t) => t.subetapa_id))];
   let subetapaNomeMap = new Map<string, string>();
   if (subetapaIds.length > 0) {
-    const subNomes = await buscarSubetapasPorIds(supabase, subetapaIds);
+    const subNomes = await fetchSubstagesByIds(supabase, subetapaIds);
     subetapaNomeMap = new Map(subNomes.map((s) => [s.id, s.nome]));
   }
 
@@ -148,7 +148,7 @@ export default async function DashboardPage() {
 
   if (minhasSubetapasRaw.length > 0) {
     const subIds = minhasSubetapasRaw.map((s) => s.id);
-    const tarefasSub = await buscarTarefasPorSubetapas(supabase, subIds);
+    const tarefasSub = await fetchTasksBySubstages(supabase, subIds);
 
     minhasSubetapasComProgresso = minhasSubetapasRaw.map((s) => {
       const tarefas = tarefasSub.filter(

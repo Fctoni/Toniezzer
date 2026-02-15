@@ -1,15 +1,15 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Compra = Tables<'compras'>
+type Purchase = Tables<'compras'>
 
-type CompraComDetalhes = Compra & {
+type PurchaseWithDetails = Purchase & {
   fornecedor: Pick<Tables<'fornecedores'>, 'nome'> | null
   categoria: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
   subcategoria: Pick<Tables<'subcategorias'>, 'nome'> | null
   etapa: Pick<Tables<'etapas'>, 'nome'> | null
 }
 
-type CompraComDetalhesFornecedor = Compra & {
+type PurchaseWithSupplierDetails = Purchase & {
   fornecedor: Pick<Tables<'fornecedores'>, 'nome' | 'cnpj_cpf'> | null
   categoria: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
   subcategoria: Pick<Tables<'subcategorias'>, 'nome'> | null
@@ -18,9 +18,9 @@ type CompraComDetalhesFornecedor = Compra & {
 
 // ===== SELECT =====
 
-export async function buscarComprasComDetalhes(
+export async function fetchPurchasesWithDetails(
   supabase: TypedSupabaseClient
-): Promise<CompraComDetalhes[]> {
+): Promise<PurchaseWithDetails[]> {
   const { data, error } = await supabase
     .from('compras')
     .select(`
@@ -35,10 +35,10 @@ export async function buscarComprasComDetalhes(
   return data
 }
 
-export async function buscarCompraPorIdComDetalhes(
+export async function fetchPurchaseByIdWithDetails(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<CompraComDetalhesFornecedor> {
+): Promise<PurchaseWithSupplierDetails> {
   const { data, error } = await supabase
     .from('compras')
     .select(`
@@ -54,10 +54,10 @@ export async function buscarCompraPorIdComDetalhes(
   return data
 }
 
-export async function buscarCompraPorId(
+export async function fetchPurchaseById(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<Compra> {
+): Promise<Purchase> {
   const { data, error } = await supabase
     .from('compras')
     .select('*')
@@ -69,10 +69,10 @@ export async function buscarCompraPorId(
 
 // ===== INSERT =====
 
-export async function criarCompra(
+export async function createPurchase(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'compras'>
-): Promise<Compra> {
+): Promise<Purchase> {
   const { data: compra, error } = await supabase
     .from('compras')
     .insert(data)
@@ -84,11 +84,11 @@ export async function criarCompra(
 
 // ===== UPDATE =====
 
-export async function atualizarCompra(
+export async function updatePurchase(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'compras'>
-): Promise<Compra> {
+): Promise<Purchase> {
   const { data, error } = await supabase
     .from('compras')
     .update(updates)
@@ -99,7 +99,7 @@ export async function atualizarCompra(
   return data
 }
 
-export async function cancelarCompra(
+export async function cancelPurchase(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

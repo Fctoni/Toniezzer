@@ -1,10 +1,10 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate, Json } from '@/lib/types/database'
-type EmailMonitorado = Tables<'emails_monitorados'>
+type MonitoredEmail = Tables<'emails_monitorados'>
 
 // ===== SELECT =====
 
-export async function buscarEmails(supabase: TypedSupabaseClient): Promise<EmailMonitorado[]> {
+export async function fetchEmails(supabase: TypedSupabaseClient): Promise<MonitoredEmail[]> {
   const { data, error } = await supabase
     .from('emails_monitorados')
     .select('*')
@@ -13,10 +13,10 @@ export async function buscarEmails(supabase: TypedSupabaseClient): Promise<Email
   return data
 }
 
-export async function buscarEmailPorId(
+export async function fetchEmailById(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<EmailMonitorado> {
+): Promise<MonitoredEmail> {
   const { data, error } = await supabase
     .from('emails_monitorados')
     .select('*')
@@ -26,10 +26,10 @@ export async function buscarEmailPorId(
   return data
 }
 
-export async function buscarEmailPorIdExterno(
+export async function fetchEmailByExternalId(
   supabase: TypedSupabaseClient,
   emailId: string
-): Promise<Pick<EmailMonitorado, 'id'> | null> {
+): Promise<Pick<MonitoredEmail, 'id'> | null> {
   const { data, error } = await supabase
     .from('emails_monitorados')
     .select('id')
@@ -38,10 +38,10 @@ export async function buscarEmailPorIdExterno(
   return data?.[0] ?? null
 }
 
-export async function buscarEmailsParaProcessar(
+export async function fetchEmailsForProcessing(
   supabase: TypedSupabaseClient,
   limit = 10
-): Promise<EmailMonitorado[]> {
+): Promise<MonitoredEmail[]> {
   const { data, error } = await supabase
     .from('emails_monitorados')
     .select('*')
@@ -53,10 +53,10 @@ export async function buscarEmailsParaProcessar(
 
 // ===== INSERT =====
 
-export async function criarEmail(
+export async function createEmail(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'emails_monitorados'>
-): Promise<EmailMonitorado> {
+): Promise<MonitoredEmail> {
   const { data: email, error } = await supabase
     .from('emails_monitorados')
     .insert(data)
@@ -68,7 +68,7 @@ export async function criarEmail(
 
 // ===== UPDATE =====
 
-export async function atualizarAnexosEmail(
+export async function updateEmailAttachments(
   supabase: TypedSupabaseClient,
   id: string,
   anexos: Json
@@ -80,7 +80,7 @@ export async function atualizarAnexosEmail(
   if (error) throw error
 }
 
-export async function atualizarStatusEmail(
+export async function updateEmailStatus(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'emails_monitorados'>
@@ -92,7 +92,7 @@ export async function atualizarStatusEmail(
   if (error) throw error
 }
 
-export async function aprovarEmail(
+export async function approveEmail(
   supabase: TypedSupabaseClient,
   id: string,
   data: { status: string; compra_sugerida_id: string | null; processado_em: string; processado_por: string }
@@ -109,7 +109,7 @@ export async function aprovarEmail(
   if (error) throw error
 }
 
-export async function rejeitarEmail(
+export async function rejectEmail(
   supabase: TypedSupabaseClient,
   id: string,
   data: { status: string; processado_em: string; processado_por: string }

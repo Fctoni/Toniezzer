@@ -9,8 +9,8 @@ import { ResumoViewer, ActionItemsList } from '@/components/features/reunioes'
 import { ArrowLeft, FileText, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { buscarReuniaoPorId, deletarReuniao } from '@/lib/services/reunioes'
-import { buscarAcoesPorReuniao, atualizarStatusAcao } from '@/lib/services/reunioes-acoes'
+import { fetchMeetingById, deleteMeeting } from '@/lib/services/reunioes'
+import { fetchActionsByMeeting, updateActionStatus } from '@/lib/services/reunioes-acoes'
 import type { Tables, AcaoStatus } from '@/lib/types/database'
 import { parseDateString } from '@/lib/utils'
 import {
@@ -44,11 +44,11 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
         const supabase = createClient()
 
         // Carregar reunião
-        const reuniaoData = await buscarReuniaoPorId(supabase, resolvedParams.id)
+        const reuniaoData = await fetchMeetingById(supabase, resolvedParams.id)
         setReuniao(reuniaoData)
 
         // Carregar ações
-        const acoesData = await buscarAcoesPorReuniao(supabase, resolvedParams.id)
+        const acoesData = await fetchActionsByMeeting(supabase, resolvedParams.id)
         setAcoes(acoesData || [])
         setLoading(false)
       } catch (error) {
@@ -63,7 +63,7 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
   const handleStatusChange = async (acaoId: string, newStatus: AcaoStatus) => {
     try {
       const supabase = createClient()
-      await atualizarStatusAcao(supabase, acaoId, newStatus)
+      await updateActionStatus(supabase, acaoId, newStatus)
 
       setAcoes(prev => prev.map(a =>
         a.id === acaoId ? { ...a, status: newStatus } : a
@@ -78,7 +78,7 @@ export default function ReuniaoDetalhesPage({ params }: { params: Promise<{ id: 
   const handleDelete = async () => {
     try {
       const supabase = createClient()
-      await deletarReuniao(supabase, resolvedParams.id)
+      await deleteMeeting(supabase, resolvedParams.id)
       toast.success('Reunião excluída')
       router.push('/reunioes')
     } catch (error) {

@@ -1,32 +1,32 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Gasto = Tables<'gastos'>
+type Expense = Tables<'gastos'>
 
-type GastoComDetalhes = Gasto & {
+type ExpenseWithDetails = Expense & {
   categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
   fornecedores: Pick<Tables<'fornecedores'>, 'nome'> | null
   etapas: Pick<Tables<'etapas'>, 'nome'> | null
   compras: Pick<Tables<'compras'>, 'id' | 'descricao'> | null
 }
 
-type GastoAprovado = Gasto & {
+type ApprovedExpense = Expense & {
   categorias: Pick<Tables<'categorias'>, 'nome' | 'cor'> | null
 }
 
-type GastoPorFornecedor = Gasto & {
+type ExpenseBySupplier = Expense & {
   categoria: Tables<'categorias'> | null
 }
 
-type GastoDetalhadoPorCategoria = Pick<Gasto, 'id' | 'descricao' | 'valor' | 'data' | 'forma_pagamento' | 'nota_fiscal_numero' | 'parcela_atual' | 'parcelas'> & {
+type DetailedExpenseByCategory = Pick<Expense, 'id' | 'descricao' | 'valor' | 'data' | 'forma_pagamento' | 'nota_fiscal_numero' | 'parcela_atual' | 'parcelas'> & {
   fornecedores: Pick<Tables<'fornecedores'>, 'nome'> | null
   criado_por_user: Pick<Tables<'users'>, 'nome_completo'> | null
 }
 
 // ===== SELECT =====
 
-export async function buscarGastosComDetalhes(
+export async function fetchExpensesWithDetails(
   supabase: TypedSupabaseClient
-): Promise<GastoComDetalhes[]> {
+): Promise<ExpenseWithDetails[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select(`
@@ -41,9 +41,9 @@ export async function buscarGastosComDetalhes(
   return data
 }
 
-export async function buscarGastosAprovados(
+export async function fetchApprovedExpenses(
   supabase: TypedSupabaseClient
-): Promise<GastoAprovado[]> {
+): Promise<ApprovedExpense[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('*, categorias(nome, cor)')
@@ -52,9 +52,9 @@ export async function buscarGastosAprovados(
   return data
 }
 
-export async function buscarGastosAprovadosResumidos(
+export async function fetchApprovedExpensesSummary(
   supabase: TypedSupabaseClient
-): Promise<Pick<Gasto, 'valor' | 'data' | 'parcelas' | 'parcela_atual'>[]> {
+): Promise<Pick<Expense, 'valor' | 'data' | 'parcelas' | 'parcela_atual'>[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('valor, data, parcelas, parcela_atual')
@@ -64,9 +64,9 @@ export async function buscarGastosAprovadosResumidos(
   return data
 }
 
-export async function buscarGastosPorEtapa(
+export async function fetchExpensesByStage(
   supabase: TypedSupabaseClient
-): Promise<Pick<Gasto, 'etapa_relacionada_id' | 'valor'>[]> {
+): Promise<Pick<Expense, 'etapa_relacionada_id' | 'valor'>[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('etapa_relacionada_id, valor')
@@ -75,9 +75,9 @@ export async function buscarGastosPorEtapa(
   return data
 }
 
-export async function buscarGastosMatriz(
+export async function fetchExpensesMatrix(
   supabase: TypedSupabaseClient
-): Promise<Pick<Gasto, 'categoria_id' | 'etapa_relacionada_id' | 'valor'>[]> {
+): Promise<Pick<Expense, 'categoria_id' | 'etapa_relacionada_id' | 'valor'>[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('categoria_id, etapa_relacionada_id, valor')
@@ -86,10 +86,10 @@ export async function buscarGastosMatriz(
   return data
 }
 
-export async function buscarGastosPorCompra(
+export async function fetchExpensesByPurchase(
   supabase: TypedSupabaseClient,
   compraId: string
-): Promise<Pick<Gasto, 'id' | 'valor' | 'data' | 'parcela_atual' | 'parcelas' | 'pago' | 'pago_em' | 'comprovante_pagamento_url'>[]> {
+): Promise<Pick<Expense, 'id' | 'valor' | 'data' | 'parcela_atual' | 'parcelas' | 'pago' | 'pago_em' | 'comprovante_pagamento_url'>[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('id, valor, data, parcela_atual, parcelas, pago, pago_em, comprovante_pagamento_url')
@@ -99,10 +99,10 @@ export async function buscarGastosPorCompra(
   return data
 }
 
-export async function buscarGastosPorFornecedor(
+export async function fetchExpensesBySupplier(
   supabase: TypedSupabaseClient,
   fornecedorId: string
-): Promise<GastoPorFornecedor[]> {
+): Promise<ExpenseBySupplier[]> {
   const { data, error } = await supabase
     .from('gastos')
     .select('*, categoria:categorias(*)')
@@ -112,11 +112,11 @@ export async function buscarGastosPorFornecedor(
   return data
 }
 
-export async function buscarGastosDetalhadosPorCategoria(
+export async function fetchDetailedExpensesByCategory(
   supabase: TypedSupabaseClient,
   categoriaId: string,
   etapaId: string
-): Promise<GastoDetalhadoPorCategoria[]> {
+): Promise<DetailedExpenseByCategory[]> {
   let query = supabase
     .from('gastos')
     .select(`
@@ -147,10 +147,10 @@ export async function buscarGastosDetalhadosPorCategoria(
 
 // ===== INSERT =====
 
-export async function criarGastos(
+export async function createExpenses(
   supabase: TypedSupabaseClient,
   parcelas: TablesInsert<'gastos'>[]
-): Promise<Gasto[]> {
+): Promise<Expense[]> {
   const { data, error } = await supabase
     .from('gastos')
     .insert(parcelas)
@@ -159,10 +159,10 @@ export async function criarGastos(
   return data
 }
 
-export async function criarGastoAvulso(
+export async function createSingleExpense(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'gastos'>
-): Promise<Gasto> {
+): Promise<Expense> {
   const { data: gasto, error } = await supabase
     .from('gastos')
     .insert(data)
@@ -174,7 +174,7 @@ export async function criarGastoAvulso(
 
 // ===== UPDATE =====
 
-export async function atualizarGastosPorCompra(
+export async function updateExpensesByPurchase(
   supabase: TypedSupabaseClient,
   compraId: string,
   updates: TablesUpdate<'gastos'>
@@ -186,7 +186,7 @@ export async function atualizarGastosPorCompra(
   if (error) throw error
 }
 
-export async function marcarPago(
+export async function markAsPaid(
   supabase: TypedSupabaseClient,
   id: string,
   data: { pago: boolean; pago_em: string; comprovante_pagamento_url: string | null }
@@ -202,7 +202,7 @@ export async function marcarPago(
   if (error) throw error
 }
 
-export async function atualizarDataVencimento(
+export async function updateDueDate(
   supabase: TypedSupabaseClient,
   id: string,
   data: string
@@ -214,7 +214,7 @@ export async function atualizarDataVencimento(
   if (error) throw error
 }
 
-export async function atualizarComprovante(
+export async function updateReceipt(
   supabase: TypedSupabaseClient,
   id: string,
   url: string
@@ -226,9 +226,9 @@ export async function atualizarComprovante(
   if (error) throw error
 }
 
-// ===== VALIDAÇÕES =====
+// ===== VALIDATIONS =====
 
-export async function contarGastosPorCategoria(
+export async function countExpensesByCategory(
   supabase: TypedSupabaseClient,
   categoriaId: string
 ): Promise<number> {
@@ -240,7 +240,7 @@ export async function contarGastosPorCategoria(
   return count || 0
 }
 
-export async function contarGastosPorSubcategoria(
+export async function countExpensesBySubcategory(
   supabase: TypedSupabaseClient,
   subcategoriaId: string
 ): Promise<number> {

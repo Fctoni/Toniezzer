@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarTarefa, deletarTarefa } from "@/lib/services/tarefas";
-import { uploadAnexo, downloadAnexo as downloadAnexoService, deletarAnexo } from "@/lib/services/tarefas-anexos";
-import { criarComentario } from "@/lib/services/tarefas-comentarios";
+import { updateTask, deleteTask } from "@/lib/services/tarefas";
+import { uploadAttachment, downloadAttachment as downloadAttachmentService, deleteAttachment } from "@/lib/services/tarefas-anexos";
+import { createComment } from "@/lib/services/tarefas-comentarios";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -76,7 +76,7 @@ interface UserOption {
   nome_completo: string;
 }
 
-interface TarefaDetalhesProps {
+interface TaskDetailsProps {
   tarefa: TarefaFull;
   etapaNome: string;
   subetapaNome: string;
@@ -87,7 +87,7 @@ interface TarefaDetalhesProps {
   currentUserId: string | null;
 }
 
-export function TarefaDetalhes({
+export function TaskDetails({
   tarefa: initialTarefa,
   etapaNome,
   subetapaNome,
@@ -96,7 +96,7 @@ export function TarefaDetalhes({
   comentarios: initialComentarios,
   users,
   currentUserId,
-}: TarefaDetalhesProps) {
+}: TaskDetailsProps) {
   const router = useRouter();
   const [tarefa, setTarefa] = useState(initialTarefa);
   const [anexos, setAnexos] = useState(initialAnexos);
@@ -111,7 +111,7 @@ export function TarefaDetalhes({
     setSaving(true);
     try {
       const supabase = createClient();
-      await atualizarTarefa(supabase, tarefa.id, { [field]: value });
+      await updateTask(supabase, tarefa.id, { [field]: value });
 
       setTarefa((prev) => ({ ...prev, [field]: value }));
       toast.success("Salvo!");
@@ -139,7 +139,7 @@ export function TarefaDetalhes({
     setUploading(true);
     try {
       const supabase = createClient();
-      await uploadAnexo(supabase, tarefa.id, file, currentUserId);
+      await uploadAttachment(supabase, tarefa.id, file, currentUserId);
 
       toast.success("Arquivo enviado!");
       router.refresh();
@@ -153,7 +153,7 @@ export function TarefaDetalhes({
   const handleDownloadAnexo = async (anexo: Anexo) => {
     try {
       const supabase = createClient();
-      const data = await downloadAnexoService(supabase, anexo.storage_path);
+      const data = await downloadAttachmentService(supabase, anexo.storage_path);
 
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
@@ -169,7 +169,7 @@ export function TarefaDetalhes({
   const handleDeleteAnexo = async (anexoId: string, storagePath: string) => {
     try {
       const supabase = createClient();
-      await deletarAnexo(supabase, anexoId, storagePath);
+      await deleteAttachment(supabase, anexoId, storagePath);
 
       setAnexos((prev) => prev.filter((a) => a.id !== anexoId));
       toast.success("Anexo removido!");
@@ -184,7 +184,7 @@ export function TarefaDetalhes({
     setSubmittingComment(true);
     try {
       const supabase = createClient();
-      await criarComentario(supabase, tarefa.id, conteudo, currentUserId);
+      await createComment(supabase, tarefa.id, conteudo, currentUserId);
 
       toast.success("Comentário adicionado!");
       router.refresh();
@@ -199,7 +199,7 @@ export function TarefaDetalhes({
     setDeleting(true);
     try {
       const supabase = createClient();
-      await deletarTarefa(supabase, tarefa.id);
+      await deleteTask(supabase, tarefa.id);
 
       toast.success("Tarefa excluída!");
       router.push("/tarefas");

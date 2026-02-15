@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
-  buscarDetalhamentoComCategoria,
-  salvarDetalhamento,
-  deletarDetalhamentoPorEtapa,
+  fetchBudgetDetailWithCategory,
+  saveBudgetDetail,
+  deleteBudgetDetailByStage,
 } from "@/lib/services/orcamento-detalhado";
 
 // GET: Buscar detalhamento de uma etapa
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    const data = await buscarDetalhamentoComCategoria(supabase, etapaId);
+    const data = await fetchBudgetDetailWithCategory(supabase, etapaId);
 
     return NextResponse.json({ detalhamento: data || [] });
   } catch (error) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    await salvarDetalhamento(supabase, etapa_id, detalhamento);
+    await saveBudgetDetail(supabase, etapa_id, detalhamento);
 
     return NextResponse.json({
       success: true,
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = await createClient();
 
-    await deletarDetalhamentoPorEtapa(supabase, etapaId);
+    await deleteBudgetDetailByStage(supabase, etapaId);
 
     return NextResponse.json({
       success: true,

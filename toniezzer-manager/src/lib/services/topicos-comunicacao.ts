@@ -1,10 +1,10 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert } from '@/lib/types/database'
-type TopicoComunicacao = Tables<'topicos_comunicacao'>
+type CommunicationTopic = Tables<'topicos_comunicacao'>
 
 // ===== SELECT =====
 
-export async function buscarTopicos(
+export async function fetchTopics(
   supabase: TypedSupabaseClient,
   filtros?: { status?: string; search?: string }
 ) {
@@ -26,7 +26,7 @@ export async function buscarTopicos(
   return data
 }
 
-export async function buscarTopicoPorId(supabase: TypedSupabaseClient, id: string) {
+export async function fetchTopicById(supabase: TypedSupabaseClient, id: string) {
   const { data, error } = await supabase
     .from('topicos_comunicacao')
     .select('*, autor:autor_id(*), etapa:etapa_relacionada_id(*)')
@@ -38,10 +38,10 @@ export async function buscarTopicoPorId(supabase: TypedSupabaseClient, id: strin
 
 // ===== INSERT =====
 
-export async function criarTopico(
+export async function createTopic(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'topicos_comunicacao'>
-): Promise<TopicoComunicacao> {
+): Promise<CommunicationTopic> {
   const { data: topico, error } = await supabase
     .from('topicos_comunicacao')
     .insert(data)
@@ -53,7 +53,7 @@ export async function criarTopico(
 
 // ===== UPDATE =====
 
-export async function atualizarStatusTopico(
+export async function updateTopicStatus(
   supabase: TypedSupabaseClient,
   id: string,
   status: string
@@ -65,7 +65,7 @@ export async function atualizarStatusTopico(
   if (error) throw error
 }
 
-export async function toggleFixadoTopico(
+export async function togglePinnedTopic(
   supabase: TypedSupabaseClient,
   id: string,
   fixado: boolean
@@ -79,7 +79,7 @@ export async function toggleFixadoTopico(
 
 // ===== DELETE =====
 
-export async function deletarTopico(
+export async function deleteTopic(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

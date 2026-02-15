@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrcamentoEtapaEditor } from "@/components/features/cronograma/orcamento-etapa-editor";
-import { buscarCategoriasParaDropdown } from "@/lib/services/categorias";
-import { buscarGastosPorEtapa } from "@/lib/services/gastos";
-import { buscarDetalhamentoPorEtapa } from "@/lib/services/orcamento-detalhado";
-import { buscarEtapas } from "@/lib/services/etapas";
+import { fetchCategoriesForDropdown } from "@/lib/services/categorias";
+import { fetchExpensesByStage } from "@/lib/services/gastos";
+import { fetchBudgetDetailByStage } from "@/lib/services/orcamento-detalhado";
+import { fetchStages } from "@/lib/services/etapas";
 
 export default async function OrcamentoPage() {
   const supabase = await createClient();
@@ -15,10 +15,10 @@ export default async function OrcamentoPage() {
     gastos,
     detalhamentos,
   ] = await Promise.all([
-    buscarEtapas(supabase),
-    buscarCategoriasParaDropdown(supabase),
-    buscarGastosPorEtapa(supabase),
-    buscarDetalhamentoPorEtapa(supabase),
+    fetchStages(supabase),
+    fetchCategoriesForDropdown(supabase),
+    fetchExpensesByStage(supabase),
+    fetchBudgetDetailByStage(supabase),
   ]);
 
   // Calcular gastos por etapa

@@ -7,8 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { criarGastos, criarGastoAvulso } from "@/lib/services/gastos";
-import { buscarPrimeiroUsuario } from "@/lib/services/users";
+import { createExpenses, createSingleExpense } from "@/lib/services/gastos";
+import { fetchFirstUser } from "@/lib/services/users";
 import { Form } from "@/components/ui/form";
 import { formatDateToString } from "@/lib/utils";
 import { FormLancamentoCampos } from "./form-lancamento-campos";
@@ -28,17 +28,17 @@ export const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-interface FormLancamentoProps {
+interface ExpenseFormProps {
   categorias: Array<{ id: string; nome: string; cor: string }>;
   fornecedores: Array<{ id: string; nome: string }>;
   etapas: Array<{ id: string; nome: string }>;
 }
 
-export function FormLancamento({
+export function ExpenseForm({
   categorias,
   fornecedores,
   etapas,
-}: FormLancamentoProps) {
+}: ExpenseFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,7 +65,7 @@ export function FormLancamento({
 
       let userId: string | undefined;
       try {
-        const user = await buscarPrimeiroUsuario(supabase);
+        const user = await fetchFirstUser(supabase);
         userId = user.id;
       } catch {
         // ignora erro se não encontrar usuário
@@ -96,11 +96,11 @@ export function FormLancamento({
           });
         }
 
-        await criarGastos(supabase, lancamentos);
+        await createExpenses(supabase, lancamentos);
 
         toast.success(`${parcelas} parcelas criadas com sucesso!`);
       } else {
-        await criarGastoAvulso(supabase, {
+        await createSingleExpense(supabase, {
           descricao: data.descricao,
           valor: valorNumerico,
           data: formatDateToString(data.data),

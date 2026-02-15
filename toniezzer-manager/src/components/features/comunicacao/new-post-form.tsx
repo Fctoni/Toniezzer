@@ -13,11 +13,11 @@ import {
 import { MencoesInput } from "./mencoes-input";
 import type { Tables, FeedTipo } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
-import { criarPost } from "@/lib/services/feed-comunicacao";
+import { createPost } from "@/lib/services/feed-comunicacao";
 import { toast } from "sonner";
 import { Send, MessageSquare, Megaphone, AlertCircle } from "lucide-react";
 
-interface NovoPostFormProps {
+interface NewPostFormProps {
   users: Tables<"users">[];
   etapas: Tables<"etapas">[];
   currentUserId: string;
@@ -30,12 +30,12 @@ const tipoOptions: { value: FeedTipo; label: string; icon: React.ReactNode }[] =
   { value: "alerta", label: "Alerta", icon: <AlertCircle className="h-4 w-4" /> },
 ];
 
-export function NovoPostForm({
+export function NewPostForm({
   users,
   etapas,
   currentUserId,
   onSuccess,
-}: NovoPostFormProps) {
+}: NewPostFormProps) {
   const [conteudo, setConteudo] = useState("");
   const [mencoes, setMencoes] = useState<string[]>([]);
   const [tipo, setTipo] = useState<FeedTipo>("post");
@@ -58,7 +58,7 @@ export function NovoPostForm({
     try {
       const supabase = createClient();
 
-      await criarPost(supabase, {
+      await createPost(supabase, {
         tipo,
         conteudo,
         autor_id: currentUserId,

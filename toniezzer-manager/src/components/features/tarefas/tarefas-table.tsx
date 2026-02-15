@@ -20,7 +20,7 @@ import {
   TarefasFilters,
   TarefasFiltersState,
 } from "@/components/features/tarefas/tarefas-filters";
-import { EditarTarefaDialog } from "@/components/features/tarefas/editar-tarefa-dialog";
+import { EditTaskDialog } from "@/components/features/tarefas/edit-task-dialog";
 import { TarefasMetricas } from "@/components/features/tarefas/tarefas-metricas";
 import {
   statusConfig,
@@ -372,7 +372,7 @@ export function TarefasTable({
 
       {/* Dialog de edicao */}
       {editingTarefa && (
-        <EditarTarefaDialog
+        <EditTaskDialog
           tarefa={editingTarefa}
           users={users}
           open={!!editingTarefa}

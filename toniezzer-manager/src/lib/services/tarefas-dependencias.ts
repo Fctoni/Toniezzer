@@ -1,13 +1,13 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables } from '@/lib/types/database'
-type TarefaDependencia = Tables<'tarefas_dependencias'>
+type TaskDependency = Tables<'tarefas_dependencias'>
 
 // ===== SELECT =====
 
-export async function buscarDependenciasDaTarefa(
+export async function fetchTaskDependencies(
   supabase: TypedSupabaseClient,
   tarefaId: string
-): Promise<Pick<TarefaDependencia, 'id' | 'depende_de_tarefa_id'>[]> {
+): Promise<Pick<TaskDependency, 'id' | 'depende_de_tarefa_id'>[]> {
   const { data, error } = await supabase
     .from('tarefas_dependencias')
     .select('id, depende_de_tarefa_id')

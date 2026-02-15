@@ -3,21 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Download, Package } from "lucide-react";
 import Link from "next/link";
 import { LancamentosList } from "@/components/features/financeiro/lancamentos-list";
-import { buscarGastosComDetalhes } from "@/lib/services/gastos";
-import { buscarTodosFornecedoresParaDropdown } from "@/lib/services/fornecedores";
-import { buscarTodasCategoriasParaDropdown } from "@/lib/services/categorias";
+import { fetchExpensesWithDetails } from "@/lib/services/gastos";
+import { fetchAllSuppliersForDropdown } from "@/lib/services/fornecedores";
+import { fetchAllCategoriesForDropdown } from "@/lib/services/categorias";
 
 export default async function LancamentosPage() {
   const supabase = await createClient();
 
   // Buscar gastos
-  const gastos = await buscarGastosComDetalhes(supabase);
+  const gastos = await fetchExpensesWithDetails(supabase);
 
   // Buscar fornecedores para o filtro
-  const fornecedores = await buscarTodosFornecedoresParaDropdown(supabase);
+  const fornecedores = await fetchAllSuppliersForDropdown(supabase);
 
   // Buscar categorias para o filtro
-  const categorias = await buscarTodasCategoriasParaDropdown(supabase);
+  const categorias = await fetchAllCategoriesForDropdown(supabase);
 
   // Garantir que campos nullable estejam preenchidos
   const gastosFormatados = gastos?.map(gasto => ({

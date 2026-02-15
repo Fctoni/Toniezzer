@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@/lib/types/database'
-import { buscarFornecedores, desativarFornecedor } from '@/lib/services/fornecedores'
+import { fetchSuppliers, deactivateSupplier } from '@/lib/services/fornecedores'
 import { FornecedorForm } from '@/components/features/fornecedores/fornecedor-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -72,7 +72,7 @@ export function FornecedoresPageClient({ initialFornecedores }: FornecedoresPage
         filtros.search = search
       }
 
-      const data = await buscarFornecedores(supabase, filtros)
+      const data = await fetchSuppliers(supabase, filtros)
       setFornecedores(data)
     } catch (error) {
       console.error('Erro ao buscar fornecedores:', error)
@@ -86,7 +86,7 @@ export function FornecedoresPageClient({ initialFornecedores }: FornecedoresPage
   const handleDelete = async (id: string) => {
     try {
       const supabase = createClient()
-      await desativarFornecedor(supabase, id)
+      await deactivateSupplier(supabase, id)
       toast.success('Fornecedor excluído!')
       refetch()
     } catch {

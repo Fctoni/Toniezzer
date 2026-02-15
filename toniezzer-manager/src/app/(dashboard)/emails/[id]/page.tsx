@@ -10,9 +10,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import type { Tables } from '@/lib/types/database'
-import { buscarEmailPorId, aprovarEmail, rejeitarEmail, atualizarStatusEmail } from '@/lib/services/emails-monitorados'
-import { criarCompra } from '@/lib/services/compras'
-import { criarGastos } from '@/lib/services/gastos'
+import { fetchEmailById, approveEmail, rejectEmail, updateEmailStatus } from '@/lib/services/emails-monitorados'
+import { createPurchase } from '@/lib/services/compras'
+import { createExpenses } from '@/lib/services/gastos'
 
 export default function EmailDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -26,7 +26,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     async function loadEmail() {
       try {
         const supabase = createClient()
-        const data = await buscarEmailPorId(supabase, resolvedParams.id)
+        const data = await fetchEmailById(supabase, resolvedParams.id)
         setEmail(data)
         setLoading(false)
       } catch (error) {
@@ -120,7 +120,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       }
       
       // 2. Criar a compra
-      const compra = await criarCompra(supabase, {
+      const compra = await createPurchase(supabase, {
         descricao: data.descricao,
         valor_total: parseFloat(data.valor),
         data_compra: data.data,
@@ -159,14 +159,14 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       }))
 
       try {
-        await criarGastos(supabase, lancamentos)
+        await createExpenses(supabase, lancamentos)
       } catch (lancamentosError) {
         console.error('Erro ao criar parcelas:', lancamentosError)
         // Não lança erro para não impedir o fluxo, mas loga
       }
 
       // 4. Atualizar o email
-      await aprovarEmail(supabase, email.id, {
+      await approveEmail(supabase, email.id, {
         status: 'processado',
         compra_sugerida_id: compra.id,
         processado_em: new Date().toISOString(),
@@ -193,7 +193,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
     try {
       const supabase = createClient()
       
-      await rejeitarEmail(supabase, email.id, {
+      await rejectEmail(supabase, email.id, {
         status: 'ignorado',
         processado_em: new Date().toISOString(),
         processado_por: currentUser.id,
@@ -218,7 +218,7 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
       const supabase = createClient()
       
       // Atualizar status para reprocessamento
-      await atualizarStatusEmail(supabase, email.id, { status: 'nao_processado' })
+      await updateEmailStatus(supabase, email.id, { status: 'nao_processado' })
 
       // Chamar API Route de processamento
       const response = await fetch('/api/emails/process', { method: 'POST' })
@@ -228,11 +228,11 @@ export default function EmailDetalhesPage({ params }: { params: Promise<{ id: st
         toast.warning('Reprocessamento falhou', {
           description: result.error || 'Edite os campos manualmente.'
         })
-        await atualizarStatusEmail(supabase, email.id, { status: 'aguardando_revisao' })
+        await updateEmailStatus(supabase, email.id, { status: 'aguardando_revisao' })
       } else {
         toast.success('Email reprocessado!')
         // Recarregar dados
-        const data = await buscarEmailPorId(supabase, email.id)
+        const data = await fetchEmailById(supabase, email.id)
         setEmail(data)
       }
       

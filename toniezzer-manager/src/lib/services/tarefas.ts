@@ -1,28 +1,28 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesUpdate } from '@/lib/types/database'
-type Tarefa = Tables<'tarefas'>
+type Task = Tables<'tarefas'>
 
 // ===== SELECT =====
 
-export async function buscarTarefas(supabase: TypedSupabaseClient): Promise<Tarefa[]> {
+export async function fetchTasks(supabase: TypedSupabaseClient): Promise<Task[]> {
   const { data, error } = await supabase.from('tarefas').select('*').order('ordem')
   if (error) throw error
   return data
 }
 
-export async function buscarTarefaPorId(
+export async function fetchTaskById(
   supabase: TypedSupabaseClient,
   id: string
-): Promise<Tarefa | null> {
+): Promise<Task | null> {
   const { data, error } = await supabase.from('tarefas').select('*').eq('id', id).single()
   if (error) throw error
   return data
 }
 
-export async function buscarTarefasDoResponsavel(
+export async function fetchTasksByResponsible(
   supabase: TypedSupabaseClient,
   responsavelId: string
-): Promise<Pick<Tarefa, 'id' | 'nome' | 'status' | 'data_prevista' | 'prioridade' | 'subetapa_id'>[]> {
+): Promise<Pick<Task, 'id' | 'nome' | 'status' | 'data_prevista' | 'prioridade' | 'subetapa_id'>[]> {
   const { data, error } = await supabase
     .from('tarefas')
     .select('id, nome, status, data_prevista, prioridade, subetapa_id')
@@ -32,10 +32,10 @@ export async function buscarTarefasDoResponsavel(
   return data
 }
 
-export async function buscarTarefasPorSubetapas(
+export async function fetchTasksBySubstages(
   supabase: TypedSupabaseClient,
   subetapaIds: string[]
-): Promise<Pick<Tarefa, 'id' | 'subetapa_id' | 'status'>[]> {
+): Promise<Pick<Task, 'id' | 'subetapa_id' | 'status'>[]> {
   const { data, error } = await supabase
     .from('tarefas')
     .select('id, subetapa_id, status')
@@ -44,10 +44,10 @@ export async function buscarTarefasPorSubetapas(
   return data
 }
 
-export async function buscarTarefasPorIds(
+export async function fetchTasksByIds(
   supabase: TypedSupabaseClient,
   ids: string[]
-): Promise<Pick<Tarefa, 'id' | 'nome' | 'status'>[]> {
+): Promise<Pick<Task, 'id' | 'nome' | 'status'>[]> {
   const { data, error } = await supabase
     .from('tarefas')
     .select('id, nome, status')
@@ -58,7 +58,7 @@ export async function buscarTarefasPorIds(
 
 // ===== INSERT =====
 
-export async function criarTarefa(
+export async function createTask(
   supabase: TypedSupabaseClient,
   data: {
     subetapa_id: string
@@ -70,7 +70,7 @@ export async function criarTarefa(
     ordem: number
     tags?: string[]
   }
-): Promise<Tarefa> {
+): Promise<Task> {
   const { data: tarefa, error } = await supabase
     .from('tarefas')
     .insert({
@@ -92,23 +92,23 @@ export async function criarTarefa(
 
 // ===== UPDATE =====
 
-export async function atualizarTarefa(
+export async function updateTask(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'tarefas'>
-): Promise<Tarefa> {
-  const updatesComDatas = { ...updates }
+): Promise<Task> {
+  const updatesWithDates = { ...updates }
 
   if (updates.status === 'em_andamento') {
-    updatesComDatas.data_inicio_real = updatesComDatas.data_inicio_real ?? new Date().toISOString()
+    updatesWithDates.data_inicio_real = updatesWithDates.data_inicio_real ?? new Date().toISOString()
   }
   if (updates.status === 'concluida') {
-    updatesComDatas.data_conclusao_real = updatesComDatas.data_conclusao_real ?? new Date().toISOString()
+    updatesWithDates.data_conclusao_real = updatesWithDates.data_conclusao_real ?? new Date().toISOString()
   }
 
   const { data, error } = await supabase
     .from('tarefas')
-    .update(updatesComDatas)
+    .update(updatesWithDates)
     .eq('id', id)
     .select()
     .single()
@@ -116,11 +116,11 @@ export async function atualizarTarefa(
   return data
 }
 
-export async function reordenarTarefas(
+export async function reorderTasks(
   supabase: TypedSupabaseClient,
-  tarefasOrdenadas: { id: string; ordem: number }[]
+  orderedTasks: { id: string; ordem: number }[]
 ): Promise<void> {
-  for (const item of tarefasOrdenadas) {
+  for (const item of orderedTasks) {
     const { error } = await supabase
       .from('tarefas')
       .update({ ordem: item.ordem })
@@ -131,7 +131,7 @@ export async function reordenarTarefas(
 
 // ===== DELETE =====
 
-export async function deletarTarefa(
+export async function deleteTask(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

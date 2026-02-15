@@ -1,19 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
-import { buscarDocumentosComEtapa } from "@/lib/services/documentos";
-import { buscarEtapasParaDropdown } from "@/lib/services/etapas";
+import { fetchDocumentsWithStage } from "@/lib/services/documentos";
+import { fetchStagesForDropdown } from "@/lib/services/etapas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image, FileText, Upload } from "lucide-react";
 import Link from "next/link";
-import { GaleriaFotos } from "@/components/features/documentos/galeria-fotos";
+import { PhotoGallery } from "@/components/features/documentos/photo-gallery";
 
 export default async function DocumentosPage() {
   const supabase = await createClient();
 
   const [documentos, etapas] = await Promise.all([
-    buscarDocumentosComEtapa(supabase),
-    buscarEtapasParaDropdown(supabase),
+    fetchDocumentsWithStage(supabase),
+    fetchStagesForDropdown(supabase),
   ]);
 
   const fotos = documentos?.filter((d) => d.tipo === "foto" && d.created_at).map(d => ({
@@ -132,7 +132,7 @@ export default async function DocumentosPage() {
               <CardTitle>Galeria de Fotos</CardTitle>
             </CardHeader>
             <CardContent>
-              <GaleriaFotos fotos={fotos} etapas={etapas} />
+              <PhotoGallery fotos={fotos} etapas={etapas} />
             </CardContent>
           </Card>
         </TabsContent>

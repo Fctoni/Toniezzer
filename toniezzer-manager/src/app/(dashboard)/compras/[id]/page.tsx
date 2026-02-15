@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buscarCompraPorIdComDetalhes } from "@/lib/services/compras";
-import { buscarGastosPorCompra } from "@/lib/services/gastos";
+import { fetchPurchaseByIdWithDetails } from "@/lib/services/compras";
+import { fetchExpensesByPurchase } from "@/lib/services/gastos";
 import { CompraDetalhesClient } from "@/components/features/compras/compra-detalhes-client";
 
 export default async function CompraDetalhesPage({
@@ -14,7 +14,7 @@ export default async function CompraDetalhesPage({
 
   let compraData;
   try {
-    compraData = await buscarCompraPorIdComDetalhes(supabase, id);
+    compraData = await fetchPurchaseByIdWithDetails(supabase, id);
   } catch {
     notFound();
   }
@@ -53,7 +53,7 @@ export default async function CompraDetalhesPage({
     comprovante_pagamento_url: string | null;
   }[];
   try {
-    const parcelasData = await buscarGastosPorCompra(supabase, id);
+    const parcelasData = await fetchExpensesByPurchase(supabase, id);
     parcelas = parcelasData.map((p) => ({
       id: p.id,
       valor: Number(p.valor),

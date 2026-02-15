@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { NovaSubetapaDialog } from "./nova-subetapa-dialog";
+import { NewSubstageDialog } from "./new-substage-dialog";
 import { parseDateString } from "@/lib/utils";
 
 interface Subetapa {
@@ -142,7 +142,7 @@ export function SubetapasList({ subetapas, etapaId, etapaNome, users, onRefresh 
       <div className="pl-14 pb-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <span>Nenhuma subetapa cadastrada</span>
-          <NovaSubetapaDialog
+          <NewSubstageDialog
             etapaId={etapaId}
             etapaNome={etapaNome}
             users={users}
@@ -258,7 +258,7 @@ export function SubetapasList({ subetapas, etapaId, etapaNome, users, onRefresh 
 
       {/* Add Subetapa Button */}
       <div className="pt-1">
-        <NovaSubetapaDialog
+        <NewSubstageDialog
           etapaId={etapaId}
           etapaNome={etapaNome}
           users={users}

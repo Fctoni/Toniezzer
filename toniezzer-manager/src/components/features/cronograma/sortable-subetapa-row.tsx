@@ -32,8 +32,8 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { ChevronDown, ChevronRight, Plus, GripVertical, Pencil } from "lucide-react";
 import { cn, formatDateToString } from "@/lib/utils";
-import { calcularProgressoSubetapa } from "@/lib/services/subetapas";
-import { NovaTarefaDialog } from "@/components/features/tarefas/nova-tarefa-dialog";
+import { calculateSubstageProgress } from "@/lib/services/subetapas";
+import { NewTaskDialog } from "@/components/features/tarefas/new-task-dialog";
 import { SortableTarefaRow } from "./sortable-tarefa-row";
 import {
   type Tarefa,
@@ -91,7 +91,7 @@ export function SortableSubetapaRow({
 
   const hasTarefas = subetapa.tarefas.length > 0;
   const subetapaStatus = getStatusConfig(subetapa.status, subetapaStatusOptions);
-  const progresso = calcularProgressoSubetapa(subetapa);
+  const progresso = calculateSubstageProgress(subetapa);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -329,7 +329,7 @@ export function SortableSubetapaRow({
           <div />
           <div />
           <div className="p-1 pl-4">
-            <NovaTarefaDialog
+            <NewTaskDialog
               users={users}
               subetapas={subetapasOptions}
               defaultSubetapaId={subetapa.id}

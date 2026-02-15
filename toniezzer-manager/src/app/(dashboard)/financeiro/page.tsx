@@ -13,17 +13,17 @@ import {
 import Link from "next/link";
 import { GastosChart } from "@/components/features/financeiro/gastos-chart";
 import { parseDateString } from "@/lib/utils";
-import { buscarCategoriasAtivas } from "@/lib/services/categorias";
-import { buscarGastosAprovados } from "@/lib/services/gastos";
-import { buscarEtapas } from "@/lib/services/etapas";
+import { fetchActiveCategories } from "@/lib/services/categorias";
+import { fetchApprovedExpenses } from "@/lib/services/gastos";
+import { fetchStages } from "@/lib/services/etapas";
 
 export default async function FinanceiroPage() {
   const supabase = await createClient();
 
   const [categorias, gastos, etapas] = await Promise.all([
-    buscarCategoriasAtivas(supabase),
-    buscarGastosAprovados(supabase),
-    buscarEtapas(supabase),
+    fetchActiveCategories(supabase),
+    fetchApprovedExpenses(supabase),
+    fetchStages(supabase),
   ]);
 
   // Orçamento agora vem das etapas

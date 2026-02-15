@@ -1,18 +1,18 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/types/database'
-type Subcategoria = Tables<'subcategorias'>
+type Subcategory = Tables<'subcategorias'>
 
 // ===== SELECT =====
 
-export async function buscarSubcategorias(supabase: TypedSupabaseClient): Promise<Subcategoria[]> {
+export async function fetchSubcategories(supabase: TypedSupabaseClient): Promise<Subcategory[]> {
   const { data, error } = await supabase.from('subcategorias').select('*').order('nome')
   if (error) throw error
   return data
 }
 
-export async function buscarSubcategoriasAtivas(
+export async function fetchActiveSubcategories(
   supabase: TypedSupabaseClient
-): Promise<Pick<Subcategoria, 'id' | 'nome' | 'categoria_id'>[]> {
+): Promise<Pick<Subcategory, 'id' | 'nome' | 'categoria_id'>[]> {
   const { data, error } = await supabase
     .from('subcategorias')
     .select('id, nome, categoria_id')
@@ -24,10 +24,10 @@ export async function buscarSubcategoriasAtivas(
 
 // ===== INSERT =====
 
-export async function criarSubcategoria(
+export async function createSubcategory(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'subcategorias'>
-): Promise<Subcategoria> {
+): Promise<Subcategory> {
   const { data: subcategoria, error } = await supabase
     .from('subcategorias')
     .insert(data)
@@ -39,11 +39,11 @@ export async function criarSubcategoria(
 
 // ===== UPDATE =====
 
-export async function atualizarSubcategoria(
+export async function updateSubcategory(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'subcategorias'>
-): Promise<Subcategoria> {
+): Promise<Subcategory> {
   const { data, error } = await supabase
     .from('subcategorias')
     .update(updates)
@@ -54,7 +54,7 @@ export async function atualizarSubcategoria(
   return data
 }
 
-export async function toggleAtivoSubcategoria(
+export async function toggleActiveSubcategory(
   supabase: TypedSupabaseClient,
   id: string,
   ativo: boolean
@@ -68,7 +68,7 @@ export async function toggleAtivoSubcategoria(
 
 // ===== DELETE =====
 
-export async function deletarSubcategoria(
+export async function deleteSubcategory(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {
@@ -76,9 +76,9 @@ export async function deletarSubcategoria(
   if (error) throw error
 }
 
-// ===== VALIDAÇÕES =====
+// ===== VALIDATIONS =====
 
-export async function verificarDuplicataSubcategoria(
+export async function checkDuplicateSubcategory(
   supabase: TypedSupabaseClient,
   categoriaId: string,
   nome: string,
@@ -99,7 +99,7 @@ export async function verificarDuplicataSubcategoria(
   return (count || 0) > 0
 }
 
-export async function verificarUsoSubcategoria(
+export async function checkSubcategoryUsage(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<{ compras: number; gastos: number }> {

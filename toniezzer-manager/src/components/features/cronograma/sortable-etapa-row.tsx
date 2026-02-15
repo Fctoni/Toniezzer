@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Plus, GripVertical, Pencil } from "lucide-react";
 import { cn, formatDateToString } from "@/lib/utils";
-import { calcularProgressoEtapa, calcularDatasEtapa } from "@/lib/services/etapas";
-import { NovaSubetapaDialog } from "./nova-subetapa-dialog";
+import { calculateStageProgress, calculateStageDates } from "@/lib/services/etapas";
+import { NewSubstageDialog } from "./new-substage-dialog";
 import { SortableSubetapaRow } from "./sortable-subetapa-row";
 import {
   type Tarefa,
@@ -96,7 +96,7 @@ export function SortableEtapaRow({
 
   const hasSubetapas = etapa.subetapas.length > 0;
   const statusConfig = getStatusConfig(etapa.status);
-  const progresso = calcularProgressoEtapa(etapa);
+  const progresso = calculateStageProgress(etapa);
 
   const orcamento = Number(etapa.orcamento) || 0;
   const gastoRealizado = etapa.gasto_realizado || 0;
@@ -200,14 +200,14 @@ export function SortableEtapaRow({
         {/* Data Início - Calculada das subetapas */}
         <div className="p-1">
           <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
-            {formatDate(calcularDatasEtapa(etapa.subetapas).inicio)}
+            {formatDate(calculateStageDates(etapa.subetapas).inicio)}
           </div>
         </div>
 
         {/* Data Fim - Calculada das subetapas */}
         <div className="p-1">
           <div className="h-8 px-2 text-xs font-normal flex items-center text-muted-foreground">
-            {formatDate(calcularDatasEtapa(etapa.subetapas).fim)}
+            {formatDate(calculateStageDates(etapa.subetapas).fim)}
           </div>
         </div>
 
@@ -278,7 +278,7 @@ export function SortableEtapaRow({
 
         {/* Add Subetapa Button */}
         <div className="p-1 flex items-center justify-center">
-          <NovaSubetapaDialog
+          <NewSubstageDialog
             etapaId={etapa.id}
             etapaNome={etapa.nome}
             users={users}

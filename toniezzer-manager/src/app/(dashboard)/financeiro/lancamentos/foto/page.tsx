@@ -11,8 +11,8 @@ import { uploadFile } from '@/lib/services/storage'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/lib/hooks/use-current-user'
 import { formatDateToString } from '@/lib/utils'
-import { criarCompra } from '@/lib/services/compras'
-import { criarGastos } from '@/lib/services/gastos'
+import { createPurchase } from '@/lib/services/compras'
+import { createExpenses } from '@/lib/services/gastos'
 
 type Step = 'capture' | 'processing' | 'review'
 
@@ -158,7 +158,7 @@ export default function FotoReciboPage() {
       const numParcelas = parseInt(data.parcelas || '1')
       
       // 1. Criar a compra
-      const compra = await criarCompra(supabase, {
+      const compra = await createPurchase(supabase, {
         descricao: data.descricao,
         valor_total: valorTotal,
         data_compra: data.data,
@@ -213,7 +213,7 @@ export default function FotoReciboPage() {
       }
 
       try {
-        await criarGastos(supabase, lancamentos)
+        await createExpenses(supabase, lancamentos)
       } catch (lancamentosError) {
         console.error('Erro ao criar parcelas:', lancamentosError)
         // Não lança erro para não impedir o fluxo, mas loga

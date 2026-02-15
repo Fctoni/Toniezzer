@@ -2,7 +2,7 @@
 
 import type { UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
-import type { formSchema } from "./form-lancamento";
+import type { formSchema } from "./expense-form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {

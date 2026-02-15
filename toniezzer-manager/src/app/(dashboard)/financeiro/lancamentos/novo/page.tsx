@@ -1,18 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormLancamento } from "@/components/features/financeiro/form-lancamento";
-import { buscarCategoriasAtivas } from "@/lib/services/categorias";
-import { buscarFornecedoresAtivos } from "@/lib/services/fornecedores";
-import { buscarEtapas } from "@/lib/services/etapas";
+import { ExpenseForm } from "@/components/features/financeiro/expense-form";
+import { fetchActiveCategories } from "@/lib/services/categorias";
+import { fetchActiveSuppliers } from "@/lib/services/fornecedores";
+import { fetchStages } from "@/lib/services/etapas";
 
 export default async function NovoLancamentoPage() {
   const supabase = await createClient();
 
   const [categorias, fornecedores, etapas] =
     await Promise.all([
-      buscarCategoriasAtivas(supabase),
-      buscarFornecedoresAtivos(supabase),
-      buscarEtapas(supabase),
+      fetchActiveCategories(supabase),
+      fetchActiveSuppliers(supabase),
+      fetchStages(supabase),
     ]);
 
   return (
@@ -29,7 +29,7 @@ export default async function NovoLancamentoPage() {
           <CardTitle>Dados do Lançamento</CardTitle>
         </CardHeader>
         <CardContent>
-          <FormLancamento
+          <ExpenseForm
             categorias={categorias || []}
             fornecedores={fornecedores || []}
             etapas={etapas}

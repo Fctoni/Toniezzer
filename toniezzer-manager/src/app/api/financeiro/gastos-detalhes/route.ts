@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { buscarGastosDetalhadosPorCategoria } from "@/lib/services/gastos";
+import { fetchDetailedExpensesByCategory } from "@/lib/services/gastos";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    const gastos = await buscarGastosDetalhadosPorCategoria(supabase, categoriaId, etapaId);
+    const gastos = await fetchDetailedExpensesByCategory(supabase, categoriaId, etapaId);
 
     // Transformar dados para formato mais amigável
     const gastosDetalhados = gastos?.map((gasto) => ({

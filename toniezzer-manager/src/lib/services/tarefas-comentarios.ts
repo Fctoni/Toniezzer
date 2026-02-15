@@ -1,13 +1,13 @@
 import { TypedSupabaseClient } from '@/lib/types/supabase'
 import type { Tables } from '@/lib/types/database'
-type TarefaComentario = Tables<'tarefas_comentarios'>
+type TaskComment = Tables<'tarefas_comentarios'>
 
 // ===== SELECT =====
 
-export async function buscarComentariosDaTarefa(
+export async function fetchTaskComments(
   supabase: TypedSupabaseClient,
   tarefaId: string
-): Promise<Pick<TarefaComentario, 'id' | 'conteudo' | 'created_at' | 'created_by'>[]> {
+): Promise<Pick<TaskComment, 'id' | 'conteudo' | 'created_at' | 'created_by'>[]> {
   const { data, error } = await supabase
     .from('tarefas_comentarios')
     .select('id, conteudo, created_at, created_by')
@@ -19,12 +19,12 @@ export async function buscarComentariosDaTarefa(
 
 // ===== INSERT =====
 
-export async function criarComentario(
+export async function createComment(
   supabase: TypedSupabaseClient,
   tarefaId: string,
   conteudo: string,
   userId: string
-): Promise<TarefaComentario> {
+): Promise<TaskComment> {
   const { data, error } = await supabase
     .from('tarefas_comentarios')
     .insert({

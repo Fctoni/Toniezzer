@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { criarEtapa, criarDependenciaEtapa } from "@/lib/services/etapas";
+import { createStage, createStageDependency } from "@/lib/services/etapas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,19 +54,19 @@ interface Etapa {
   nome: string;
 }
 
-interface NovaEtapaDialogProps {
+interface NewStageDialogProps {
   users: User[];
   etapas: Etapa[];
   proximaOrdem: number;
   onSuccess?: () => void;
 }
 
-export function NovaEtapaDialog({
+export function NewStageDialog({
   users,
   etapas,
   proximaOrdem,
   onSuccess,
-}: NovaEtapaDialogProps) {
+}: NewStageDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,7 +85,7 @@ export function NovaEtapaDialog({
     try {
       const supabase = createClient();
 
-      const etapa = await criarEtapa(supabase, {
+      const etapa = await createStage(supabase, {
         nome: data.nome,
         descricao: data.descricao || null,
         responsavel_id: data.responsavel_id || null,
@@ -94,7 +94,7 @@ export function NovaEtapaDialog({
 
       // Criar dependência se especificada
       if (data.depende_de && etapa) {
-        await criarDependenciaEtapa(supabase, {
+        await createStageDependency(supabase, {
           etapa_id: etapa.id,
           depende_de_etapa_id: data.depende_de,
           tipo: "obrigatoria",

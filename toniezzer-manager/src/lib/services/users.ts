@@ -4,19 +4,19 @@ type User = Tables<'users'>
 
 // ===== SELECT =====
 
-export async function buscarUsuarios(supabase: TypedSupabaseClient): Promise<User[]> {
+export async function fetchUsers(supabase: TypedSupabaseClient): Promise<User[]> {
   const { data, error } = await supabase.from('users').select('*').order('nome_completo')
   if (error) throw error
   return data
 }
 
-export async function buscarUsuariosAtivos(supabase: TypedSupabaseClient): Promise<User[]> {
+export async function fetchActiveUsers(supabase: TypedSupabaseClient): Promise<User[]> {
   const { data, error } = await supabase.from('users').select('*').eq('ativo', true).order('nome_completo')
   if (error) throw error
   return data
 }
 
-export async function buscarUsuariosParaDropdown(
+export async function fetchUsersForDropdown(
   supabase: TypedSupabaseClient
 ): Promise<Pick<User, 'id' | 'nome_completo'>[]> {
   const { data, error } = await supabase
@@ -27,7 +27,7 @@ export async function buscarUsuariosParaDropdown(
   return data
 }
 
-export async function buscarUsuarioPorEmail(
+export async function fetchUserByEmail(
   supabase: TypedSupabaseClient,
   email: string
 ): Promise<Pick<User, 'id'>> {
@@ -40,7 +40,7 @@ export async function buscarUsuarioPorEmail(
   return data
 }
 
-export async function buscarPrimeiroUsuario(
+export async function fetchFirstUser(
   supabase: TypedSupabaseClient
 ): Promise<Pick<User, 'id'>> {
   const { data, error } = await supabase
@@ -66,7 +66,7 @@ export async function isAdmin(
 
 // ===== INSERT =====
 
-export async function criarUsuario(
+export async function createUser(
   supabase: TypedSupabaseClient,
   data: TablesInsert<'users'>
 ): Promise<User> {
@@ -81,7 +81,7 @@ export async function criarUsuario(
 
 // ===== UPDATE =====
 
-export async function atualizarUsuario(
+export async function updateUser(
   supabase: TypedSupabaseClient,
   id: string,
   updates: TablesUpdate<'users'>
@@ -96,7 +96,7 @@ export async function atualizarUsuario(
   return data
 }
 
-export async function desativarUsuario(
+export async function deactivateUser(
   supabase: TypedSupabaseClient,
   id: string
 ): Promise<void> {

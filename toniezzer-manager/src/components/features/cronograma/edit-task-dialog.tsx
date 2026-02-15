@@ -5,16 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { atualizarTarefa, deletarTarefa } from "@/lib/services/tarefas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -44,23 +41,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, formatDateToString } from "@/lib/utils";
+import { updateTask } from "@/lib/services/tarefas";
 
 const formSchema = z.object({
   nome: z.string().min(2, "Mínimo 2 caracteres"),
   descricao: z.string().optional(),
+  data_inicio_prevista: z.date().optional().nullable(),
+  data_fim_prevista: z.date().optional().nullable(),
   responsavel_id: z.string().optional(),
-  prioridade: z.string(),
-  data_prevista: z.date().optional().nullable(),
-  status: z.string(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -74,30 +67,28 @@ interface Tarefa {
   id: string;
   nome: string;
   descricao: string | null;
-  status: string;
-  data_prevista: string | null;
-  prioridade: string | null;
+  data_inicio_prevista: string | null;
+  data_fim_prevista: string | null;
   responsavel_id: string | null;
 }
 
-interface EditarTarefaDialogProps {
+interface EditTaskDialogProps {
   tarefa: Tarefa;
   users: User[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  onSuccess?: (updatedTarefa: Partial<Tarefa> & { id: string }) => void;
   onDelete?: (tarefaId: string) => void;
 }
 
-export function EditarTarefaDialog({
+export function EditTaskDialog({
   tarefa,
   users,
   open,
   onOpenChange,
   onSuccess,
   onDelete,
-}: EditarTarefaDialogProps) {
-  const router = useRouter();
+}: EditTaskDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -107,12 +98,13 @@ export function EditarTarefaDialog({
     defaultValues: {
       nome: tarefa.nome,
       descricao: tarefa.descricao || "",
-      responsavel_id: tarefa.responsavel_id || undefined,
-      prioridade: tarefa.prioridade || "media",
-      data_prevista: tarefa.data_prevista
-        ? new Date(tarefa.data_prevista + "T12:00:00")
+      data_inicio_prevista: tarefa.data_inicio_prevista
+        ? new Date(tarefa.data_inicio_prevista)
         : null,
-      status: tarefa.status,
+      data_fim_prevista: tarefa.data_fim_prevista
+        ? new Date(tarefa.data_fim_prevista)
+        : null,
+      responsavel_id: tarefa.responsavel_id || undefined,
     },
   });
 
@@ -125,23 +117,22 @@ export function EditarTarefaDialog({
       const updatedData = {
         nome: data.nome,
         descricao: data.descricao || null,
-        responsavel_id: data.responsavel_id || null,
-        prioridade: data.prioridade,
-        data_prevista: data.data_prevista
-          ? formatDateToString(data.data_prevista)
+        data_inicio_prevista: data.data_inicio_prevista
+          ? formatDateToString(data.data_inicio_prevista)
           : null,
-        status: data.status,
+        data_fim_prevista: data.data_fim_prevista
+          ? formatDateToString(data.data_fim_prevista)
+          : null,
+        responsavel_id: data.responsavel_id || null,
       };
 
-      // Lógica de datas automáticas agora está no service
-      await atualizarTarefa(supabase, tarefa.id, updatedData);
+      await updateTask(supabase, tarefa.id, updatedData);
 
       toast.success("Tarefa atualizada!");
-
+      
+      // Notificar o parent com os dados atualizados
       if (onSuccess) {
-        onSuccess();
-      } else {
-        router.refresh();
+        onSuccess({ id: tarefa.id, ...updatedData });
       }
       onOpenChange(false);
     } catch (error) {
@@ -158,17 +149,18 @@ export function EditarTarefaDialog({
     try {
       const supabase = createClient();
 
-      await deletarTarefa(supabase, tarefa.id);
+      const { error } = await supabase.from("tarefas").delete().eq("id", tarefa.id);
+
+      if (error) throw error;
 
       toast.success("Tarefa excluída!");
       setShowDeleteAlert(false);
-
+      
+      // Notificar o parent sobre a exclusão
       if (onDelete) {
         onDelete(tarefa.id);
       }
       onOpenChange(false);
-
-      router.refresh();
     } catch (error) {
       console.error(error);
       toast.error("Erro ao excluir tarefa");
@@ -180,12 +172,9 @@ export function EditarTarefaDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle>Editar Tarefa</DialogTitle>
-            <DialogDescription>
-              Altere os campos desejados e clique em Salvar.
-            </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
@@ -197,7 +186,7 @@ export function EditarTarefaDialog({
                   <FormItem>
                     <FormLabel>Nome da Tarefa *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Adquirir concreto" {...field} />
+                      <Input placeholder="Ex: Escavação" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -225,97 +214,10 @@ export function EditarTarefaDialog({
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="responsavel_id"
+                  name="data_inicio_prevista"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Responsável</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.nome_completo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pendente">Pendente</SelectItem>
-                          <SelectItem value="em_andamento">
-                            Em Andamento
-                          </SelectItem>
-                          <SelectItem value="concluida">Concluída</SelectItem>
-                          <SelectItem value="bloqueada">Bloqueada</SelectItem>
-                          <SelectItem value="cancelada">Cancelada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="prioridade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prioridade</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="baixa">Baixa</SelectItem>
-                          <SelectItem value="media">Média</SelectItem>
-                          <SelectItem value="alta">Alta</SelectItem>
-                          <SelectItem value="critica">Crítica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="data_prevista"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data Prevista</FormLabel>
+                      <FormLabel>Data Início</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -327,9 +229,46 @@ export function EditarTarefaDialog({
                               )}
                             >
                               {field.value ? (
-                                format(field.value, "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="data_fim_prevista"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data Fim</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
                               ) : (
                                 <span>Selecione</span>
                               )}
@@ -352,6 +291,31 @@ export function EditarTarefaDialog({
                 />
               </div>
 
+              <FormField
+                control={form.control}
+                name="responsavel_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Responsável</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione (opcional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.nome_completo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="flex justify-between pt-4">
                 <Button
                   type="button"
@@ -363,7 +327,7 @@ export function EditarTarefaDialog({
                   <Trash2 className="mr-2 h-4 w-4" />
                   Excluir
                 </Button>
-
+                
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -374,9 +338,7 @@ export function EditarTarefaDialog({
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSubmitting ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
@@ -391,15 +353,11 @@ export function EditarTarefaDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa{" "}
-              <strong>{tarefa.nome}</strong> e todos os seus anexos e
-              comentários serão excluídos permanentemente.
+              Esta ação não pode ser desfeita. A tarefa <strong>{tarefa.nome}</strong> será excluída permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              Cancelar
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -420,3 +378,4 @@ export function EditarTarefaDialog({
     </>
   );
 }
+
